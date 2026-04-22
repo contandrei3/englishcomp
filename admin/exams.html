@@ -96,7 +96,8 @@ function ExamsPage() {
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <button className="btn btn-mid btn-sm" onClick={reload}>↻ Actualizează</button>
-            <button className="btn btn-outline btn-sm" onClick={addStub}>+ Examen stub</button>
+            <button className="btn btn-mid btn-sm" onClick={()=>window.location.href="exam-builder.html"}>✏ Editor</button>
+            <button className="btn btn-outline btn-sm" onClick={addStub}>+ Stub</button>
             <button className="btn btn-primary btn-sm" onClick={()=>fileRef.current?.click()}>⬆ Import JSON</button>
             <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={handleImport}/>
           </div>
@@ -150,6 +151,7 @@ function ExamsPage() {
                       {isOpen?"Ascunde JSON":"Afișează JSON"}
                     </button>
                     <button className="btn btn-mid btn-sm" onClick={()=>downloadJSON(exam)}>⬇ JSON</button>
+                    <button className="btn btn-outline btn-sm" onClick={()=>window.location.href=`exam-builder.html?id=${exam.id}`}>✏ Editează</button>
                     <button className="btn btn-danger btn-sm" onClick={()=>setToDelete(exam.id)}>✕</button>
                   </div>
                 </div>

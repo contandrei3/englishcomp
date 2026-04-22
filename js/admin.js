@@ -43,6 +43,7 @@ var ADMIN = (function () {
   var LINKS = [
     { href: 'index.html',        key: 'dashboard',    label: 'Dashboard' },
     { href: 'participants.html', key: 'participants', label: 'Participanți' },
+    { href: 'sessions.html',     key: 'sessions',     label: 'Sesiuni' },
     { href: 'results.html',      key: 'results',      label: 'Rezultate' },
     { href: 'exams.html',        key: 'exams',        label: 'Subiecte' },
     { href: 'settings.html',     key: 'settings',     label: 'Setări' },

@@ -51,7 +51,7 @@ var CPEEN = (function () {
 
   // ── Config ────────────────────────────────────────────────────────────────
   function getConfig() {
-    return Object.assign({ maxPerSchoolPerLevel: 0, showResultsImmediately: true, adminHash: DEFAULT_ADMIN_HASH }, sg(KEYS.CONFIG, {}));
+    return Object.assign({ maxPerSchoolPerLevel: 0, showResultsImmediately: true, adminHash: DEFAULT_ADMIN_HASH, activeExams: {} }, sg(KEYS.CONFIG, {}));
   }
   function saveConfig(cfg) { return ss(KEYS.CONFIG, cfg); }
 

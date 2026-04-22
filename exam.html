@@ -106,6 +106,14 @@ function ExamApp() {
       return;
     }
 
+    // Check activation — skip if already in progress
+    if(!s || s.status === "pending") {
+      const cfg = CPEEN.getConfig();
+      if(!cfg.activeExams?.[p.level]?.[p.stage]) {
+        setPtcp(p); setView("noExam"); return;
+      }
+    }
+
     const ex = CPEEN.getExamForParticipant(p.level, p.stage);
     if(!ex) { setPtcp(p); setView("noExam"); return; }
 
