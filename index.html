@@ -29,7 +29,8 @@ const storage = {
   list: (prefix) => { try{ const keys=[]; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith(prefix))keys.push(k); } return {keys}; }catch(e){ return {keys:[]}; } },
 };
 
-const TEACHER_PASS = "cpeen2026";
+const TEACHER_PASS_HASH = "214d1f1c62239db83286301ef9ce31e93144e98570370de2f035560e13b2a7d9";
+const hashPass = async s => { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); };
 const C = { dark:"#1F3864", mid:"#2E75B6", light:"#D6E4F0", accent:"#E8F4FD", red:"#C0392B", green:"#1D6027", orange:"#E67E22" };
 const norm = s => (s||"").trim().toLowerCase().replace(/\s+/g," ");
 const DURATION = { calificare:45, finala:60 };
@@ -215,6 +216,8 @@ function App() {
     setSubs(loaded.sort((a,b)=>b.ts-a.ts));
   };
 
+  const tryLogin = async () => { const h = await hashPass(tPass); if(h===TEACHER_PASS_HASH){loadSubs();setView("teacher");}else setTErr("Parolă incorectă."); };
+
   const canStart = student.name.trim()&&student.school.trim()&&student.grade.trim();
   const filteredSubs = subs.filter(s=>(tFilter.level==="all"||s.level===tFilter.level)&&(tFilter.stage==="all"||s.stage===tFilter.stage));
 
@@ -298,10 +301,10 @@ function App() {
         </div>
         <label style={{fontSize:13,fontWeight:600,color:C.dark,display:"block",marginBottom:6}}>Parolă</label>
         <input type="password" value={tPass} onChange={e=>setTPass(e.target.value)}
-          onKeyDown={e=>{ if(e.key==="Enter"){ if(tPass===TEACHER_PASS){loadSubs();setView("teacher");}else setTErr("Parolă incorectă."); }}}
+          onKeyDown={e=>{ if(e.key==="Enter") tryLogin(); }}
           style={{width:"100%",border:`1.5px solid ${C.mid}`,borderRadius:6,padding:"8px 10px",fontSize:14,boxSizing:"border-box",marginBottom:8}}/>
         {tErr&&<div style={{color:C.red,fontSize:12,marginBottom:8}}>{tErr}</div>}
-        <button onClick={()=>{ if(tPass===TEACHER_PASS){loadSubs();setView("teacher");}else setTErr("Parolă incorectă."); }}
+        <button onClick={tryLogin}
           style={{width:"100%",background:C.dark,color:"white",border:"none",borderRadius:6,padding:"10px",cursor:"pointer",fontWeight:600}}>Intră</button>
         <button onClick={()=>setView("home")} style={{width:"100%",background:"none",border:"none",color:C.mid,marginTop:8,cursor:"pointer",fontSize:13}}>← Înapoi</button>
       </div>
