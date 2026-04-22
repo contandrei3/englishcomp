@@ -56,13 +56,19 @@ function ExamApp() {
   const [answers, setAnswers] = useState({s1:[],s2:[],s3:[],s4:[],writing:""});
   const [timeLeft, setTimeLeft] = useState(0);
   const [result,  setResult]  = useState(null);
-  const timerRef  = useRef(null);
-  const subRef    = useRef(false);
-  const sessIdRef = useRef(null);
+  const timerRef   = useRef(null);
+  const subRef     = useRef(false);
+  const sessIdRef  = useRef(null);
+  // Refs so the timer callback always sees current values without stale closures
+  const answersRef = useRef({s1:[],s2:[],s3:[],s4:[],writing:""});
+  const sessRef    = useRef(null);
+  const examRef    = useRef(null);
+  const variantRef = useRef(null);
 
   const setAns = (sec, i, v) => {
     setAnswers(prev => {
       const next = {...prev,[sec]:typeof i==="number"?prev[sec].map((x,j)=>j===i?v:x):v};
+      answersRef.current = next;
       if(sessIdRef.current) CPEEN.updateSession(sessIdRef.current, {answers: next});
       return next;
     });
@@ -122,25 +128,24 @@ function ExamApp() {
 
     subRef.current = false;
     sessIdRef.current = s.id;
+    examRef.current = ex;
+    variantRef.current = v;
+    sessRef.current = s;
+    answersRef.current = s.answers;
     setPtcp(p); setSess(s); setExam(ex); setVariant(v);
     setAnswers(s.answers);
     setTimeLeft(remaining);
     setView("exam");
   };
 
-  // Timer
+  // Timer — uses refs so auto-submit always sees current values
   useEffect(() => {
     if(view !== "exam") return;
     timerRef.current = setInterval(() => {
       setTimeLeft(t => {
         if(t <= 1) {
           clearInterval(timerRef.current);
-          setAnswers(cur => {
-            setSess(s => { setExam(ex => { setVariant(v => {
-              doSubmit(cur, s, ex, v); return v;
-            }); return ex; }); return s; });
-            return cur;
-          });
+          setTimeout(() => doSubmit(answersRef.current, sessRef.current, examRef.current, variantRef.current), 0);
           return 0;
         }
         return t - 1;
@@ -431,7 +436,7 @@ function ExamApp() {
           {/* Submit */}
           <div style={{textAlign:"center"}}>
             <div style={{fontSize:12,color:"#888",marginBottom:8}}>Verificați toate răspunsurile înainte de a trimite.</div>
-            <button onClick={()=>doSubmit(answers,sess,exam,variant)}
+            <button onClick={()=>doSubmit(answersRef.current,sessRef.current,examRef.current,variantRef.current)}
               style={{background:C.dark,color:"#fff",border:"none",borderRadius:10,padding:"14px 44px",fontSize:15,fontWeight:700,cursor:"pointer",letterSpacing:1,boxShadow:"0 4px 16px rgba(31,56,100,.3)"}}>
               TRIMITE LUCRAREA ✓
             </button>
