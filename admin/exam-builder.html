@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Editor subiect – Admin CPEEN 2026</title>
+<link rel="stylesheet" href="../css/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/admin.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+const C = {dark:"#1F3864",mid:"#2E75B6",red:"#C0392B",green:"#1D6027"};
+
+/* ── helpers ── */
+function emptyS1Item() { return {s1:"",kw:"",before:"",after:"",answers:""}; }
+function emptyS4Item() { return {before:"",kw:"",after:"",answers:""}; }
+
+function toDBFormat(meta, s1, s2, s3, s4, variantId) {
+  const s2lines = s2.linesRaw.split("\n").map(l=>l.trim()).filter(Boolean);
+  const s2keys  = s2.keysRaw.split("\n").map(k=>k.trim()).filter(Boolean);
+  const parts   = s3.textRaw.split(/(\[\d+\])/);
+  const segments = parts.flatMap(p=>{ const m=p.match(/^\[(\d+)\]$/); return m?[{g:parseInt(m[1])}]:(p?[p]:[]); });
+  return {
+    title: meta.title, level: meta.level, stage: meta.stage,
+    duration: parseInt(meta.duration)||45,
+    variants:[{
+      id: variantId||"V1",
+      s1:{ pts:parseInt(s1.pts)||3,
+           items:s1.items.map(it=>({s1:it.s1,kw:it.kw,before:it.before,after:it.after})),
+           key:s1.items.map(it=>it.answers.split(";").map(x=>x.trim()).filter(Boolean)) },
+      s2:{ pts:parseInt(s2.pts)||3, text:s2.text, intro:s2.intro, lines:s2lines, key:s2keys },
+      s3:{ pts:parseInt(s3.pts)||2, title:s3.title, segments,
+           key:s3.answers.map(a=>a.split(";").map(x=>x.trim()).filter(Boolean)) },
+      s4:{ pts:parseInt(s4.pts)||2,
+           items:s4.items.map(it=>({before:it.before,kw:it.kw,after:it.after})),
+           key:s4.items.map(it=>it.answers.split(";").map(x=>x.trim()).filter(Boolean)) }
+    }]
+  };
+}
+
+function fromVariant(exam) {
+  const v = exam.variants?.[0]||{};
+  return {
+    meta: { title:exam.title||"", level:exam.level||"B1", stage:exam.stage||"calificare", duration:String(exam.duration||45) },
+    s1: { pts:String(v.s1?.pts||3),
+          items:(v.s1?.items||[]).map((it,i)=>({...it, answers:(v.s1?.key?.[i]||[]).join("; ")})) },
+    s2: { pts:String(v.s2?.pts||3), text:v.s2?.text||"", intro:v.s2?.intro||"(0) OK | (00) DELETE",
+          linesRaw:(v.s2?.lines||[]).join("\n"), keysRaw:(v.s2?.key||[]).join("\n") },
+    s3: { pts:String(v.s3?.pts||2), title:v.s3?.title||"",
+          textRaw:(v.s3?.segments||[]).map(s=>typeof s==="string"?s:`[${s.g}]`).join(""),
+          answers:(v.s3?.key||[]).map(a=>a.join("; ")) },
+    s4: { pts:String(v.s4?.pts||2),
+          items:(v.s4?.items||[]).map((it,i)=>({...it, answers:(v.s4?.key?.[i]||[]).join("; ")})) },
+    variantId: v.id||"V1"
+  };
+}
+
+function Card({title, children}) {
+  return (
+    <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:16,overflow:"hidden"}}>
+      <div style={{background:C.dark,padding:"10px 18px",color:"#fff",fontWeight:700,fontSize:14}}>{title}</div>
+      <div style={{padding:18}}>{children}</div>
+    </div>
+  );
+}
+
+function Row({children}) { return <div style={{display:"grid",gridTemplateColumns:`repeat(${React.Children.count(children)},1fr)`,gap:10,marginBottom:10}}>{children}</div>; }
+function F({label,children}) { return <div><div style={{fontSize:12,fontWeight:600,color:"#555",marginBottom:3}}>{label}</div>{children}</div>; }
+
+function ExamBuilder() {
+  if(!ADMIN.isAuthed()) { window.location.replace("index.html"); return null; }
+
+  const params  = new URLSearchParams(window.location.search);
+  const editId  = params.get("id");
+
+  const [meta,      setMeta]      = useState({title:"",level:"B1",stage:"calificare",duration:"45"});
+  const [s1,        setS1]        = useState({pts:"3", items:[]});
+  const [s2,        setS2]        = useState({pts:"3", text:"", intro:"(0) OK | (00) DELETE", linesRaw:"", keysRaw:""});
+  const [s3,        setS3]        = useState({pts:"2", title:"", textRaw:"", answers:[]});
+  const [s4,        setS4]        = useState({pts:"2", items:[]});
+  const [variantId, setVariantId] = useState("V1");
+  const [msg,       setMsg]       = useState({type:"",text:""});
+
+  useEffect(()=>{
+    if(!editId) return;
+    const exam = CPEEN.getExams().find(e=>e.id===editId);
+    if(!exam) return;
+    const d = fromVariant(exam);
+    setMeta(d.meta); setS1(d.s1); setS2(d.s2); setS3(d.s3); setS4(d.s4); setVariantId(d.variantId);
+  },[]);
+
+  /* S1 helpers */
+  const s1Up  = (i,f,v) => setS1(p=>({...p,items:p.items.map((it,j)=>j===i?{...it,[f]:f==="kw"?v.toUpperCase():v}:it)}));
+  const s1Add = ()      => setS1(p=>({...p,items:[...p.items,emptyS1Item()]}));
+  const s1Del = i       => setS1(p=>({...p,items:p.items.filter((_,j)=>j!==i)}));
+
+  /* S3 gap sync */
+  const s3Text = raw => {
+    const n = (raw.match(/\[\d+\]/g)||[]).length;
+    setS3(p=>({...p, textRaw:raw, answers:Array.from({length:n},(_,i)=>p.answers[i]||"")}));
+  };
+
+  /* S4 helpers */
+  const s4Up  = (i,f,v) => setS4(p=>({...p,items:p.items.map((it,j)=>j===i?{...it,[f]:f==="kw"?v.toUpperCase():v}:it)}));
+  const s4Add = ()      => setS4(p=>({...p,items:[...p.items,emptyS4Item()]}));
+  const s4Del = i       => setS4(p=>({...p,items:p.items.filter((_,j)=>j!==i)}));
+
+  const save = () => {
+    setMsg({type:"",text:""});
+    if(!meta.title.trim()) { setMsg({type:"err",text:"Titlul este obligatoriu."}); return; }
+    const s2l = s2.linesRaw.split("\n").filter(l=>l.trim()).length;
+    const s2k = s2.keysRaw.split("\n").filter(k=>k.trim()).length;
+    if(s2l!==s2k) { setMsg({type:"err",text:`S2: ${s2l} linii vs ${s2k} răspunsuri.`}); return; }
+    const data = toDBFormat(meta,s1,s2,s3,s4,variantId);
+    editId ? CPEEN.updateExam(editId,data) : CPEEN.addExam(data);
+    setMsg({type:"ok",text:"Salvat!"});
+    setTimeout(()=>window.location.replace("exams.html"),1000);
+  };
+
+  const inp = "inp inp-sm";
+  const s2l = s2.linesRaw.split("\n").filter(l=>l.trim()).length;
+  const s2k = s2.keysRaw.split("\n").filter(k=>k.trim()).length;
+  const gapCount = (s3.textRaw.match(/\[\d+\]/g)||[]).length;
+
+  return (
+    <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
+      <ADMIN.Nav active="exams"/>
+      <div className="page"><div style={{maxWidth:800,margin:"0 auto"}}>
+
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+          <a href="exams.html" className="btn btn-ghost btn-sm">← Înapoi</a>
+          <h2 style={{color:C.dark,fontSize:18,margin:0}}>{editId?"Editare subiect":"Subiect nou"}</h2>
+        </div>
+
+        {/* Metadata */}
+        <Card title="Informații generale">
+          <div className="fg">
+            <label style={{fontWeight:700,color:C.dark}}>Titlu</label>
+            <input className="inp" value={meta.title} onChange={e=>setMeta(p=>({...p,title:e.target.value}))} placeholder="ex: B1 Calificare 2026"/>
+          </div>
+          <Row>
+            <F label="Nivel">
+              <select className={inp} value={meta.level} onChange={e=>setMeta(p=>({...p,level:e.target.value}))}>
+                {["A2","B1","B2","C1"].map(l=><option key={l}>{l}</option>)}
+              </select>
+            </F>
+            <F label="Etapă">
+              <select className={inp} value={meta.stage} onChange={e=>setMeta(p=>({...p,stage:e.target.value}))}>
+                <option value="calificare">Calificare</option>
+                <option value="finala">Finală</option>
+              </select>
+            </F>
+            <F label="Durată (min)">
+              <input type="number" className={inp} value={meta.duration} min="10" max="180" onChange={e=>setMeta(p=>({...p,duration:e.target.value}))}/>
+            </F>
+            <F label="ID Variantă">
+              <input className={inp} value={variantId} onChange={e=>setVariantId(e.target.value)} placeholder="V1"/>
+            </F>
+          </Row>
+        </Card>
+
+        {/* S1 */}
+        <Card title={`S1 – Key Word Transformations  (pct/item: ${s1.pts})`}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+            <span style={{fontSize:12,color:"#555"}}>Puncte/item:</span>
+            <input type="number" className={inp} style={{width:60}} value={s1.pts} min="1" max="10" onChange={e=>setS1(p=>({...p,pts:e.target.value}))}/>
+          </div>
+          {s1.items.map((it,i)=>(
+            <div key={i} style={{border:"1px solid #e0e8f0",borderRadius:8,padding:12,marginBottom:10,background:"#f8fbff"}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                <b style={{color:C.dark,fontSize:13}}>#{i+1}</b>
+                <button onClick={()=>s1Del(i)} style={{background:C.red,color:"#fff",border:"none",borderRadius:4,padding:"2px 8px",cursor:"pointer",fontSize:11}}>✕</button>
+              </div>
+              <Row>
+                <F label="Propoziție originală"><textarea className={inp} rows={2} value={it.s1} onChange={e=>s1Up(i,"s1",e.target.value)} placeholder="She had no idea..."/></F>
+                <F label="CUVÂNT CHEIE"><input className={inp} value={it.kw} onChange={e=>s1Up(i,"kw",e.target.value)} style={{textTransform:"uppercase",fontWeight:700}} placeholder="DAWNED"/></F>
+              </Row>
+              <Row>
+                <F label="Înainte de spațiu"><input className={inp} value={it.before} onChange={e=>s1Up(i,"before",e.target.value)} placeholder="It only"/></F>
+                <F label="După spațiu"><input className={inp} value={it.after} onChange={e=>s1Up(i,"after",e.target.value)} placeholder="costly..."/></F>
+              </Row>
+              <F label="Răspunsuri acceptate (separate prin ;)"><input className={inp} value={it.answers} onChange={e=>s1Up(i,"answers",e.target.value)} placeholder="dawned on her; only dawned on her"/></F>
+            </div>
+          ))}
+          <button className="btn btn-mid btn-sm" onClick={s1Add}>+ Adaugă item</button>
+        </Card>
+
+        {/* S2 */}
+        <Card title="S2 – Error Correction">
+          <Row>
+            <F label="Titlu text"><input className={inp} value={s2.text} onChange={e=>setS2(p=>({...p,text:e.target.value}))} placeholder="Social Media and..."/></F>
+            <F label="Legendă"><input className={inp} value={s2.intro} onChange={e=>setS2(p=>({...p,intro:e.target.value}))}/></F>
+            <F label="Pct/linie"><input type="number" className={inp} style={{width:60}} value={s2.pts} min="1" onChange={e=>setS2(p=>({...p,pts:e.target.value}))}/></F>
+          </Row>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <F label={`Linii text (una/rând) — ${s2l} linii`}>
+              <textarea className={inp} rows={12} value={s2.linesRaw} onChange={e=>setS2(p=>({...p,linesRaw:e.target.value}))} style={{fontFamily:"monospace",fontSize:12}} placeholder="Whereas once news was...&#10;connection is capable to..."/>
+            </F>
+            <F label={`Cuvinte corecte (una/rând) — ${s2k} răspunsuri`}>
+              <textarea className={inp} rows={12} value={s2.keysRaw} onChange={e=>setS2(p=>({...p,keysRaw:e.target.value}))} style={{fontFamily:"monospace",fontSize:12}} placeholder="an&#10;of&#10;has"/>
+            </F>
+          </div>
+          {s2l>0&&s2k>0&&s2l!==s2k&&<div className="alert alert-err" style={{marginTop:6}}>⚠ {s2l} linii ≠ {s2k} răspunsuri</div>}
+        </Card>
+
+        {/* S3 */}
+        <Card title="S3 – Open Cloze">
+          <Row>
+            <F label="Titlu text"><input className={inp} value={s3.title} onChange={e=>setS3(p=>({...p,title:e.target.value}))} placeholder="THE ART OF SLOW TRAVEL"/></F>
+            <F label="Pct/spațiu"><input type="number" className={inp} style={{width:60}} value={s3.pts} min="1" onChange={e=>setS3(p=>({...p,pts:e.target.value}))}/></F>
+          </Row>
+          <F label={`Text cu spații — folosiți [1] [2] … pentru goluri (${gapCount} detectate)`}>
+            <textarea className={inp} rows={7} value={s3.textRaw} onChange={e=>s3Text(e.target.value)} placeholder="The concept of slow travel has gained [1] momentum in [2] recent years..."/>
+          </F>
+          {gapCount>0&&(
+            <div style={{marginTop:10}}>
+              <div style={{fontSize:12,fontWeight:600,color:C.dark,marginBottom:8}}>Răspunsuri per gol <span style={{color:"#999",fontWeight:400}}>(variante separate prin ;)</span></div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:6}}>
+                {Array.from({length:gapCount},(_,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({i+1})</span>
+                    <input className={inp} style={{flex:1}} value={s3.answers[i]||""}
+                      onChange={e=>setS3(p=>({...p,answers:p.answers.map((a,j)=>j===i?e.target.value:a)}))}
+                      placeholder="in; within"/>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* S4 */}
+        <Card title={`S4 – Word Formation  (pct/item: ${s4.pts})`}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+            <span style={{fontSize:12,color:"#555"}}>Puncte/item:</span>
+            <input type="number" className={inp} style={{width:60}} value={s4.pts} min="1" max="10" onChange={e=>setS4(p=>({...p,pts:e.target.value}))}/>
+          </div>
+          {s4.items.map((it,i)=>(
+            <div key={i} style={{border:"1px solid #e0e8f0",borderRadius:8,padding:12,marginBottom:10,background:"#f8fbff"}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                <b style={{color:C.dark,fontSize:13}}>#{i+1}</b>
+                <button onClick={()=>s4Del(i)} style={{background:C.red,color:"#fff",border:"none",borderRadius:4,padding:"2px 8px",cursor:"pointer",fontSize:11}}>✕</button>
+              </div>
+              <Row>
+                <F label="Înainte"><input className={inp} value={it.before} onChange={e=>s4Up(i,"before",e.target.value)} placeholder="The"/></F>
+                <F label="CUVÂNT CHEIE"><input className={inp} value={it.kw} onChange={e=>s4Up(i,"kw",e.target.value)} style={{textTransform:"uppercase",fontWeight:700}} placeholder="AUTHENTIC"/></F>
+                <F label="După"><input className={inp} value={it.after} onChange={e=>s4Up(i,"after",e.target.value)} placeholder="of the manuscript..."/></F>
+              </Row>
+              <F label="Forme acceptate (separate prin ;)"><input className={inp} value={it.answers} onChange={e=>s4Up(i,"answers",e.target.value)} placeholder="authentication; authenticated"/></F>
+            </div>
+          ))}
+          <button className="btn btn-mid btn-sm" onClick={s4Add}>+ Adaugă item</button>
+        </Card>
+
+        {msg.text && <div className={`alert alert-${msg.type==="ok"?"ok":"err"}`}>{msg.text}</div>}
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end",paddingBottom:40}}>
+          <a href="exams.html" className="btn btn-ghost">Anulează</a>
+          <button className="btn btn-primary" onClick={save}>{editId?"Actualizează":"Salvează subiectul"}</button>
+        </div>
+      </div></div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<ExamBuilder/>);
+</script>
+</body>
+</html>
