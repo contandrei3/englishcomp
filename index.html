@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CPEEN 2026 – Platformă de evaluare</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#f0f4f8;font-family:Georgia,serif;}
+  input,select,button{font-family:inherit;}
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:#2E75B6;border-radius:3px;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ── Storage: localStorage pentru GitHub Pages ──────────────────────────────
+const storage = {
+  set: (k,v) => { try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } },
+  get: (k)   => { try{ const v=localStorage.getItem(k); return v?{value:v}:null; }catch(e){ return null; } },
+  list: (prefix) => { try{ const keys=[]; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith(prefix))keys.push(k); } return {keys}; }catch(e){ return {keys:[]}; } },
+};
+
+const TEACHER_PASS = "cpeen2026";
+const C = { dark:"#1F3864", mid:"#2E75B6", light:"#D6E4F0", accent:"#E8F4FD", red:"#C0392B", green:"#1D6027", orange:"#E67E22" };
+const norm = s => (s||"").trim().toLowerCase().replace(/\s+/g," ");
+const DURATION = { calificare:45, finala:60 };
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BAZA DE SUBIECTE — adaugă variante noi în arrays-urile de mai jos
+// ══════════════════════════════════════════════════════════════════════════════
+const EXAMS = {
+  C1: {
+    finala: { variants: [
+      { id:"V1",
+        s1:{
+          items:[
+            {kw:"DAWNED",   s1:"She had no idea how costly the renovation would turn out to be until she received the builder's quote.", before:"It only", after:"costly the renovation would be when she received the builder's quote."},
+            {kw:"PROSPECT", s1:"The authorities are very unlikely to lift the travel ban before the end of the year.", before:"There is", after:"of the travel ban being lifted before the end of the year."},
+            {kw:"EXCEEDED", s1:"Margaret found the new software system far more intuitive than she had anticipated.", before:"The new software system's ease of use", after:"Margaret."},
+            {kw:"OWN",      s1:"She consistently refused to admit that her initial assessment had been wrong.", before:"She consistently refused", after:"that her initial assessment had been wrong."},
+            {kw:"HAVING",   s1:"People rarely achieve lasting success in creative fields without experiencing at least one major setback.", before:"Lasting success in creative fields rarely comes", after:"at least one major setback."},
+            {kw:"SPITE",    s1:"Even though the negotiations had broken down completely, the diplomats refused to abandon hope.", before:"The diplomats refused to abandon hope", after:"complete breakdown of the negotiations."},
+            {kw:"POINT",    s1:"He never once stopped to consider that his business model might be fundamentally flawed.", before:"", after:"did he stop to consider that his business model might be fundamentally flawed."},
+            {kw:"LIGHT",    s1:"The investigation revealed that the company had been falsifying its accounts for years.", before:"The fact that the company had been falsifying its accounts for years was", after:"the investigation."},
+            {kw:"ACCOUNT",  s1:"The government faced severe criticism for failing to address the housing crisis in time.", before:"The government", after:"its failure to address the housing crisis in time."},
+            {kw:"TERMS",    s1:"She found it extremely difficult to accept the new working conditions.", before:"She", after:"the new working conditions."},
+          ],
+          key:[
+            ["dawned on her how","only dawned on her how"],
+            ["very little prospect","little prospect whatsoever","slim prospect whatsoever","very slim prospect"],
+            ["far exceeded the expectations of"],
+            ["to own up to the fact","to own up to the fact that"],
+            ["without having gone through","without having experienced","without having had"],
+            ["in spite of the"],
+            ["at no point"],
+            ["brought to light by"],
+            ["was called to account for"],
+            ["struggled to come to terms with","found it hard to come to terms with"],
+          ],
+          pts:3,
+        },
+        s2:{
+          intro:"(0) OK | (00) DELETE 'to'",
+          text:"Social Media and Political Discourse",
+          lines:[
+            "Whereas once news was controlled by established broadcasters, today anyone who has internet",
+            "connection is capable to broadcasting their views to a global audience. Supporters of this",
+            "shift argue that social media have democratised political participation, giving marginalised",
+            "voices a chance to be heard. Critics, however, note that false stories spread considerately",
+            "faster than accurate ones on these platforms and are far most likely to go viral. Perhaps",
+            'the most troubling development is the rise of "echo chambers" — digital spaces in that',
+            "users are exposed solely to views that reinforce their own beliefs. This makes increasingly",
+            "difficult to engage in the kind of reasoned dialogue that healthy democracies depend of.",
+            "Unless social media companies take greater responsible for the content shared on their",
+            "platforms, these troubling trends are unlike to reverse, threatening democratic discourse.",
+          ],
+          key:["an","of","has","considerably","more","which","it","on","responsibility","unlikely"],
+          pts:3,
+        },
+        s3:{
+          title:"THE ART OF SLOW TRAVEL",
+          segments:[
+            "The concept of slow travel has gained considerable momentum ",{g:1}," recent years, emerging as a deliberate counterpoint to the relentless pace of modern tourism. ",{g:2}," of rushing from one landmark to another, slow travellers choose to remain in a single destination for an extended period, immersing themselves fully in ",{g:3}," local culture and daily rhythms. The philosophy is rooted in the belief that genuine cultural understanding cannot ",{g:4}," achieved by merely ticking items off a list of must-see attractions. ",{g:5},", it demands patience, curiosity, and a willingness to embrace the unplanned. Advocates argue that this approach benefits not only the individual traveller, ",{g:6}," also the communities they visit. When tourists stay longer, they tend to spend their money at local businesses ",{g:7}," than at international chains. Furthermore, the reduced need for frequent flights significantly lowers one's carbon footprint, making slow travel an environmentally conscious ",{g:8}," as well. Critics, ",{g:9},", maintain that slow travel is a luxury that few can afford. This is a valid point, and one ",{g:10}," which advocates have yet to offer a fully satisfactory answer.",
+          ],
+          key:[["in"],["instead","rather"],["the"],["be"],["rather","instead"],["but"],["rather"],["choice","option"],["however"],["to"]],
+          pts:2,
+        },
+        s4:{
+          items:[
+            {before:"The", after:"of the ancient manuscript confirmed that it dated back to the 12th century.", kw:"AUTHENTIC"},
+            {before:"His", after:"refusal to compromise ultimately led to the breakdown of the negotiations.", kw:"YIELD"},
+            {before:"The charity's work has brought about a remarkable", after:"in the lives of thousands of displaced families.", kw:"TRANSFORM"},
+            {before:"She was widely praised for her", after:"in dealing with the unexpected crisis that arose mid-project.", kw:"RESOURCE"},
+            {before:"The", after:"of the new policy has sparked widespread debate among legal experts.", kw:"IMPLEMENT"},
+            {before:"Many historians consider the treaty to have been fundamentally", after:"due to its ambiguous wording.", kw:"EFFECT"},
+            {before:"The professor's", after:"approach to teaching encouraged students to question received wisdom.", kw:"CONVENTIONAL"},
+            {before:"The report highlighted a fundamental", after:"between the two countries' approaches to fiscal policy.", kw:"COMPATIBLE"},
+            {before:"Her speech was delivered with such", after:"that the entire audience fell silent.", kw:"ELOQUENT"},
+            {before:"The excavation shed new light on the", after:"of the ancient civilisation and its early trading routes.", kw:"ORIGIN"},
+          ],
+          key:[["authentication"],["unyielding"],["transformation"],["resourcefulness"],["implementation"],["ineffective","ineffectual"],["unconventional"],["incompatibility"],["eloquence"],["origins"]],
+          pts:2,
+        },
+      },
+      // Adaugă V2, V3, V4 aici cu aceeași structură
+    ]},
+    calificare:{ variants:[] }, // Adaugă variante de calificare C1
+  },
+  B2:{ finala:{variants:[]}, calificare:{variants:[]} },
+  B1:{ finala:{variants:[]}, calificare:{variants:[]} },
+  A2:{ finala:{variants:[]}, calificare:{variants:[]} },
+};
+
+// ── Grading ────────────────────────────────────────────────────────────────
+function gradeVariant(variant, answers) {
+  let total = 10;
+  const det = {s1:[],s2:[],s3:[],s4:[]};
+  variant.s1.key.forEach((acc,i)=>{ const ok=acc.some(a=>norm(a)===norm(answers.s1[i])); det.s1.push(ok); if(ok)total+=variant.s1.pts; });
+  variant.s2.key.forEach((a,i)=>{ const ok=norm(a)===norm(answers.s2[i]); det.s2.push(ok); if(ok)total+=variant.s2.pts; });
+  variant.s3.key.forEach((acc,i)=>{ const ok=acc.some(a=>norm(a)===norm(answers.s3[i])); det.s3.push(ok); if(ok)total+=variant.s3.pts; });
+  variant.s4.key.forEach((acc,i)=>{ const ok=acc.some(a=>norm(a)===norm(answers.s4[i])); det.s4.push(ok); if(ok)total+=variant.s4.pts; });
+  return {total,det};
+}
+
+const fmtTime = s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+const LEVEL_COLOR = {A2:"#27AE60",B1:"#E67E22",B2:"#8E44AD",C1:"#2E75B6"};
+const LEVEL_LABEL = {A2:"Elementar",B1:"Intermediar",B2:"Avansat",C1:"Performanță"};
+
+// ── UI Components ──────────────────────────────────────────────────────────
+const SBadge = ({n,title,pts}) => (
+  <div style={{background:C.dark,borderRadius:8,padding:"10px 16px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <span style={{color:"white",fontWeight:700,fontSize:14,letterSpacing:1}}>SECTION {n} — {title}</span>
+    <span style={{background:C.mid,color:"white",borderRadius:20,padding:"2px 12px",fontSize:12,fontWeight:600}}>{pts}</span>
+  </div>
+);
+const Instr = ({t}) => <p style={{fontStyle:"italic",color:"#555",fontSize:12,background:C.accent,borderLeft:`3px solid ${C.mid}`,padding:"8px 12px",borderRadius:4,margin:"8px 0 14px"}}>{t}</p>;
+const Inp = ({value,onChange,placeholder="",w="100%"}) => (
+  <input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
+    style={{width:w,border:`1.5px solid ${C.mid}`,borderRadius:6,padding:"5px 9px",fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+);
+
+function S3Text({segments}) {
+  return <span>{segments.map((seg,i)=>
+    typeof seg==="string"
+      ? <span key={i}>{seg}</span>
+      : <span key={i} style={{background:C.dark,color:"white",borderRadius:4,fontSize:11,fontWeight:700,padding:"1px 6px",margin:"0 2px"}}>({seg.g})</span>
+  )}</span>;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MAIN APP
+// ══════════════════════════════════════════════════════════════════════════════
+function App() {
+  const [view,     setView]    = useState("home");
+  const [level,    setLevel]   = useState(null);
+  const [stage,    setStage]   = useState(null);
+  const [variant,  setVariant] = useState(null);
+  const [student,  setStudent] = useState({name:"",school:"",grade:"",teacher:""});
+  const [answers,  setAnswers] = useState({s1:[],s2:[],s3:[],s4:[]});
+  const [result,   setResult]  = useState(null);
+  const [timeLeft, setTimeLeft]= useState(0);
+  const [tPass,    setTPass]   = useState("");
+  const [tErr,     setTErr]    = useState("");
+  const [subs,     setSubs]    = useState([]);
+  const [selSub,   setSelSub]  = useState(null);
+  const [tFilter,  setTFilter] = useState({level:"all",stage:"all"});
+  const timerRef  = useRef(null);
+  const submitted = useRef(false);
+
+  const setAns = (sec,i,v) => setAnswers(p=>({...p,[sec]:p[sec].map((x,j)=>j===i?v:x)}));
+
+  const startExam = () => {
+    const pool = EXAMS[level]?.[stage]?.variants||[];
+    if(!pool.length){ alert("Subiectele pentru această etapă nu au fost încă adăugate."); return; }
+    const v = pool[Math.floor(Math.random()*pool.length)];
+    setVariant(v);
+    setAnswers({s1:Array(v.s1.items.length).fill(""),s2:Array(v.s2.key.length).fill(""),s3:Array(v.s3.key.length).fill(""),s4:Array(v.s4.items.length).fill("")});
+    setTimeLeft(DURATION[stage]*60);
+    submitted.current=false;
+    setView("exam");
+  };
+
+  const handleSubmit = useCallback(()=>{
+    if(submitted.current||!variant) return;
+    submitted.current=true;
+    clearInterval(timerRef.current);
+    const res = gradeVariant(variant,answers);
+    const sub = {student,level,stage,variantId:variant.id,answers,result:res,ts:Date.now()};
+    storage.set(`cpeen_${level}_${stage}_${Date.now()}`, JSON.stringify(sub));
+    setResult(res);
+    setView("result");
+  },[answers,student,variant,level,stage]);
+
+  useEffect(()=>{
+    if(view==="exam"){
+      timerRef.current=setInterval(()=>{
+        setTimeLeft(t=>{ if(t<=1){ clearInterval(timerRef.current); handleSubmit(); return 0; } return t-1; });
+      },1000);
+    }
+    return ()=>clearInterval(timerRef.current);
+  },[view]);
+
+  const loadSubs = () => {
+    const {keys} = storage.list("cpeen_");
+    const loaded = keys.map(k=>{ const r=storage.get(k); return r?JSON.parse(r.value):null; }).filter(Boolean);
+    setSubs(loaded.sort((a,b)=>b.ts-a.ts));
+  };
+
+  const canStart = student.name.trim()&&student.school.trim()&&student.grade.trim();
+  const filteredSubs = subs.filter(s=>(tFilter.level==="all"||s.level===tFilter.level)&&(tFilter.stage==="all"||s.stage===tFilter.stage));
+
+  // ── HOME ────────────────────────────────────────────────────────────────
+  if(view==="home") return (
+    <div style={{minHeight:"100vh",background:"#f0f4f8",display:"flex",flexDirection:"column",alignItems:"center",padding:"32px 16px"}}>
+      <div style={{width:"100%",maxWidth:600}}>
+        <div style={{background:C.dark,borderRadius:"12px 12px 0 0",padding:"24px 32px",textAlign:"center"}}>
+          <div style={{color:C.light,fontSize:11,letterSpacing:3,textTransform:"uppercase",marginBottom:6}}>englishgrammarchallenge.ro</div>
+          <div style={{color:"white",fontSize:20,fontWeight:700,lineHeight:1.4}}>CONCURSUL DE PERFORMANȚĂ<br/>ÎN LIMBA ENGLEZĂ</div>
+          <div style={{color:C.light,fontSize:12,marginTop:6,opacity:.8}}>CPEEN 2026 · Platformă de evaluare</div>
+        </div>
+        <div style={{background:"white",borderRadius:"0 0 12px 12px",padding:"28px 32px",boxShadow:"0 4px 20px rgba(0,0,0,.1)"}}>
+          
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:13,fontWeight:700,color:C.dark,marginBottom:10}}>1. Alege nivelul</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {["A2","B1","B2","C1"].map(l=>{
+                const has=(EXAMS[l]?.finala?.variants?.length||0)+(EXAMS[l]?.calificare?.variants?.length||0)>0;
+                return <button key={l} onClick={()=>setLevel(l)}
+                  style={{border:`2px solid ${level===l?LEVEL_COLOR[l]:"#ddd"}`,borderRadius:8,padding:"12px 8px",background:level===l?LEVEL_COLOR[l]+"22":"white",cursor:"pointer",textAlign:"left"}}>
+                  <div style={{fontWeight:700,color:level===l?LEVEL_COLOR[l]:C.dark,fontSize:15}}>{l}</div>
+                  <div style={{fontSize:11,color:"#777",marginTop:2}}>{LEVEL_LABEL[l]}</div>
+                  <div style={{fontSize:10,color:has?C.green:C.orange,marginTop:2}}>{has?"✓ disponibil":"⚙ în pregătire"}</div>
+                </button>;
+              })}
+            </div>
+          </div>
+
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:13,fontWeight:700,color:C.dark,marginBottom:10}}>2. Alege etapa</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {[["calificare","🖥 Calificare","Online · 45 min"],["finala","🏆 Finală","Supervizat · 60 min"]].map(([s,lbl,sub])=>(
+                <button key={s} onClick={()=>setStage(s)}
+                  style={{border:`2px solid ${stage===s?C.dark:"#ddd"}`,borderRadius:8,padding:"12px",background:stage===s?C.dark:"white",cursor:"pointer",textAlign:"left"}}>
+                  <div style={{fontWeight:700,color:stage===s?"white":C.dark,fontSize:13}}>{lbl}</div>
+                  <div style={{fontSize:11,color:stage===s?C.light:"#888",marginTop:2}}>{sub}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {level&&stage&&(
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.dark,marginBottom:10}}>3. Date participant</div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {[["Numele și prenumele *","name","ex: Ionescu Maria"],["Școala *","school","ex: CN Mihai Viteazul Ploiești"],["Clasa *","grade","ex: X A"],["Profesor coordonator","teacher","(opțional)"]].map(([lbl,f,ph])=>(
+                  <div key={f}>
+                    <label style={{fontSize:12,fontWeight:600,color:C.dark,display:"block",marginBottom:3}}>{lbl}</label>
+                    <Inp value={student[f]} onChange={v=>setStudent(p=>({...p,[f]:v}))} placeholder={ph}/>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {level&&stage&&(
+            <button onClick={startExam}
+              style={{width:"100%",background:canStart?C.dark:"#aaa",color:"white",border:"none",borderRadius:8,padding:"14px",fontSize:15,fontWeight:700,cursor:canStart?"pointer":"not-allowed",letterSpacing:1}}>
+              ÎNCEPE EXAMENUL →
+            </button>
+          )}
+
+          <div style={{textAlign:"center",marginTop:16}}>
+            <button onClick={()=>setView("teacherlogin")} style={{background:"none",border:"none",color:C.mid,fontSize:12,cursor:"pointer",textDecoration:"underline"}}>
+              Acces profesor / administrator
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── TEACHER LOGIN ────────────────────────────────────────────────────────
+  if(view==="teacherlogin") return (
+    <div style={{minHeight:"100vh",background:"#f0f4f8",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{background:"white",borderRadius:12,padding:"32px",width:320,boxShadow:"0 4px 20px rgba(0,0,0,.1)"}}>
+        <div style={{textAlign:"center",marginBottom:20}}>
+          <div style={{fontSize:16,fontWeight:700,color:C.dark}}>Dashboard Profesor</div>
+          <div style={{fontSize:12,color:"#888"}}>CPEEN 2026</div>
+        </div>
+        <label style={{fontSize:13,fontWeight:600,color:C.dark,display:"block",marginBottom:6}}>Parolă</label>
+        <input type="password" value={tPass} onChange={e=>setTPass(e.target.value)}
+          onKeyDown={e=>{ if(e.key==="Enter"){ if(tPass===TEACHER_PASS){loadSubs();setView("teacher");}else setTErr("Parolă incorectă."); }}}
+          style={{width:"100%",border:`1.5px solid ${C.mid}`,borderRadius:6,padding:"8px 10px",fontSize:14,boxSizing:"border-box",marginBottom:8}}/>
+        {tErr&&<div style={{color:C.red,fontSize:12,marginBottom:8}}>{tErr}</div>}
+        <button onClick={()=>{ if(tPass===TEACHER_PASS){loadSubs();setView("teacher");}else setTErr("Parolă incorectă."); }}
+          style={{width:"100%",background:C.dark,color:"white",border:"none",borderRadius:6,padding:"10px",cursor:"pointer",fontWeight:600}}>Intră</button>
+        <button onClick={()=>setView("home")} style={{width:"100%",background:"none",border:"none",color:C.mid,marginTop:8,cursor:"pointer",fontSize:13}}>← Înapoi</button>
+      </div>
+    </div>
+  );
+
+  // ── TEACHER DASHBOARD ────────────────────────────────────────────────────
+  if(view==="teacher") return (
+    <div style={{minHeight:"100vh",background:"#f0f4f8",padding:"24px 16px"}}>
+      <div style={{maxWidth:900,margin:"0 auto"}}>
+        <div style={{background:C.dark,color:"white",borderRadius:"12px 12px 0 0",padding:"14px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div><strong>Dashboard CPEEN 2026</strong><span style={{marginLeft:10,fontSize:12,opacity:.7}}>{filteredSubs.length} submisii</span></div>
+          <button onClick={()=>setView("home")} style={{background:"none",border:"1px solid rgba(255,255,255,.4)",color:"white",borderRadius:6,padding:"4px 12px",cursor:"pointer",fontSize:12}}>Ieși</button>
+        </div>
+        <div style={{background:"white",padding:"12px 24px",display:"flex",gap:12,flexWrap:"wrap",borderBottom:"1px solid #eee"}}>
+          <select value={tFilter.level} onChange={e=>setTFilter(p=>({...p,level:e.target.value}))}
+            style={{border:`1px solid ${C.mid}`,borderRadius:6,padding:"5px 10px",fontSize:13}}>
+            <option value="all">Toate nivelurile</option>
+            {["A2","B1","B2","C1"].map(l=><option key={l} value={l}>{l}</option>)}
+          </select>
+          <select value={tFilter.stage} onChange={e=>setTFilter(p=>({...p,stage:e.target.value}))}
+            style={{border:`1px solid ${C.mid}`,borderRadius:6,padding:"5px 10px",fontSize:13}}>
+            <option value="all">Ambele etape</option>
+            <option value="calificare">Calificare</option>
+            <option value="finala">Finală</option>
+          </select>
+          <button onClick={loadSubs} style={{background:C.mid,color:"white",border:"none",borderRadius:6,padding:"5px 14px",cursor:"pointer",fontSize:13}}>↻ Actualizează</button>
+          {filteredSubs.length>0&&(
+            <button onClick={()=>{
+              const csv=["Nume,Școală,Clasă,Profesor,Nivel,Etapă,Variantă,Punctaj,Notă,Data"]
+                .concat(filteredSubs.map(s=>`"${s.student.name}","${s.student.school}","${s.student.grade}","${s.student.teacher||""}",${s.level},${s.stage},${s.variantId},${s.result.total},${(s.result.total/10).toFixed(2)},"${new Date(s.ts).toLocaleString("ro-RO")}"`))
+                .join("\n");
+              const a=document.createElement("a"); a.href="data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent(csv); a.download="cpeen_rezultate.csv"; a.click();
+            }} style={{background:C.green,color:"white",border:"none",borderRadius:6,padding:"5px 14px",cursor:"pointer",fontSize:13}}>⬇ Export CSV</button>
+          )}
+        </div>
+        {selSub ? (
+          <div style={{background:"white",borderRadius:"0 0 12px 12px",padding:"24px",boxShadow:"0 4px 20px rgba(0,0,0,.1)"}}>
+            <button onClick={()=>setSelSub(null)} style={{background:"none",border:"none",color:C.mid,cursor:"pointer",marginBottom:16,fontSize:13}}>← Înapoi</button>
+            <div style={{display:"flex",gap:16,marginBottom:20,flexWrap:"wrap"}}>
+              <div style={{flex:1,minWidth:200}}>
+                <div style={{fontSize:18,fontWeight:700,color:C.dark}}>{selSub.student.name}</div>
+                <div style={{fontSize:13,color:"#666"}}>{selSub.student.school} · {selSub.student.grade}</div>
+                {selSub.student.teacher&&<div style={{fontSize:13,color:"#666"}}>Prof. {selSub.student.teacher}</div>}
+                <div style={{display:"flex",gap:8,marginTop:6,flexWrap:"wrap"}}>
+                  <span style={{background:LEVEL_COLOR[selSub.level],color:"white",borderRadius:12,padding:"2px 10px",fontSize:12,fontWeight:700}}>{selSub.level}</span>
+                  <span style={{background:C.dark,color:"white",borderRadius:12,padding:"2px 10px",fontSize:12}}>{selSub.stage==="finala"?"Finală":"Calificare"}</span>
+                  <span style={{background:"#eee",borderRadius:12,padding:"2px 10px",fontSize:12}}>Varianta {selSub.variantId}</span>
+                </div>
+                <div style={{fontSize:12,color:"#999",marginTop:4}}>{new Date(selSub.ts).toLocaleString("ro-RO")}</div>
+              </div>
+              <div style={{background:C.dark,color:"white",borderRadius:10,padding:"12px 24px",textAlign:"center"}}>
+                <div style={{fontSize:40,fontWeight:700}}>{selSub.result.total}</div>
+                <div style={{fontSize:12,opacity:.8}}>din 100 · Nota: {(selSub.result.total/10).toFixed(2)}</div>
+              </div>
+            </div>
+            {["s1","s2","s3","s4"].map((sec,si)=>{
+              const secData=EXAMS[selSub.level]?.[selSub.stage]?.variants?.find(v=>v.id===selSub.variantId)?.[sec];
+              const pts=secData?.pts||0;
+              const scored=selSub.result.det[sec].filter(Boolean).length*pts;
+              const max=selSub.result.det[sec].length*pts;
+              return (
+                <div key={sec} style={{marginBottom:14}}>
+                  <div style={{background:C.mid,color:"white",padding:"4px 12px",borderRadius:6,fontSize:13,fontWeight:600,marginBottom:6}}>
+                    S{si+1} — {["KWT","Error Correction","Open Cloze","Word Formation"][si]} ({scored}/{max}p)
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(165px,1fr))",gap:5}}>
+                    {selSub.answers[sec].map((ans,i)=>{
+                      const ok=selSub.result.det[sec][i];
+                      const ca=Array.isArray(secData?.key?.[i])?secData.key[i][0]:secData?.key?.[i];
+                      return (
+                        <div key={i} style={{background:ok?"#e8f5e9":"#fce4e4",border:`1px solid ${ok?"#a5d6a7":"#ef9a9a"}`,borderRadius:6,padding:"5px 9px",fontSize:11}}>
+                          <span style={{fontWeight:700,color:"#555"}}>#{i+1} </span>
+                          <span style={{color:ok?C.green:C.red}}>{ans||"—"}</span>
+                          {!ok&&ca&&<div style={{color:C.green,fontSize:10,marginTop:1}}>✓ {ca}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{background:"#fff8e1",borderLeft:"3px solid #f9a825",padding:"8px 12px",fontSize:12,borderRadius:4,marginTop:8}}>
+              ⚠️ <strong>Section 1 (KWT)</strong> — verificați manual, sunt acceptate variante multiple.
+            </div>
+          </div>
+        ):(
+          <div style={{background:"white",borderRadius:"0 0 12px 12px",boxShadow:"0 4px 20px rgba(0,0,0,.1)"}}>
+            {filteredSubs.length===0
+              ?<div style={{padding:"40px",textAlign:"center",color:"#888"}}>Nu există submisii.</div>
+              :filteredSubs.map((s,i)=>(
+                <div key={i} onClick={()=>setSelSub(s)}
+                  style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 24px",borderBottom:"1px solid #eee",cursor:"pointer"}}
+                  onMouseEnter={e=>e.currentTarget.style.background="#f5f9ff"} onMouseLeave={e=>e.currentTarget.style.background="white"}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{background:LEVEL_COLOR[s.level],color:"white",borderRadius:8,padding:"2px 8px",fontSize:12,fontWeight:700}}>{s.level}</span>
+                    <div>
+                      <div style={{fontWeight:700,color:C.dark,fontSize:14}}>{s.student.name}</div>
+                      <div style={{fontSize:11,color:"#999"}}>{s.student.school} · {s.student.grade} · {s.stage==="finala"?"Finală":"Calificare"} · {s.variantId} · {new Date(s.ts).toLocaleString("ro-RO")}</div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{background:s.result.total>=50?C.dark:C.red,color:"white",borderRadius:20,padding:"4px 12px",fontWeight:700,fontSize:14}}>{s.result.total}p</span>
+                    <span style={{color:C.mid}}>›</span>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // ── RESULT ───────────────────────────────────────────────────────────────
+  if(view==="result"&&result&&variant) return (
+    <div style={{minHeight:"100vh",background:"#f0f4f8",display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 16px"}}>
+      <div style={{width:"100%",maxWidth:480,background:"white",borderRadius:12,overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,.12)"}}>
+        <div style={{background:C.dark,padding:"24px",textAlign:"center"}}>
+          <div style={{color:C.light,fontSize:11,letterSpacing:2,marginBottom:6}}>CPEEN 2026 · {level} · {stage==="finala"?"Finală":"Calificare"} · {variant.id}</div>
+          <div style={{color:"white",fontSize:44,fontWeight:700}}>{result.total}</div>
+          <div style={{color:C.light,fontSize:13}}>puncte din 100 · Nota: <strong style={{fontSize:17}}>{(result.total/10).toFixed(2)}</strong></div>
+        </div>
+        <div style={{padding:"24px"}}>
+          <div style={{fontWeight:700,color:C.dark}}>{student.name}</div>
+          <div style={{fontSize:13,color:"#888",marginBottom:16}}>{student.school} · {student.grade}</div>
+          {[
+            {sec:"s1",lbl:"KWT",max:variant.s1.key.length*variant.s1.pts},
+            {sec:"s2",lbl:"Error Correction",max:variant.s2.key.length*variant.s2.pts},
+            {sec:"s3",lbl:"Open Cloze",max:variant.s3.key.length*variant.s3.pts},
+            {sec:"s4",lbl:"Word Formation",max:variant.s4.key.length*variant.s4.pts},
+          ].map(({sec,lbl,max})=>{
+            const scored=result.det[sec].filter(Boolean).length*(max/result.det[sec].length);
+            return (
+              <div key={sec} style={{marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:3}}>
+                  <span style={{color:C.dark,fontWeight:600}}>{lbl}</span>
+                  <span style={{fontWeight:700,color:C.mid}}>{scored}/{max}p</span>
+                </div>
+                <div style={{background:"#eee",borderRadius:4,height:7}}>
+                  <div style={{background:C.mid,width:`${(scored/max)*100}%`,height:7,borderRadius:4}}/>
+                </div>
+              </div>
+            );
+          })}
+          <div style={{background:"#fff8e1",border:"1px solid #f9a825",borderRadius:6,padding:"8px 12px",fontSize:11,marginTop:12}}>
+            ⚠️ Secțiunea KWT poate fi reverificată manual de profesor.
+          </div>
+          <div style={{textAlign:"center",marginTop:14,color:"#888",fontSize:11}}>
+            Răspunsurile au fost salvate.<br/>
+            <span style={{color:C.mid}}>englishgrammarchallenge.ro · CPEEN 2026</span>
+          </div>
+          <button onClick={()=>{setView("home");setLevel(null);setStage(null);setVariant(null);setResult(null);setStudent({name:"",school:"",grade:"",teacher:""}); }}
+            style={{width:"100%",background:C.dark,color:"white",border:"none",borderRadius:8,padding:"10px",marginTop:14,cursor:"pointer",fontWeight:600,fontSize:13}}>
+            ← Pagina principală
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── EXAM ─────────────────────────────────────────────────────────────────
+  const urgent = timeLeft<300;
+  return (
+    <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
+      <div style={{position:"sticky",top:0,zIndex:100,background:C.dark,padding:"9px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>
+        <div style={{color:C.light,fontSize:11,fontWeight:600,letterSpacing:1}}>
+          <span style={{background:LEVEL_COLOR[level],color:"white",borderRadius:6,padding:"1px 7px",marginRight:8,fontWeight:700}}>{level}</span>
+          {stage==="finala"?"Finală":"Calificare"} · {variant?.id} · {student.name}
+        </div>
+        <div style={{background:urgent?C.red:C.mid,color:"white",borderRadius:8,padding:"5px 14px",fontWeight:700,fontSize:17,fontFamily:"monospace",letterSpacing:2,animation:urgent?"blink 1s infinite":"none"}}>
+          ⏱ {fmtTime(timeLeft)}
+        </div>
+        <div style={{display:"flex",gap:5}}>
+          {[1,2,3,4].map(n=>(
+            <button key={n} onClick={()=>document.getElementById(`sec${n}`)?.scrollIntoView({behavior:"smooth"})}
+              style={{background:"rgba(255,255,255,.15)",color:"white",border:"none",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:600}}>S{n}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{maxWidth:750,margin:"0 auto",padding:"22px 16px 80px"}}>
+
+        <div id="sec1" style={{background:"white",borderRadius:12,padding:"22px",marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+          <SBadge n={1} title="KEY WORD TRANSFORMATIONS" pts={`${variant.s1.items.length} × ${variant.s1.pts} = ${variant.s1.items.length*variant.s1.pts} pts`}/>
+          <Instr t="Complete the second sentence using the word given. Do NOT change the word given. Use between THREE and SIX words including the word given."/>
+          {variant.s1.items.map((item,i)=>(
+            <div key={i} style={{borderBottom:"1px solid #eee",paddingBottom:14,marginBottom:14}}>
+              <div style={{fontSize:13,color:"#333",marginBottom:5}}><strong style={{color:C.dark,marginRight:5}}>{i+1}.</strong>{item.s1}</div>
+              <div style={{display:"inline-block",background:C.dark,color:"white",fontWeight:700,fontSize:10,letterSpacing:2,padding:"2px 9px",borderRadius:4,marginBottom:7}}>{item.kw}</div>
+              <div style={{fontSize:13,color:"#333",display:"flex",alignItems:"center",flexWrap:"wrap",gap:4}}>
+                {item.before&&<span>{item.before}</span>}
+                <Inp value={answers.s1[i]} onChange={v=>setAns("s1",i,v)} placeholder="3–6 words..." w="210px"/>
+                {item.after&&<span>{item.after}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div id="sec2" style={{background:"white",borderRadius:12,padding:"22px",marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+          <SBadge n={2} title="ERROR CORRECTION" pts={`${variant.s2.key.length} × ${variant.s2.pts} = ${variant.s2.key.length*variant.s2.pts} pts`}/>
+          <Instr t="Each numbered line contains ONE error. Write the correct word. Write DELETE if a word should be removed."/>
+          <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:"12px",marginBottom:14,fontFamily:"'Courier New',monospace",fontSize:12,lineHeight:2}}>
+            <div style={{color:"#999",marginBottom:4}}>(0) — OK | (00) {variant.s2.intro}</div>
+            <strong style={{color:C.dark,display:"block",marginBottom:6}}>{variant.s2.text}</strong>
+            {variant.s2.lines.map((line,i)=>(
+              <div key={i} style={{display:"flex",gap:6,alignItems:"baseline"}}>
+                <span style={{color:C.dark,fontWeight:700,minWidth:18}}>{i+1}.</span>
+                <span>{line}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+            {variant.s2.lines.map((_,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontWeight:700,color:C.dark,minWidth:24,fontSize:12}}>{i+1}.</span>
+                <Inp value={answers.s2[i]} onChange={v=>setAns("s2",i,v)} placeholder="correct word / DELETE"/>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div id="sec3" style={{background:"white",borderRadius:12,padding:"22px",marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+          <SBadge n={3} title="OPEN CLOZE" pts={`${variant.s3.key.length} × ${variant.s3.pts} = ${variant.s3.key.length*variant.s3.pts} pts`}/>
+          <Instr t="Read the text and think of ONE word which best fits each gap."/>
+          <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:"14px",marginBottom:14,fontSize:13,lineHeight:1.9}}>
+            <strong style={{color:C.dark,display:"block",marginBottom:8}}>{variant.s3.title}</strong>
+            <S3Text segments={variant.s3.segments}/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+            {variant.s3.key.map((_,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({i+1})</span>
+                <Inp value={answers.s3[i]} onChange={v=>setAns("s3",i,v)} placeholder="one word"/>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div id="sec4" style={{background:"white",borderRadius:12,padding:"22px",marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+          <SBadge n={4} title="WORD FORMATION" pts={`${variant.s4.items.length} × ${variant.s4.pts} = ${variant.s4.items.length*variant.s4.pts} pts`}/>
+          <Instr t="Use the word in CAPITALS to form a word that fits the gap."/>
+          {variant.s4.items.map((item,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:9,flexWrap:"wrap"}}>
+              <span style={{fontWeight:700,color:C.dark,minWidth:22,fontSize:12}}>{i+1}.</span>
+              <span style={{fontSize:13}}>{item.before}</span>
+              <Inp value={answers.s4[i]} onChange={v=>setAns("s4",i,v)} placeholder="..." w="160px"/>
+              <span style={{fontSize:13}}>{item.after}</span>
+              <span style={{background:C.light,color:C.dark,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:4,letterSpacing:1}}>{item.kw}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{textAlign:"center"}}>
+          <div style={{fontSize:12,color:"#888",marginBottom:8}}>Verifică toate răspunsurile înainte de a trimite.</div>
+          <button onClick={handleSubmit}
+            style={{background:C.dark,color:"white",border:"none",borderRadius:10,padding:"14px 44px",fontSize:15,fontWeight:700,cursor:"pointer",letterSpacing:1,boxShadow:"0 4px 16px rgba(31,56,100,.3)"}}>
+            TRIMITE LUCRAREA ✓
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
