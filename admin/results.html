@@ -24,22 +24,51 @@ function DetailPanel({sel, ptcp, onBack}) {
   const ex    = exams.find(e => e.id === sel.examId) || exams.find(e => e.level===sel.level && e.stage===sel.stage);
   const v     = ex?.variants?.find(v => v.id === sel.variantId);
 
-  const [wGrade, setWGrade]   = useState(sel.writingGrade != null ? String(sel.writingGrade) : "");
-  const [wFb,    setWFb]      = useState(sel.writingFeedback || "");
-  const [saved,  setSaved]    = useState(false);
+  const [s1det,      setS1det]      = useState(sel.result?.det?.s1 || []);
+  const [savedS1,    setSavedS1]    = useState(false);
+  const [totalVal,   setTotalVal]   = useState(String(sel.result?.total || 0));
+  const [savedTotal, setSavedTotal] = useState(false);
+  const [wGrade,     setWGrade]     = useState(sel.writingGrade != null ? String(sel.writingGrade) : "");
+  const [wFb,        setWFb]        = useState(sel.writingFeedback || "");
+  const [savedW,     setSavedW]     = useState(false);
 
-  const saveWriting = () => {
-    const g = wGrade === "" ? null : Number(wGrade);
-    CPEEN.updateSession(sel.id, {writingGrade: g, writingFeedback: wFb});
-    setSaved(true); setTimeout(()=>setSaved(false),2000);
+  const recalc = (newS1) => {
+    if(!v) return parseInt(totalVal)||0;
+    const det = sel.result?.det || {};
+    return 10
+      + newS1.filter(Boolean).length           * (v.s1?.pts||0)
+      + (det.s2||[]).filter(Boolean).length    * (v.s2?.pts||0)
+      + (det.s3||[]).filter(Boolean).length    * (v.s3?.pts||0)
+      + (det.s4||[]).filter(Boolean).length    * (v.s4?.pts||0);
   };
 
-  const secs = v ? [
-    {k:"s1", lbl:"S1 – KWT",              data:v.s1},
-    {k:"s2", lbl:"S2 – Error Correction", data:v.s2},
-    {k:"s3", lbl:"S3 – Open Cloze",       data:v.s3},
-    {k:"s4", lbl:"S4 – Word Formation",   data:v.s4},
-  ] : [];
+  const toggleS1 = i => {
+    const next = s1det.map((x,j)=>j===i?!x:x);
+    setS1det(next);
+    setTotalVal(String(recalc(next)));
+    setSavedS1(false);
+  };
+
+  const saveS1 = () => {
+    const newDet = {...(sel.result?.det||{}), s1: s1det};
+    const total  = recalc(s1det);
+    CPEEN.updateSession(sel.id, {result: {...sel.result, total, det: newDet}});
+    setTotalVal(String(total));
+    setSavedS1(true); setTimeout(()=>setSavedS1(false), 2000);
+  };
+
+  const saveTotal = () => {
+    const t = parseInt(totalVal);
+    if(isNaN(t)) return;
+    CPEEN.updateSession(sel.id, {result: {...sel.result, total: t}});
+    setSavedTotal(true); setTimeout(()=>setSavedTotal(false), 2000);
+  };
+
+  const saveWriting = () => {
+    const g = wGrade==="" ? null : Number(wGrade);
+    CPEEN.updateSession(sel.id, {writingGrade: g, writingFeedback: wFb});
+    setSavedW(true); setTimeout(()=>setSavedW(false), 2000);
+  };
 
   return (
     <div style={{background:"#fff",borderRadius:10,padding:24,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
@@ -58,26 +87,67 @@ function DetailPanel({sel, ptcp, onBack}) {
           </div>
           <div style={{fontSize:11,color:"#aaa",marginTop:4}}>{sel.submittedAt?new Date(sel.submittedAt).toLocaleString("ro-RO"):""}</div>
         </div>
-        <div style={{background:C.dark,color:"#fff",borderRadius:10,padding:"14px 24px",textAlign:"center",minWidth:120}}>
-          <div style={{fontSize:42,fontWeight:700}}>{sel.result?.total||0}</div>
-          <div style={{fontSize:12,opacity:.8}}>din 100 · Nota: {((sel.result?.total||0)/10).toFixed(2)}</div>
+        <div style={{background:C.dark,color:"#fff",borderRadius:10,padding:"14px 24px",textAlign:"center",minWidth:140}}>
+          <div style={{fontSize:42,fontWeight:700}}>{totalVal}</div>
+          <div style={{fontSize:12,opacity:.8}}>din 100 · Nota: {(parseInt(totalVal||0)/10).toFixed(2)}</div>
+          {sel.writingGrade!=null && <div style={{fontSize:11,opacity:.7,marginTop:2}}>Writing: {sel.writingGrade}/20</div>}
+          <div style={{display:"flex",gap:6,marginTop:10,alignItems:"center",justifyContent:"center"}}>
+            <input type="number" value={totalVal} min="0" max="200"
+              onChange={e=>{ setTotalVal(e.target.value); setSavedTotal(false); }}
+              style={{width:58,textAlign:"center",borderRadius:5,border:"1px solid rgba(255,255,255,.4)",background:"rgba(255,255,255,.15)",color:"#fff",padding:"3px 4px",fontSize:13}}/>
+            <button onClick={saveTotal}
+              style={{background:"rgba(255,255,255,.2)",color:"#fff",border:"1px solid rgba(255,255,255,.4)",borderRadius:5,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:600}}>
+              {savedTotal?"✓":"Set"}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Section-by-section answers */}
-      {v ? secs.map(({k,lbl,data})=>{
-        const det = sel.result?.det?.[k] || [];
-        const pts = data.pts || 0;
-        const scored = det.filter(Boolean).length * pts;
-        const max    = det.length * pts;
+      {/* S1 – KWT clickable correction */}
+      {v && (
+        <div style={{marginBottom:16}}>
+          <div style={{background:C.mid,color:"#fff",padding:"5px 12px",borderRadius:6,fontSize:13,fontWeight:600,marginBottom:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span>S1 – KWT <span style={{fontSize:11,fontWeight:400,opacity:.85}}>(click pe item pentru a corecta)</span></span>
+            <span>{s1det.filter(Boolean).length*(v.s1?.pts||0)}/{s1det.length*(v.s1?.pts||0)}p</span>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:5,marginBottom:8}}>
+            {(sel.answers?.s1||[]).map((ans,i)=>{
+              const ok  = s1det[i];
+              const cas = v.s1?.key?.[i]||[];
+              return (
+                <div key={i} onClick={()=>toggleS1(i)}
+                  style={{background:ok?"#e8f5e9":"#fce4e4",border:`2px solid ${ok?"#a5d6a7":"#ef9a9a"}`,borderRadius:6,padding:"6px 10px",fontSize:11,cursor:"pointer",userSelect:"none"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                    <span style={{fontWeight:700,color:"#555"}}>#{i+1}</span>
+                    <span style={{fontSize:14,fontWeight:700,color:ok?C.green:C.red}}>{ok?"✓":"✗"}</span>
+                  </div>
+                  <div style={{color:ok?C.green:C.red,marginBottom:ok?0:2}}>{ans||"—"}</div>
+                  {!ok && cas.length>0 && <div style={{color:C.green,fontSize:10}}>✓ {cas[0]}</div>}
+                </div>
+              );
+            })}
+          </div>
+          <button className="btn btn-primary btn-sm" onClick={saveS1}>
+            {savedS1?"✓ Salvat!":"Salvează KWT + recalculează total"}
+          </button>
+        </div>
+      )}
+
+      {/* S2 / S3 / S4 – read-only */}
+      {v ? [
+        {k:"s2",lbl:"S2 – Error Correction",data:v.s2},
+        {k:"s3",lbl:"S3 – Open Cloze",data:v.s3},
+        {k:"s4",lbl:"S4 – Word Formation",data:v.s4},
+      ].map(({k,lbl,data})=>{
+        const det = sel.result?.det?.[k]||[];
+        const pts = data.pts||0;
         return (
           <div key={k} style={{marginBottom:16}}>
             <div style={{background:C.mid,color:"#fff",padding:"5px 12px",borderRadius:6,fontSize:13,fontWeight:600,marginBottom:6,display:"flex",justifyContent:"space-between"}}>
-              <span>{lbl}</span>
-              <span>{scored}/{max}p</span>
+              <span>{lbl}</span><span>{det.filter(Boolean).length*pts}/{det.length*pts}p</span>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(175px,1fr))",gap:5}}>
-              {sel.answers[k].map((ans,i)=>{
+              {(sel.answers?.[k]||[]).map((ans,i)=>{
                 const ok = det[i];
                 const ca = Array.isArray(data.key?.[i]) ? data.key[i][0] : data.key?.[i];
                 return (
@@ -91,19 +161,12 @@ function DetailPanel({sel, ptcp, onBack}) {
             </div>
           </div>
         );
-      }) : (
-        <div className="alert alert-warn">Datele subiectului nu au fost găsite — nu se pot afișa răspunsurile corecte.</div>
-      )}
+      }) : <div className="alert alert-warn">Datele subiectului nu au fost găsite.</div>}
 
-      {/* KWT note */}
-      <div className="alert alert-warn" style={{marginBottom:16}}>
-        <strong>S1 (KWT)</strong> — verificați manual; sunt acceptate variante multiple.
-      </div>
-
-      {/* Writing grading */}
+      {/* Writing */}
       {sel.answers?.writing ? (
         <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:16,marginTop:4}}>
-          <div style={{fontWeight:700,color:C.dark,marginBottom:10,fontSize:14}}>Secțiunea Writing — Corectare manuală</div>
+          <div style={{fontWeight:700,color:C.dark,marginBottom:10,fontSize:14}}>S5 – Writing — Corectare manuală</div>
           <div style={{background:"#fff",border:"1px solid #ddd",borderRadius:6,padding:12,fontSize:13,lineHeight:1.7,maxHeight:220,overflowY:"auto",marginBottom:12,fontFamily:"Georgia,serif"}}>
             {sel.answers.writing}
           </div>
@@ -111,17 +174,17 @@ function DetailPanel({sel, ptcp, onBack}) {
             <div>
               <label style={{fontSize:12,fontWeight:600,color:C.dark,display:"block",marginBottom:4}}>Notă (0–20)</label>
               <input type="number" className="inp inp-sm" style={{width:80}} min="0" max="20"
-                value={wGrade} onChange={e=>{ setWGrade(e.target.value); setSaved(false); }}/>
+                value={wGrade} onChange={e=>{ setWGrade(e.target.value); setSavedW(false); }}/>
             </div>
             <div>
               <label style={{fontSize:12,fontWeight:600,color:C.dark,display:"block",marginBottom:4}}>Feedback profesor</label>
               <textarea className="inp inp-sm" rows={3} style={{resize:"vertical"}}
-                value={wFb} onChange={e=>{ setWFb(e.target.value); setSaved(false); }}
+                value={wFb} onChange={e=>{ setWFb(e.target.value); setSavedW(false); }}
                 placeholder="Comentarii și feedback pentru elev…"/>
             </div>
           </div>
           <button className="btn btn-primary btn-sm" style={{marginTop:10}} onClick={saveWriting}>
-            {saved ? "✓ Salvat!" : "Salvează nota Writing"}
+            {savedW?"✓ Salvat!":"Salvează nota Writing"}
           </button>
         </div>
       ) : (
