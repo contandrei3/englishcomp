@@ -24,15 +24,16 @@ var CPEEN = (function () {
     var url = (typeof CPEEN_SHEETS_URL !== 'undefined') ? CPEEN_SHEETS_URL : '';
     if (!url || url.indexOf('YOUR_APPS') !== -1) return Promise.resolve();
     SHEETS_URL = url;
-    return fetch(url + '?action=getAll')
+    var fetchData = fetch(url + '?action=getAll')
       .then(function(r) { return r.json(); })
       .then(function(d) {
         if (d.participants) ss(KEYS.PARTICIPANTS, d.participants);
         if (d.sessions)     ss(KEYS.SESSIONS,     d.sessions);
         if (d.exams)        ss(KEYS.EXAMS,         d.exams);
         if (d.config)       ss(KEYS.CONFIG,         d.config);
-      })
-      .catch(function() {}); // offline: use localStorage cache
+      });
+    var timeout = new Promise(function(resolve) { setTimeout(resolve, 4000); });
+    return Promise.race([fetchData, timeout]).catch(function() {});
   }
 
   var DEFAULT_ADMIN_HASH = '214d1f1c62239db83286301ef9ce31e93144e98570370de2f035560e13b2a7d9'; // cpeen2026

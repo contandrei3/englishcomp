@@ -353,7 +353,8 @@ function ResultsPage() {
   );
 }
 
-CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<ResultsPage/>));
+document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Georgia,serif;color:#2E75B6;font-size:15px;">Se încarcă…</div>';
+(document.getElementById("root")).render(<ResultsPage/>));
 </script>
 </body>
 </html>
