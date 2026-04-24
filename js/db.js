@@ -24,8 +24,8 @@ var CPEEN = (function () {
     var url = (typeof CPEEN_SHEETS_URL !== 'undefined') ? CPEEN_SHEETS_URL : '';
     if (!url || url.indexOf('YOUR_APPS') !== -1) return Promise.resolve();
     SHEETS_URL = url;
-    var hasCache = localStorage.getItem(KEYS.PARTICIPANTS) !== null;
-    var fetchData = fetch(url + '?action=getAll')
+    // Always render immediately from cache; sync Sheets in background
+    fetch(url + '?action=getAll')
       .then(function(r) { return r.json(); })
       .then(function(d) {
         if (d.participants) ss(KEYS.PARTICIPANTS, d.participants);
@@ -33,11 +33,7 @@ var CPEEN = (function () {
         if (d.exams)        ss(KEYS.EXAMS,         d.exams);
         if (d.config)       ss(KEYS.CONFIG,         d.config);
       }).catch(function() {});
-    // If we already have cached data, render immediately and sync in background
-    if (hasCache) { fetchData; return Promise.resolve(); }
-    // First visit: wait up to 6s for Sheets to load
-    var timeout = new Promise(function(resolve) { setTimeout(resolve, 6000); });
-    return Promise.race([fetchData, timeout]).catch(function() {});
+    return Promise.resolve();
   }
 
   var DEFAULT_ADMIN_HASH = '214d1f1c62239db83286301ef9ce31e93144e98570370de2f035560e13b2a7d9'; // cpeen2026
