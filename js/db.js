@@ -24,6 +24,7 @@ var CPEEN = (function () {
     var url = (typeof CPEEN_SHEETS_URL !== 'undefined') ? CPEEN_SHEETS_URL : '';
     if (!url || url.indexOf('YOUR_APPS') !== -1) return Promise.resolve();
     SHEETS_URL = url;
+    var hasCache = localStorage.getItem(KEYS.PARTICIPANTS) !== null;
     var fetchData = fetch(url + '?action=getAll')
       .then(function(r) { return r.json(); })
       .then(function(d) {
@@ -31,8 +32,11 @@ var CPEEN = (function () {
         if (d.sessions)     ss(KEYS.SESSIONS,     d.sessions);
         if (d.exams)        ss(KEYS.EXAMS,         d.exams);
         if (d.config)       ss(KEYS.CONFIG,         d.config);
-      });
-    var timeout = new Promise(function(resolve) { setTimeout(resolve, 4000); });
+      }).catch(function() {});
+    // If we already have cached data, render immediately and sync in background
+    if (hasCache) { fetchData; return Promise.resolve(); }
+    // First visit: wait up to 6s for Sheets to load
+    var timeout = new Promise(function(resolve) { setTimeout(resolve, 6000); });
     return Promise.race([fetchData, timeout]).catch(function() {});
   }
 
