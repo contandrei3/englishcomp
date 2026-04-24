@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Înregistrare – CPEEN 2026</title>
+<link rel="stylesheet" href="css/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html" class="nav-brand">
+    <span class="nav-domain">englishgrammarchallenge.ro</span>
+    <span class="nav-title">CPEEN 2026</span>
+  </a>
+  <div class="nav-links">
+    <a href="register.html" class="nav-link active">Înregistrare</a>
+    <a href="exam.html" class="nav-link">Acces Examen</a>
+    <a href="admin/index.html" class="nav-link">Admin</a>
+  </div>
+</nav>
+
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState } = React;
+
+const COUNTIES = ["Alba","Arad","Argeș","Bacău","Bihor","Bistrița-Năsăud","Botoșani","Brăila","Brașov","București","Buzău","Călărași","Caraș-Severin","Cluj","Constanța","Covasna","Dâmbovița","Dolj","Galați","Giurgiu","Gorj","Harghita","Hunedoara","Ialomița","Iași","Ilfov","Maramureș","Mehedinți","Mureș","Neamț","Olt","Prahova","Sălaj","Satu Mare","Sibiu","Suceava","Teleorman","Timiș","Tulcea","Vâlcea","Vaslui","Vrancea"];
+const LEVELS  = [{v:"A2",l:"A2 – Elementar"},{v:"B1",l:"B1 – Intermediar"},{v:"B2",l:"B2 – Avansat"},{v:"C1",l:"C1 – Performanță"}];
+const STAGES  = [{v:"calificare",l:"🖥 Calificare (Online · 45 min)"},{v:"finala",l:"🏆 Finală (Supervizat · 60 min)"}];
+const BLOCKED = /[<>"'&;\\{}[\]/]/;
+
+function validate(f) {
+  const e = {}, c = s => (s||"").trim();
+  if(!c(f.name))          e.name    = "Numele este obligatoriu.";
+  else if(c(f.name).length < 4)     e.name    = "Introduceți numele complet (minim 4 caractere).";
+  else if(BLOCKED.test(f.name))     e.name    = "Caractere speciale nepermise.";
+
+  if(!c(f.school))        e.school  = "Școala este obligatorie.";
+  else if(BLOCKED.test(f.school))   e.school  = "Caractere speciale nepermise.";
+
+  if(!f.county)           e.county  = "Selectați județul.";
+
+  if(!c(f.teacher))       e.teacher = "Profesorul coordonator este obligatoriu.";
+  else if(BLOCKED.test(f.teacher))  e.teacher = "Caractere speciale nepermise.";
+
+  if(!f.level)            e.level   = "Selectați nivelul.";
+  if(!f.stage)            e.stage   = "Selectați etapa.";
+
+  if(!c(f.email))         e.email   = "Email-ul este obligatoriu.";
+  else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email.trim())) e.email = "Format email invalid.";
+
+  if(f.grade && BLOCKED.test(f.grade)) e.grade = "Caractere speciale nepermise.";
+  return e;
+}
+
+function FG({label, name, req, hint, err, children}) {
+  return (
+    <div className="fg">
+      <label>{label}{req && <span className="req">*</span>}</label>
+      {children}
+      {err  && <div className="ferr">{err}</div>}
+      {hint && !err && <div className="fhint">{hint}</div>}
+    </div>
+  );
+}
+
+function RegisterApp() {
+  CPEEN.seedInitialData();
+
+  const [f,  setF]  = useState({name:"",school:"",county:"",teacher:"",level:"",stage:"",email:"",grade:""});
+  const [e,  setE]  = useState({});
+  const [sub, setSub] = useState(null);
+  const [err, setErr] = useState("");
+
+  const set = (k, v) => { setF(p=>({...p,[k]:v})); setE(p=>({...p,[k]:""})); };
+
+  const submit = () => {
+    const errs = validate(f);
+    if(Object.keys(errs).length) { setE(errs); return; }
+
+    const cfg = CPEEN.getConfig();
+    if(cfg.maxPerSchoolPerLevel > 0) {
+      const dupes = CPEEN.getParticipants().filter(p =>
+        p.school.trim().toLowerCase() === f.school.trim().toLowerCase() &&
+        p.level === f.level && p.stage === f.stage
+      );
+      if(dupes.length >= cfg.maxPerSchoolPerLevel) {
+        setErr(`Limita de ${cfg.maxPerSchoolPerLevel} participanți per școală per nivel a fost atinsă.`);
+        return;
+      }
+    }
+
+    const p = CPEEN.addParticipant({
+      name: f.name.trim(), school: f.school.trim(), county: f.county,
+      teacher: f.teacher.trim(), level: f.level, stage: f.stage,
+      email: f.email.trim().toLowerCase(), grade: f.grade.trim()
+    });
+    setSub(p);
+  };
+
+  if(sub) return (
+    <div className="page-center">
+      <div className="wrap-sm">
+        <div className="card">
+          <div className="card-head" style={{textAlign:"center",padding:"32px 28px"}}>
+            <div style={{fontSize:44,marginBottom:8}}>✅</div>
+            <h2>Înregistrare confirmată!</h2>
+            <p>Datele tale au fost salvate cu succes.</p>
+          </div>
+          <div className="card-body" style={{textAlign:"center"}}>
+            <p style={{marginBottom:6,fontSize:14,color:"#555"}}><strong>{sub.name}</strong></p>
+            <p style={{fontSize:13,color:"#777",marginBottom:20}}>{sub.school} · {sub.county} · <span className={`badge b-${sub.level}`}>{sub.level}</span> · {sub.stage==="finala"?"Finală":"Calificare"}</p>
+            <p style={{fontSize:13,color:"#555",marginBottom:10,fontWeight:600}}>Codul tău de acces:</p>
+            <div className="code-box">{sub.accessCode}</div>
+            <div className="alert alert-warn" style={{marginTop:18,textAlign:"left"}}>
+              <strong>Notează codul!</strong> Este necesar pentru a accesa examenul. Nu poate fi recuperat ulterior.
+            </div>
+            <a href="exam.html" className="btn btn-primary btn-lg btn-block mt16">Mergi la examen →</a>
+            <a href="index.html" className="btn btn-ghost btn-block mt8" style={{color:"var(--mid)"}}>← Pagina principală</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const inp = (k, type="text", ph="") => (
+    <input type={type} className={`inp${e[k]?" err":""}`} value={f[k]} placeholder={ph}
+      onChange={ev=>set(k,ev.target.value)}/>
+  );
+  const sel = (k, opts, ph) => (
+    <select className={`inp${e[k]?" err":""}`} value={f[k]} onChange={ev=>set(k,ev.target.value)}>
+      <option value="">{ph}</option>
+      {opts.map(o=><option key={o.v||o} value={o.v||o}>{o.l||o}</option>)}
+    </select>
+  );
+
+  return (
+    <div className="page-center">
+      <div className="wrap-sm">
+        <div className="card">
+          <div className="card-head">
+            <h2>Înregistrare participanți</h2>
+            <p>CPEEN 2026 · Completați toate câmpurile obligatorii marcate cu *</p>
+          </div>
+          <div className="card-body">
+            {err && <div className="alert alert-err">{err}</div>}
+
+            <FG label="Numele și prenumele" name="name" req err={e.name}>
+              {inp("name","text","ex: Ionescu Maria")}
+            </FG>
+
+            <FG label="Școala" name="school" req err={e.school}>
+              {inp("school","text","ex: CN Mihai Viteazul Ploiești")}
+            </FG>
+
+            <div className="grid2">
+              <FG label="Județul" name="county" req err={e.county}>
+                {sel("county", COUNTIES, "Selectează județul")}
+              </FG>
+              <FG label="Clasa" name="grade" hint="ex: X A" err={e.grade}>
+                {inp("grade","text","ex: X A")}
+              </FG>
+            </div>
+
+            <FG label="Profesor coordonator" name="teacher" req err={e.teacher}>
+              {inp("teacher","text","ex: Prof. Popescu Ion")}
+            </FG>
+
+            <FG label="Email" name="email" req hint="Adresă de email validă" err={e.email}>
+              {inp("email","email","ex: maria.ionescu@scoala.ro")}
+            </FG>
+
+            <div className="grid2">
+              <FG label="Nivel" name="level" req err={e.level}>
+                {sel("level", LEVELS, "Selectează nivelul")}
+              </FG>
+              <FG label="Etapa" name="stage" req err={e.stage}>
+                {sel("stage", STAGES, "Selectează etapa")}
+              </FG>
+            </div>
+
+            <button className="btn btn-primary btn-lg btn-block mt8" onClick={submit}>
+              Înregistrează-te →
+            </button>
+            <div style={{textAlign:"center",marginTop:12}}>
+              <a href="exam.html" style={{fontSize:13}}>Am deja un cod de acces →</a>
+            </div>
+          </div>
+        </div>
+        <div className="text-center text-muted" style={{marginTop:14}}>CPEEN 2026 · englishgrammarchallenge.ro</div>
+      </div>
+    </div>
+  );
+}
+
+CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<RegisterApp/>));
+</script>
+</body>
+</html>

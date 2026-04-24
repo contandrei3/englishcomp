@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Participanți – Admin CPEEN 2026</title>
+<link rel="stylesheet" href="../css/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/admin.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo } = React;
+const C = {dark:"#1F3864",mid:"#2E75B6",red:"#C0392B",green:"#1D6027"};
+const LVL = ["A2","B1","B2","C1"];
+
+function ParticipantsPage() {
+  if(!ADMIN.isAuthed()) { window.location.replace("index.html"); return null; }
+  CPEEN.seedInitialData();
+
+  const [all,    setAll]    = useState(() => CPEEN.getParticipants());
+  const [search, setSearch] = useState("");
+  const [fLvl,   setFLvl]   = useState("all");
+  const [fStage, setFStage] = useState("all");
+  const [fCounty,setFCounty]= useState("all");
+  const [copied, setCopied] = useState(null);
+  const [toConfirm, setToConfirm] = useState(null); // id pending delete
+
+  const sessions  = CPEEN.getSessions();
+  const counties  = useMemo(()=>[...new Set(all.map(p=>p.county).filter(Boolean))].sort(),[all]);
+
+  const reload = () => setAll(CPEEN.getParticipants());
+
+  const filtered = useMemo(()=>{
+    const q = search.toLowerCase();
+    return all.filter(p =>
+      (fLvl==="all"   || p.level===fLvl) &&
+      (fStage==="all" || p.stage===fStage) &&
+      (fCounty==="all"|| p.county===fCounty) &&
+      (!q || p.name.toLowerCase().includes(q) || p.school.toLowerCase().includes(q) || (p.email||"").toLowerCase().includes(q))
+    );
+  },[all,search,fLvl,fStage,fCounty]);
+
+  const copyCode = (p) => {
+    navigator.clipboard.writeText(p.accessCode).catch(()=>{});
+    setCopied(p.id);
+    setTimeout(()=>setCopied(null),1800);
+  };
+
+  const doDelete = (id) => {
+    CPEEN.deleteParticipant(id);
+    setToConfirm(null);
+    reload();
+  };
+
+  const exportCSV = () => {
+    const header = ["Nume","Scoala","Judet","Clasa","Profesor","Email","Nivel","Etapa","Cod acces","Inregistrat","Status"];
+    const rows = filtered.map(p => [
+      p.name, p.school, p.county, p.grade||"", p.teacher, p.email||"",
+      p.level, ADMIN.stageLabel[p.stage]||p.stage, p.accessCode,
+      new Date(p.registeredAt).toLocaleString("ro-RO"), p.status
+    ]);
+    ADMIN.csv(header, rows, "cpeen_participanti.csv");
+  };
+
+  const sessMap = useMemo(()=>{
+    const m = {};
+    sessions.forEach(s=>{ m[s.participantId]=s; });
+    return m;
+  },[sessions]);
+
+  const statusBadge = (p) => {
+    const s = sessMap[p.id];
+    if(!s) return <span className="badge b-gray">Fără test</span>;
+    if(s.status==="submitted") return <span className="badge b-ok">Trimis</span>;
+    if(s.status==="in_progress") return <span className="badge b-mid">În desfășurare</span>;
+    return <span className="badge b-gray">Alocat</span>;
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
+      <ADMIN.Nav active="participants"/>
+      <div className="page">
+        <div className="container">
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
+            <div>
+              <h2 style={{color:C.dark,fontSize:18}}>Participanți</h2>
+              <div style={{fontSize:12,color:"#888"}}>{filtered.length} din {all.length} înregistrați</div>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn btn-mid btn-sm" onClick={reload}>↻ Actualizează</button>
+              <button className="btn btn-success btn-sm" onClick={exportCSV} disabled={!filtered.length}>⬇ Export CSV</button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div style={{background:"#fff",borderRadius:10,padding:"12px 16px",marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+            <input className="inp inp-sm" style={{flex:1,minWidth:180}} placeholder="Caută după nume, școală, email…"
+              value={search} onChange={e=>setSearch(e.target.value)}/>
+            <select className="inp inp-sm" style={{width:120}} value={fLvl} onChange={e=>setFLvl(e.target.value)}>
+              <option value="all">Toate nivelurile</option>
+              {LVL.map(l=><option key={l} value={l}>{l}</option>)}
+            </select>
+            <select className="inp inp-sm" style={{width:130}} value={fStage} onChange={e=>setFStage(e.target.value)}>
+              <option value="all">Ambele etape</option>
+              <option value="calificare">Calificare</option>
+              <option value="finala">Finală</option>
+            </select>
+            <select className="inp inp-sm" style={{width:150}} value={fCounty} onChange={e=>setFCounty(e.target.value)}>
+              <option value="all">Toate județele</option>
+              {counties.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {/* Confirm delete dialog */}
+          {toConfirm && (()=>{
+            const p = all.find(x=>x.id===toConfirm);
+            return (
+              <div style={{background:"#fce4e4",border:"1px solid #ef9a9a",borderRadius:8,padding:"12px 16px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+                <span style={{fontSize:13,color:C.red}}>Sigur vrei să ștergi <strong>{p?.name}</strong>? Sesiunea de examen va fi ștearsă și ea.</span>
+                <div style={{display:"flex",gap:8}}>
+                  <button className="btn btn-danger btn-sm" onClick={()=>doDelete(toConfirm)}>Șterge</button>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>setToConfirm(null)}>Anulează</button>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Table */}
+          <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+            {filtered.length === 0
+              ? <div style={{padding:40,textAlign:"center",color:"#aaa"}}>Niciun participant găsit.</div>
+              : (
+                <div className="tbl-wrap">
+                  <table className="tbl">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Nume</th>
+                        <th>Școală</th>
+                        <th>Județ</th>
+                        <th>Cls</th>
+                        <th>Nivel</th>
+                        <th>Etapă</th>
+                        <th>Cod acces</th>
+                        <th>Status</th>
+                        <th>Înregistrat</th>
+                        <th>Acțiuni</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((p,i)=>(
+                        <tr key={p.id}>
+                          <td style={{color:"#aaa",fontSize:11}}>{i+1}</td>
+                          <td>
+                            <div style={{fontWeight:700,color:C.dark,fontSize:13}}>{p.name}</div>
+                            <div style={{fontSize:11,color:"#999"}}>{p.email}</div>
+                          </td>
+                          <td style={{fontSize:12,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.school}</td>
+                          <td style={{fontSize:12}}>{p.county}</td>
+                          <td style={{fontSize:12}}>{p.grade||"—"}</td>
+                          <td><span className={`badge b-${p.level}`}>{p.level}</span></td>
+                          <td style={{fontSize:12}}>{ADMIN.stageLabel[p.stage]||p.stage}</td>
+                          <td>
+                            <span style={{fontFamily:"monospace",fontSize:12,letterSpacing:2,background:"#f0f4f8",padding:"2px 6px",borderRadius:4}}>{p.accessCode}</span>
+                          </td>
+                          <td>{statusBadge(p)}</td>
+                          <td style={{fontSize:11,color:"#999",whiteSpace:"nowrap"}}>{new Date(p.registeredAt).toLocaleDateString("ro-RO")}</td>
+                          <td>
+                            <div style={{display:"flex",gap:4}}>
+                              <button className="btn btn-sm btn-outline" title="Copiază codul"
+                                onClick={()=>copyCode(p)}
+                                style={{padding:"3px 8px",fontSize:11}}>
+                                {copied===p.id?"✓":"⎘"}
+                              </button>
+                              <button className="btn btn-sm btn-danger" title="Șterge"
+                                onClick={()=>setToConfirm(p.id)}
+                                style={{padding:"3px 8px",fontSize:11}}>✕</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<ParticipantsPage/>));
+</script>
+</body>
+</html>

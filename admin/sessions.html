@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sesiuni – Admin CPEEN 2026</title>
+<link rel="stylesheet" href="../css/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/admin.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo } = React;
+const C = {dark:"#1F3864",mid:"#2E75B6",red:"#C0392B",green:"#1D6027"};
+const LVL = ["A2","B1","B2","C1"];
+
+function SessionsPage() {
+  if(!ADMIN.isAuthed()) { window.location.replace("index.html"); return null; }
+  CPEEN.seedInitialData();
+
+  const [cfg,      setCfg]      = useState(()=>CPEEN.getConfig());
+  const [sessions, setSessions] = useState(()=>CPEEN.getSessions());
+  const participants             = CPEEN.getParticipants();
+  const exams                   = CPEEN.getExams();
+
+  // Allocation state
+  const [allocLvl,   setAllocLvl]   = useState("B1");
+  const [allocStage, setAllocStage] = useState("calificare");
+  const [allocExamId,setAllocExamId]= useState("");
+  const [allocVar,   setAllocVar]   = useState("random");
+  const [selected,   setSelected]   = useState(new Set());
+  const [allocMsg,   setAllocMsg]   = useState({type:"",text:""});
+
+  // Table filters
+  const [fLvl,    setFLvl]    = useState("all");
+  const [fStage,  setFStage]  = useState("all");
+  const [fStatus, setFStatus] = useState("all");
+
+  const reload = () => setSessions(CPEEN.getSessions());
+
+  // ── Activation ────────────────────────────────────────────────────────────
+  const isActive = (lvl,stg) => !!(cfg.activeExams?.[lvl]?.[stg]);
+
+  const toggleActive = (lvl,stg) => {
+    const ae = JSON.parse(JSON.stringify(cfg.activeExams||{}));
+    if(!ae[lvl]) ae[lvl]={};
+    ae[lvl][stg] = !ae[lvl][stg];
+    const next = {...cfg, activeExams:ae};
+    CPEEN.saveConfig(next);
+    setCfg(next);
+  };
+
+  // ── Allocation ────────────────────────────────────────────────────────────
+  const sessMap = useMemo(()=>{ const m={}; sessions.forEach(s=>{m[s.participantId]=s;}); return m; }, [sessions]);
+  const allocExams = exams.filter(e=>e.level===allocLvl&&e.stage===allocStage&&e.variants?.length);
+  const selExam    = allocExams.find(e=>e.id===allocExamId)||null;
+  const candidates = participants.filter(p=>p.level===allocLvl&&p.stage===allocStage&&!sessMap[p.id]);
+
+  const toggle = id => setSelected(prev=>{ const s=new Set(prev); s.has(id)?s.delete(id):s.add(id); return s; });
+
+  const doAllocate = () => {
+    setAllocMsg({type:"",text:""});
+    if(!selExam)      { setAllocMsg({type:"err",text:"Selectați un subiect."}); return; }
+    if(!selected.size){ setAllocMsg({type:"err",text:"Selectați cel puțin un participant."}); return; }
+    let n=0;
+    selected.forEach(pid=>{
+      const varId = allocVar==="random"
+        ? selExam.variants[Math.floor(Math.random()*selExam.variants.length)].id
+        : (selExam.variants.find(v=>v.id===allocVar)?.id||selExam.variants[0].id);
+      CPEEN.createSession(pid, selExam, varId);
+      n++;
+    });
+    setSelected(new Set());
+    setAllocMsg({type:"ok",text:`${n} sesiuni alocate.`});
+    reload();
+  };
+
+  // ── Table ─────────────────────────────────────────────────────────────────
+  const ptcpMap  = useMemo(()=>{ const m={}; participants.forEach(p=>{m[p.id]=p;}); return m; },[participants]);
+  const examsMap = useMemo(()=>{ const m={}; exams.forEach(e=>{m[e.id]=e;}); return m; },[exams]);
+
+  const filtered = useMemo(()=>sessions.filter(s=>
+    (fLvl==="all"||s.level===fLvl)&&
+    (fStage==="all"||s.stage===fStage)&&
+    (fStatus==="all"||s.status===fStatus)
+  ),[sessions,fLvl,fStage,fStatus]);
+
+  const delSession = id => {
+    if(!confirm("Ștergi sesiunea?")) return;
+    CPEEN.saveSessions(CPEEN.getSessions().filter(s=>s.id!==id));
+    reload();
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
+      <ADMIN.Nav active="sessions"/>
+      <div className="page"><div className="container">
+
+        {/* ── Activation ── */}
+        <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:20,overflow:"hidden"}}>
+          <div style={{background:C.dark,padding:"12px 20px"}}>
+            <div style={{color:"#fff",fontWeight:700,fontSize:15}}>Activare examene</div>
+            <div style={{color:"rgba(255,255,255,.65)",fontSize:12,marginTop:2}}>Pornește/oprește accesul elevilor pe categorii. Elevii văd ecran de așteptare până la activare.</div>
+          </div>
+          <div style={{padding:20}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
+              {LVL.flatMap(lvl=>["calificare","finala"].map(stg=>{
+                const active = isActive(lvl,stg);
+                return (
+                  <div key={lvl+stg} style={{border:`2px solid ${active?"#27AE60":"#ddd"}`,borderRadius:10,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center",background:active?"#f0faf2":"#fafafa"}}>
+                    <div>
+                      <span className={`badge b-${lvl}`} style={{marginRight:6}}>{lvl}</span>
+                      <span style={{fontSize:13,fontWeight:600,color:C.dark}}>{stg==="finala"?"Finală":"Calificare"}</span>
+                      <div style={{fontSize:11,color:active?"#27AE60":"#999",marginTop:3,fontWeight:600}}>{active?"● Activ":"○ Inactiv"}</div>
+                    </div>
+                    <button onClick={()=>toggleActive(lvl,stg)}
+                      style={{background:active?"#27AE60":"#ccc",color:"#fff",border:"none",borderRadius:20,padding:"6px 16px",cursor:"pointer",fontWeight:700,fontSize:12}}>
+                      {active?"Oprește":"Pornește"}
+                    </button>
+                  </div>
+                );
+              }))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Allocate ── */}
+        <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:20,overflow:"hidden"}}>
+          <div style={{background:C.mid,padding:"12px 20px"}}>
+            <div style={{color:"#fff",fontWeight:700,fontSize:15}}>Alocare sesiuni</div>
+          </div>
+          <div style={{padding:20}}>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}>
+              <select className="inp inp-sm" style={{width:110}} value={allocLvl}
+                onChange={e=>{setAllocLvl(e.target.value);setSelected(new Set());setAllocMsg({type:"",text:""});}}>
+                {LVL.map(l=><option key={l} value={l}>{l}</option>)}
+              </select>
+              <select className="inp inp-sm" style={{width:130}} value={allocStage}
+                onChange={e=>{setAllocStage(e.target.value);setSelected(new Set());setAllocMsg({type:"",text:""});}}>
+                <option value="calificare">Calificare</option>
+                <option value="finala">Finală</option>
+              </select>
+              <select className="inp inp-sm" style={{flex:1,minWidth:200}} value={allocExamId} onChange={e=>setAllocExamId(e.target.value)}>
+                <option value="">— Selectează subiectul —</option>
+                {allocExams.map(e=><option key={e.id} value={e.id}>{e.title||e.id} ({e.variants?.length||0} var.)</option>)}
+              </select>
+              {selExam && selExam.variants?.length>1 && (
+                <select className="inp inp-sm" style={{width:160}} value={allocVar} onChange={e=>setAllocVar(e.target.value)}>
+                  <option value="random">Variantă aleatorie</option>
+                  {selExam.variants.map(v=><option key={v.id} value={v.id}>{v.id}</option>)}
+                </select>
+              )}
+            </div>
+
+            {allocExams.length===0 && (
+              <div className="alert alert-warn">Niciun subiect pentru {allocLvl} – {allocStage==="finala"?"Finală":"Calificare"}.
+                <a href="exam-builder.html" style={{marginLeft:8}}>Creați unul →</a>
+              </div>
+            )}
+
+            {candidates.length===0
+              ? <div style={{color:"#aaa",fontSize:13,padding:"12px 0"}}>Toți participanții {allocLvl} – {allocStage==="finala"?"Finală":"Calificare"} au sesiuni sau nu există participanți.</div>
+              : (<>
+                <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+                  <span style={{fontSize:13,color:"#666"}}>{candidates.length} fără sesiune</span>
+                  <button onClick={()=>setSelected(new Set(candidates.map(p=>p.id)))} className="btn btn-ghost btn-sm">Toți</button>
+                  <button onClick={()=>setSelected(new Set())} className="btn btn-ghost btn-sm">Niciunul</button>
+                  <span style={{fontSize:12,color:C.mid,fontWeight:600}}>{selected.size} selectați</span>
+                </div>
+                <div style={{maxHeight:220,overflowY:"auto",border:"1px solid #eee",borderRadius:8,marginBottom:12}}>
+                  {candidates.map(p=>(
+                    <label key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderBottom:"1px solid #f5f5f5",cursor:"pointer",background:selected.has(p.id)?"#f0f7ff":"transparent"}}>
+                      <input type="checkbox" checked={selected.has(p.id)} onChange={()=>toggle(p.id)}/>
+                      <div>
+                        <div style={{fontWeight:700,color:C.dark,fontSize:13}}>{p.name}</div>
+                        <div style={{fontSize:11,color:"#888"}}>{p.school} · {p.county}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </>)
+            }
+
+            {allocMsg.text && <div className={`alert alert-${allocMsg.type==="ok"?"ok":"err"}`} style={{marginBottom:10}}>{allocMsg.text}</div>}
+            <button className="btn btn-primary" onClick={doAllocate} disabled={!selected.size||!selExam}>
+              Alocă sesiuni ({selected.size})
+            </button>
+          </div>
+        </div>
+
+        {/* ── Sessions table ── */}
+        <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,.06)",overflow:"hidden"}}>
+          <div style={{background:C.dark,padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{color:"#fff",fontWeight:700,fontSize:15}}>Sesiuni ({sessions.length})</div>
+            <button onClick={reload} style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"4px 12px",cursor:"pointer",fontSize:12}}>↻</button>
+          </div>
+          <div style={{padding:"10px 16px",display:"flex",gap:8,borderBottom:"1px solid #eee",flexWrap:"wrap"}}>
+            <select className="inp inp-sm" style={{width:130}} value={fLvl} onChange={e=>setFLvl(e.target.value)}>
+              <option value="all">Toate nivelurile</option>
+              {LVL.map(l=><option key={l} value={l}>{l}</option>)}
+            </select>
+            <select className="inp inp-sm" style={{width:130}} value={fStage} onChange={e=>setFStage(e.target.value)}>
+              <option value="all">Ambele etape</option>
+              <option value="calificare">Calificare</option>
+              <option value="finala">Finală</option>
+            </select>
+            <select className="inp inp-sm" style={{width:150}} value={fStatus} onChange={e=>setFStatus(e.target.value)}>
+              <option value="all">Toate statusurile</option>
+              <option value="pending">Alocată</option>
+              <option value="in_progress">În desfășurare</option>
+              <option value="submitted">Trimisă</option>
+            </select>
+          </div>
+          {filtered.length===0
+            ? <div style={{padding:40,textAlign:"center",color:"#aaa"}}>Nicio sesiune.</div>
+            : (
+              <div className="tbl-wrap">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>#</th><th>Participant</th><th>Nivel</th><th>Etapă</th>
+                      <th>Subiect</th><th>Var.</th><th>Status</th><th>Pornit</th><th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((s,i)=>{
+                      const p=ptcpMap[s.participantId]||{};
+                      const ex=examsMap[s.examId];
+                      return (
+                        <tr key={s.id}>
+                          <td style={{color:"#aaa",fontSize:11}}>{i+1}</td>
+                          <td>
+                            <div style={{fontWeight:700,color:C.dark,fontSize:13}}>{p.name||"—"}</div>
+                            <div style={{fontSize:11,color:"#999"}}>{p.school||""}</div>
+                          </td>
+                          <td><span className={`badge b-${s.level}`}>{s.level}</span></td>
+                          <td style={{fontSize:12}}>{ADMIN.stageLabel[s.stage]||s.stage}</td>
+                          <td style={{fontSize:12,maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ex?.title||s.examId||"—"}</td>
+                          <td style={{fontFamily:"monospace",fontSize:12}}>{s.variantId}</td>
+                          <td>
+                            {s.status==="submitted"?<span className="badge b-ok">Trimisă</span>
+                             :s.status==="in_progress"?<span className="badge b-mid">Activ</span>
+                             :<span className="badge b-gray">Alocată</span>}
+                          </td>
+                          <td style={{fontSize:11,color:"#999",whiteSpace:"nowrap"}}>{s.startedAt?new Date(s.startedAt).toLocaleString("ro-RO"):"-"}</td>
+                          <td>
+                            {s.status!=="submitted" && (
+                              <button className="btn btn-sm btn-danger" style={{padding:"2px 8px",fontSize:11}} onClick={()=>delSession(s.id)}>✕</button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
+          }
+        </div>
+        <div style={{textAlign:"center",color:"#aaa",fontSize:11,paddingBottom:24,paddingTop:16}}>CPEEN 2026 · englishgrammarchallenge.ro</div>
+      </div></div>
+    </div>
+  );
+}
+
+CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<SessionsPage/>));
+</script>
+</body>
+</html>

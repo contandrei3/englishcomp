@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Rezultate – Admin CPEEN 2026</title>
+<link rel="stylesheet" href="../css/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/admin.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo } = React;
+const C = {dark:"#1F3864",mid:"#2E75B6",red:"#C0392B",green:"#1D6027"};
+const LVL = ["A2","B1","B2","C1"];
+const SEC_LABELS = ["KWT","Error Correction","Open Cloze","Word Formation"];
+
+function DetailPanel({sel, ptcp, onBack}) {
+  const exams = CPEEN.getExams();
+  const ex    = exams.find(e => e.id === sel.examId) || exams.find(e => e.level===sel.level && e.stage===sel.stage);
+  const v     = ex?.variants?.find(v => v.id === sel.variantId);
+
+  const [s1det,      setS1det]      = useState(sel.result?.det?.s1 || []);
+  const [savedS1,    setSavedS1]    = useState(false);
+  const [totalVal,   setTotalVal]   = useState(String(sel.result?.total || 0));
+  const [savedTotal, setSavedTotal] = useState(false);
+  const [wGrade,     setWGrade]     = useState(sel.writingGrade != null ? String(sel.writingGrade) : "");
+  const [wFb,        setWFb]        = useState(sel.writingFeedback || "");
+  const [savedW,     setSavedW]     = useState(false);
+
+  const recalc = (newS1) => {
+    if(!v) return parseInt(totalVal)||0;
+    const det = sel.result?.det || {};
+    return 10
+      + newS1.filter(Boolean).length           * (v.s1?.pts||0)
+      + (det.s2||[]).filter(Boolean).length    * (v.s2?.pts||0)
+      + (det.s3||[]).filter(Boolean).length    * (v.s3?.pts||0)
+      + (det.s4||[]).filter(Boolean).length    * (v.s4?.pts||0);
+  };
+
+  const toggleS1 = i => {
+    const next = s1det.map((x,j)=>j===i?!x:x);
+    setS1det(next);
+    setTotalVal(String(recalc(next)));
+    setSavedS1(false);
+  };
+
+  const saveS1 = () => {
+    const newDet = {...(sel.result?.det||{}), s1: s1det};
+    const total  = recalc(s1det);
+    CPEEN.updateSession(sel.id, {result: {...sel.result, total, det: newDet}});
+    setTotalVal(String(total));
+    setSavedS1(true); setTimeout(()=>setSavedS1(false), 2000);
+  };
+
+  const saveTotal = () => {
+    const t = parseInt(totalVal);
+    if(isNaN(t)) return;
+    CPEEN.updateSession(sel.id, {result: {...sel.result, total: t}});
+    setSavedTotal(true); setTimeout(()=>setSavedTotal(false), 2000);
+  };
+
+  const saveWriting = () => {
+    const g = wGrade==="" ? null : Number(wGrade);
+    CPEEN.updateSession(sel.id, {writingGrade: g, writingFeedback: wFb});
+    setSavedW(true); setTimeout(()=>setSavedW(false), 2000);
+  };
+
+  return (
+    <div style={{background:"#fff",borderRadius:10,padding:24,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+      <button className="btn btn-ghost btn-sm" onClick={onBack} style={{marginBottom:16}}>← Înapoi la lista</button>
+
+      {/* Student info + score */}
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:20}}>
+        <div style={{flex:1,minWidth:200}}>
+          <div style={{fontSize:18,fontWeight:700,color:C.dark}}>{ptcp?.name||"—"}</div>
+          <div style={{fontSize:13,color:"#666"}}>{ptcp?.school} · {ptcp?.county} · {ptcp?.grade||""}</div>
+          {ptcp?.teacher && <div style={{fontSize:12,color:"#888"}}>Prof. {ptcp.teacher}</div>}
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6}}>
+            <span className={`badge b-${sel.level}`}>{sel.level}</span>
+            <span className="badge b-dark">{ADMIN.stageLabel[sel.stage]||sel.stage}</span>
+            <span className="badge b-gray">Var. {sel.variantId}</span>
+          </div>
+          <div style={{fontSize:11,color:"#aaa",marginTop:4}}>{sel.submittedAt?new Date(sel.submittedAt).toLocaleString("ro-RO"):""}</div>
+        </div>
+        <div style={{background:C.dark,color:"#fff",borderRadius:10,padding:"14px 24px",textAlign:"center",minWidth:140}}>
+          <div style={{fontSize:42,fontWeight:700}}>{totalVal}</div>
+          <div style={{fontSize:12,opacity:.8}}>din 100 · Nota: {(parseInt(totalVal||0)/10).toFixed(2)}</div>
+          {sel.writingGrade!=null && <div style={{fontSize:11,opacity:.7,marginTop:2}}>Writing: {sel.writingGrade}/20</div>}
+          <div style={{display:"flex",gap:6,marginTop:10,alignItems:"center",justifyContent:"center"}}>
+            <input type="number" value={totalVal} min="0" max="200"
+              onChange={e=>{ setTotalVal(e.target.value); setSavedTotal(false); }}
+              style={{width:58,textAlign:"center",borderRadius:5,border:"1px solid rgba(255,255,255,.4)",background:"rgba(255,255,255,.15)",color:"#fff",padding:"3px 4px",fontSize:13}}/>
+            <button onClick={saveTotal}
+              style={{background:"rgba(255,255,255,.2)",color:"#fff",border:"1px solid rgba(255,255,255,.4)",borderRadius:5,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:600}}>
+              {savedTotal?"✓":"Set"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* S1 – KWT clickable correction */}
+      {v && (
+        <div style={{marginBottom:16}}>
+          <div style={{background:C.mid,color:"#fff",padding:"5px 12px",borderRadius:6,fontSize:13,fontWeight:600,marginBottom:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span>S1 – KWT <span style={{fontSize:11,fontWeight:400,opacity:.85}}>(click pe item pentru a corecta)</span></span>
+            <span>{s1det.filter(Boolean).length*(v.s1?.pts||0)}/{s1det.length*(v.s1?.pts||0)}p</span>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:5,marginBottom:8}}>
+            {(sel.answers?.s1||[]).map((ans,i)=>{
+              const ok  = s1det[i];
+              const cas = v.s1?.key?.[i]||[];
+              return (
+                <div key={i} onClick={()=>toggleS1(i)}
+                  style={{background:ok?"#e8f5e9":"#fce4e4",border:`2px solid ${ok?"#a5d6a7":"#ef9a9a"}`,borderRadius:6,padding:"6px 10px",fontSize:11,cursor:"pointer",userSelect:"none"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                    <span style={{fontWeight:700,color:"#555"}}>#{i+1}</span>
+                    <span style={{fontSize:14,fontWeight:700,color:ok?C.green:C.red}}>{ok?"✓":"✗"}</span>
+                  </div>
+                  <div style={{color:ok?C.green:C.red,marginBottom:ok?0:2}}>{ans||"—"}</div>
+                  {!ok && cas.length>0 && <div style={{color:C.green,fontSize:10}}>✓ {cas[0]}</div>}
+                </div>
+              );
+            })}
+          </div>
+          <button className="btn btn-primary btn-sm" onClick={saveS1}>
+            {savedS1?"✓ Salvat!":"Salvează KWT + recalculează total"}
+          </button>
+        </div>
+      )}
+
+      {/* S2 / S3 / S4 – read-only */}
+      {v ? [
+        {k:"s2",lbl:"S2 – Error Correction",data:v.s2},
+        {k:"s3",lbl:"S3 – Open Cloze",data:v.s3},
+        {k:"s4",lbl:"S4 – Word Formation",data:v.s4},
+      ].map(({k,lbl,data})=>{
+        const det = sel.result?.det?.[k]||[];
+        const pts = data.pts||0;
+        return (
+          <div key={k} style={{marginBottom:16}}>
+            <div style={{background:C.mid,color:"#fff",padding:"5px 12px",borderRadius:6,fontSize:13,fontWeight:600,marginBottom:6,display:"flex",justifyContent:"space-between"}}>
+              <span>{lbl}</span><span>{det.filter(Boolean).length*pts}/{det.length*pts}p</span>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(175px,1fr))",gap:5}}>
+              {(sel.answers?.[k]||[]).map((ans,i)=>{
+                const ok = det[i];
+                const ca = Array.isArray(data.key?.[i]) ? data.key[i][0] : data.key?.[i];
+                return (
+                  <div key={i} style={{background:ok?"#e8f5e9":"#fce4e4",border:`1px solid ${ok?"#a5d6a7":"#ef9a9a"}`,borderRadius:6,padding:"5px 9px",fontSize:11}}>
+                    <span style={{fontWeight:700,color:"#555"}}>#{i+1} </span>
+                    <span style={{color:ok?C.green:C.red}}>{ans||"—"}</span>
+                    {!ok && ca && <div style={{color:C.green,fontSize:10,marginTop:1}}>✓ {ca}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }) : <div className="alert alert-warn">Datele subiectului nu au fost găsite.</div>}
+
+      {/* Writing */}
+      {sel.answers?.writing ? (
+        <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:16,marginTop:4}}>
+          <div style={{fontWeight:700,color:C.dark,marginBottom:10,fontSize:14}}>S5 – Writing — Corectare manuală</div>
+          <div style={{background:"#fff",border:"1px solid #ddd",borderRadius:6,padding:12,fontSize:13,lineHeight:1.7,maxHeight:220,overflowY:"auto",marginBottom:12,fontFamily:"Georgia,serif"}}>
+            {sel.answers.writing}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:10,alignItems:"start"}}>
+            <div>
+              <label style={{fontSize:12,fontWeight:600,color:C.dark,display:"block",marginBottom:4}}>Notă (0–20)</label>
+              <input type="number" className="inp inp-sm" style={{width:80}} min="0" max="20"
+                value={wGrade} onChange={e=>{ setWGrade(e.target.value); setSavedW(false); }}/>
+            </div>
+            <div>
+              <label style={{fontSize:12,fontWeight:600,color:C.dark,display:"block",marginBottom:4}}>Feedback profesor</label>
+              <textarea className="inp inp-sm" rows={3} style={{resize:"vertical"}}
+                value={wFb} onChange={e=>{ setWFb(e.target.value); setSavedW(false); }}
+                placeholder="Comentarii și feedback pentru elev…"/>
+            </div>
+          </div>
+          <button className="btn btn-primary btn-sm" style={{marginTop:10}} onClick={saveWriting}>
+            {savedW?"✓ Salvat!":"Salvează nota Writing"}
+          </button>
+        </div>
+      ) : (
+        <div style={{fontSize:12,color:"#aaa",marginTop:4}}>Nicio secțiune Writing pentru această lucrare.</div>
+      )}
+    </div>
+  );
+}
+
+function ResultsPage() {
+  if(!ADMIN.isAuthed()) { window.location.replace("index.html"); return null; }
+  CPEEN.seedInitialData();
+
+  const participants = CPEEN.getParticipants();
+  const [sessions,   setSessions] = useState(()=>CPEEN.getSessions().filter(s=>s.status==="submitted"));
+  const [sel,        setSel]      = useState(null);
+  const [fLvl,       setFLvl]     = useState("all");
+  const [fStage,     setFStage]   = useState("all");
+  const [fMin,       setFMin]     = useState("");
+  const [sortBy,     setSortBy]   = useState("score"); // score | date
+
+  const ptcpMap = useMemo(()=>{
+    const m={}; participants.forEach(p=>{ m[p.id]=p; }); return m;
+  },[participants]);
+
+  const reload = () => setSessions(CPEEN.getSessions().filter(s=>s.status==="submitted"));
+
+  const filtered = useMemo(()=>{
+    const minScore = fMin==="" ? 0 : Number(fMin);
+    const list = sessions.filter(s=>
+      (fLvl==="all"   || s.level===fLvl) &&
+      (fStage==="all" || s.stage===fStage) &&
+      ((s.result?.total||0) >= minScore)
+    );
+    if(sortBy==="score") list.sort((a,b)=>(b.result?.total||0)-(a.result?.total||0));
+    else list.sort((a,b)=>(b.submittedAt||0)-(a.submittedAt||0));
+    return list;
+  },[sessions,fLvl,fStage,fMin,sortBy]);
+
+  const exportCSV = () => {
+    const header = ["Nume","Scoala","Judet","Clasa","Profesor","Nivel","Etapa","Varianta","Punctaj","Nota","Nota Writing","Data"];
+    const rows = filtered.map(s=>{
+      const p = ptcpMap[s.participantId]||{};
+      return [p.name||"",p.school||"",p.county||"",p.grade||"",p.teacher||"",
+        s.level, ADMIN.stageLabel[s.stage]||s.stage, s.variantId,
+        s.result?.total||0, ((s.result?.total||0)/10).toFixed(2),
+        s.writingGrade!=null?s.writingGrade:"",
+        s.submittedAt?new Date(s.submittedAt).toLocaleString("ro-RO"):""];
+    });
+    ADMIN.csv(header, rows, "cpeen_rezultate.csv");
+  };
+
+  if(sel) {
+    const p = ptcpMap[sel.participantId];
+    return (
+      <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
+        <ADMIN.Nav active="results"/>
+        <div className="page"><div className="container">
+          <DetailPanel sel={sel} ptcp={p} onBack={()=>{ setSel(null); reload(); }}/>
+        </div></div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
+      <ADMIN.Nav active="results"/>
+      <div className="page"><div className="container">
+
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
+          <div>
+            <h2 style={{color:C.dark,fontSize:18}}>Rezultate</h2>
+            <div style={{fontSize:12,color:"#888"}}>{filtered.length} lucrări</div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button className="btn btn-mid btn-sm" onClick={reload}>↻ Actualizează</button>
+            <button className="btn btn-success btn-sm" onClick={exportCSV} disabled={!filtered.length}>⬇ Export CSV</button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div style={{background:"#fff",borderRadius:10,padding:"12px 16px",marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+          <select className="inp inp-sm" style={{width:140}} value={fLvl} onChange={e=>setFLvl(e.target.value)}>
+            <option value="all">Toate nivelurile</option>
+            {LVL.map(l=><option key={l} value={l}>{l}</option>)}
+          </select>
+          <select className="inp inp-sm" style={{width:130}} value={fStage} onChange={e=>setFStage(e.target.value)}>
+            <option value="all">Ambele etape</option>
+            <option value="calificare">Calificare</option>
+            <option value="finala">Finală</option>
+          </select>
+          <input className="inp inp-sm" style={{width:130}} type="number" min="0" max="100"
+            placeholder="Scor minim…" value={fMin} onChange={e=>setFMin(e.target.value)}/>
+          <select className="inp inp-sm" style={{width:150}} value={sortBy} onChange={e=>setSortBy(e.target.value)}>
+            <option value="score">Sortare: scor ↓</option>
+            <option value="date">Sortare: dată ↓</option>
+          </select>
+        </div>
+
+        {/* Ranking header per level when filtered */}
+        {fLvl !== "all" && filtered.length > 0 && (
+          <div className="alert alert-info" style={{marginBottom:12}}>
+            <strong>Clasament {fLvl}</strong> — {filtered.length} lucrări · Scor maxim: {filtered[0]?.result?.total||0}p · Medie: {Math.round(filtered.reduce((a,s)=>a+(s.result?.total||0),0)/filtered.length)}p
+          </div>
+        )}
+
+        <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+          {filtered.length===0
+            ? <div style={{padding:40,textAlign:"center",color:"#aaa"}}>Nicio lucrare trimisă.</div>
+            : (
+              <div className="tbl-wrap">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Elev</th>
+                      <th>Școală</th>
+                      <th>Județ</th>
+                      <th>Nivel</th>
+                      <th>Etapă</th>
+                      <th>Var.</th>
+                      <th>Punctaj</th>
+                      <th>Notă</th>
+                      <th>Data</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((s,i)=>{
+                      const p = ptcpMap[s.participantId]||{};
+                      const total = s.result?.total||0;
+                      return (
+                        <tr key={s.id}>
+                          <td style={{color:"#aaa",fontSize:11,fontWeight:700}}>{i+1}</td>
+                          <td>
+                            <div style={{fontWeight:700,color:C.dark,fontSize:13}}>{p.name||"—"}</div>
+                            <div style={{fontSize:11,color:"#999"}}>{p.grade||""} {p.teacher?"· Prof. "+p.teacher:""}</div>
+                          </td>
+                          <td style={{fontSize:12,maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.school||"—"}</td>
+                          <td style={{fontSize:12}}>{p.county||"—"}</td>
+                          <td><span className={`badge b-${s.level}`}>{s.level}</span></td>
+                          <td style={{fontSize:12}}>{ADMIN.stageLabel[s.stage]||s.stage}</td>
+                          <td style={{fontSize:12,fontFamily:"monospace"}}>{s.variantId}</td>
+                          <td>
+                            <span style={{background:total>=50?C.dark:C.red,color:"#fff",borderRadius:20,padding:"3px 10px",fontWeight:700,fontSize:13}}>
+                              {total}p
+                            </span>
+                          </td>
+                          <td style={{fontWeight:600,color:C.mid,fontSize:13}}>{(total/10).toFixed(2)}</td>
+                          <td style={{fontSize:11,color:"#999",whiteSpace:"nowrap"}}>{s.submittedAt?new Date(s.submittedAt).toLocaleDateString("ro-RO"):""}</td>
+                          <td>
+                            <button className="btn btn-outline btn-sm" onClick={()=>setSel(s)} style={{fontSize:11}}>Detalii ›</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )
+          }
+        </div>
+      </div></div>
+    </div>
+  );
+}
+
+CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<ResultsPage/>));
+</script>
+</body>
+</html>

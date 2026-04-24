@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin – CPEEN 2026</title>
+<link rel="stylesheet" href="../css/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/admin.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+const C = {dark:"#1F3864",mid:"#2E75B6",red:"#C0392B",green:"#1D6027"};
+const LVL = ["A2","B1","B2","C1"];
+
+function LoginView() {
+  const [pw,  setPw]  = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = () => {
+    if(!pw) { setErr("Introduceți parola."); return; }
+    setBusy(true);
+    ADMIN.login(pw).then(ok => {
+      if(ok) window.location.reload();
+      else { setErr("Parolă incorectă."); setBusy(false); }
+    });
+  };
+
+  return (
+    <div className="page-center">
+      <div className="wrap-sm">
+        <div className="card">
+          <div className="card-head" style={{textAlign:"center"}}>
+            <h2>Panou Administrator</h2>
+            <p>CPEEN 2026 · Autentificare</p>
+          </div>
+          <div className="card-body">
+            {err && <div className="alert alert-err">{err}</div>}
+            <div className="fg">
+              <label>Parolă</label>
+              <input type="password" className="inp" value={pw}
+                onChange={e=>{ setPw(e.target.value); setErr(""); }}
+                onKeyDown={e=>e.key==="Enter"&&submit()}
+                autoFocus placeholder="parola administrator"/>
+            </div>
+            <button className="btn btn-primary btn-lg btn-block" onClick={submit} disabled={busy}>
+              {busy ? "Se verifică…" : "Intră →"}
+            </button>
+            <div style={{textAlign:"center",marginTop:12}}>
+              <a href="../index.html" style={{fontSize:13,color:C.mid}}>← Pagina principală</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Metric({label, value, sub, color}) {
+  return (
+    <div style={{background:"#fff",borderRadius:10,padding:"18px 20px",boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+      <div style={{fontSize:32,fontWeight:700,color:color||C.dark}}>{value}</div>
+      <div style={{fontSize:13,fontWeight:600,color:"#444",marginTop:2}}>{label}</div>
+      {sub && <div style={{fontSize:11,color:"#999",marginTop:2}}>{sub}</div>}
+    </div>
+  );
+}
+
+function Bar({pct,color}) {
+  return (
+    <div style={{background:"#eee",borderRadius:4,height:8,margin:"4px 0"}}>
+      <div style={{background:color||C.mid,width:pct+"%",height:8,borderRadius:4,transition:"width .3s"}}/>
+    </div>
+  );
+}
+
+function DashboardView() {
+  CPEEN.seedInitialData();
+  const participants = CPEEN.getParticipants();
+  const sessions     = CPEEN.getSessions();
+  const submitted    = sessions.filter(s => s.status === "submitted");
+  const avg  = submitted.length ? Math.round(submitted.reduce((a,s)=>a+(s.result?.total||0),0)/submitted.length) : "—";
+  const last24 = submitted.filter(s => s.submittedAt && Date.now()-s.submittedAt < 86400000).length;
+
+  const lvlStats = LVL.map(l => ({
+    l,
+    p: participants.filter(p=>p.level===l).length,
+    s: submitted.filter(s=>s.level===l).length,
+    color: ADMIN.levelColor[l]
+  }));
+  const maxP = Math.max(1, ...lvlStats.map(x=>x.p));
+
+  const recent = submitted
+    .slice().sort((a,b)=>b.submittedAt-a.submittedAt).slice(0,10)
+    .map(s => ({...s, ptcp: participants.find(p=>p.id===s.participantId)}));
+
+  const PAGES = [
+    {href:"participants.html", icon:"👥", label:"Participanți", desc:`${participants.length} înregistrați`},
+    {href:"results.html",      icon:"📊", label:"Rezultate",    desc:`${submitted.length} lucrări`},
+    {href:"exams.html",        icon:"📝", label:"Subiecte",     desc:`${CPEEN.getExams().length} examene`},
+    {href:"settings.html",     icon:"⚙️", label:"Setări",       desc:"configurare platformă"},
+  ];
+
+  return (
+    <div className="page">
+      <div className="container">
+        <ADMIN.Nav active="dashboard"/>
+
+        {/* Metrics */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:14,margin:"24px 0 20px"}}>
+          <Metric label="Participanți" value={participants.length} sub="înregistrați"/>
+          <Metric label="Lucrări trimise" value={submitted.length} sub="din toate nivelurile"/>
+          <Metric label="Scor mediu" value={avg} sub={avg!=="—"?"puncte (0–100)":""} color={C.mid}/>
+          <Metric label="Ultimele 24h" value={last24} sub="lucrări noi" color={C.green}/>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:24}}>
+          {/* Per-level breakdown */}
+          <div style={{background:"#fff",borderRadius:10,padding:"18px 20px",boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+            <div style={{fontWeight:700,color:C.dark,marginBottom:14,fontSize:14}}>Participanți per nivel</div>
+            {lvlStats.map(({l,p,s,color})=>(
+              <div key={l} style={{marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:2}}>
+                  <span><span className={`badge b-${l}`}>{l}</span> <span style={{marginLeft:6,color:"#555"}}>{p} participanți, {s} lucrări</span></span>
+                </div>
+                <Bar pct={Math.round((p/maxP)*100)} color={color}/>
+              </div>
+            ))}
+          </div>
+
+          {/* Recent activity */}
+          <div style={{background:"#fff",borderRadius:10,padding:"18px 20px",boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+            <div style={{fontWeight:700,color:C.dark,marginBottom:14,fontSize:14}}>Activitate recentă</div>
+            {recent.length === 0
+              ? <div style={{color:"#aaa",fontSize:13}}>Nicio lucrare trimisă încă.</div>
+              : recent.map((s,i)=>(
+                <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                  padding:"6px 0",borderBottom:"1px solid #f0f0f0",fontSize:12}}>
+                  <div>
+                    <span className={`badge b-${s.level}`} style={{fontSize:10,marginRight:6}}>{s.level}</span>
+                    <strong style={{color:C.dark}}>{s.ptcp?.name||"—"}</strong>
+                    <span style={{color:"#999",marginLeft:6}}>{s.ptcp?.school?.slice(0,25)||""}</span>
+                  </div>
+                  <div style={{fontWeight:700,color:C.mid,whiteSpace:"nowrap"}}>{s.result?.total||0}p</div>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {/* Quick-link cards */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14}}>
+          {PAGES.map(pg=>(
+            <a key={pg.href} href={pg.href} style={{background:"#fff",borderRadius:10,padding:"20px",boxShadow:"0 2px 12px rgba(0,0,0,.07)",textDecoration:"none",display:"block"}}>
+              <div style={{fontSize:26,marginBottom:6}}>{pg.icon}</div>
+              <div style={{fontWeight:700,color:C.dark,fontSize:14,marginBottom:4}}>{pg.label}</div>
+              <div style={{fontSize:12,color:"#888"}}>{pg.desc}</div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  if(!ADMIN.isAuthed()) return <LoginView/>;
+  return <DashboardView/>;
+}
+
+CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<App/>));
+</script>
+</body>
+</html>

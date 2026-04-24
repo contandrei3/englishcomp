@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Subiecte – Admin CPEEN 2026</title>
+<link rel="stylesheet" href="../css/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/admin.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useRef } = React;
+const C = {dark:"#1F3864",mid:"#2E75B6",red:"#C0392B",green:"#1D6027"};
+
+function ExamsPage() {
+  if(!ADMIN.isAuthed()) { window.location.replace("index.html"); return null; }
+  CPEEN.seedInitialData();
+
+  const [exams,    setExams]    = useState(()=>CPEEN.getExams());
+  const [expanded, setExpanded] = useState(null);
+  const [toDelete, setToDelete] = useState(null);
+  const [importErr,setImportErr]= useState("");
+  const [importOk, setImportOk] = useState("");
+  const fileRef = useRef(null);
+  const sessions = CPEEN.getSessions();
+
+  const reload = () => setExams(CPEEN.getExams());
+
+  const downloadJSON = (exam) => {
+    const blob = JSON.stringify(exam, null, 2);
+    const a = document.createElement("a");
+    a.href = "data:application/json;charset=utf-8," + encodeURIComponent(blob);
+    a.download = `cpeen_${exam.level}_${exam.stage}_${exam.id}.json`;
+    a.click();
+  };
+
+  const doDelete = (id) => {
+    CPEEN.deleteExam(id);
+    setToDelete(null);
+    reload();
+  };
+
+  const handleImport = (e) => {
+    const file = e.target.files?.[0];
+    if(!file) return;
+    setImportErr(""); setImportOk("");
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        // Validate minimal structure
+        if(!data.level || !data.stage || !Array.isArray(data.variants)) {
+          setImportErr("JSON invalid: trebuie să conțină level, stage și variants[].");
+          return;
+        }
+        if(!data.variants.length) {
+          setImportErr("Examenul nu conține nicio variantă (variants[]).");
+          return;
+        }
+        // Remove id so a new one is generated
+        delete data.id;
+        CPEEN.addExam(data);
+        setImportOk(`Examenul "${data.title||data.level+" "+data.stage}" a fost importat.`);
+        reload();
+      } catch(err) {
+        setImportErr("Eroare de parsare JSON: " + err.message);
+      }
+      e.target.value = "";
+    };
+    reader.readAsText(file);
+  };
+
+  const addStub = () => {
+    CPEEN.addExam({
+      level: "B1", stage: "calificare",
+      title: "Examen nou (editați prin JSON)",
+      duration: 45, variants: []
+    });
+    reload();
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
+      <ADMIN.Nav active="exams"/>
+      <div className="page"><div className="container">
+
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
+          <div>
+            <h2 style={{color:C.dark,fontSize:18}}>Subiecte (Examene)</h2>
+            <div style={{fontSize:12,color:"#888"}}>{exams.length} examene în baza de date</div>
+          </div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <button className="btn btn-mid btn-sm" onClick={reload}>↻ Actualizează</button>
+            <button className="btn btn-mid btn-sm" onClick={()=>window.location.href="exam-builder.html"}>✏ Editor</button>
+            <button className="btn btn-outline btn-sm" onClick={addStub}>+ Stub</button>
+            <button className="btn btn-primary btn-sm" onClick={()=>fileRef.current?.click()}>⬆ Import JSON</button>
+            <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={handleImport}/>
+          </div>
+        </div>
+
+        {importErr && <div className="alert alert-err">{importErr}</div>}
+        {importOk  && <div className="alert alert-ok">{importOk}</div>}
+
+        <div className="alert alert-info" style={{marginBottom:16}}>
+          <strong>Format JSON:</strong> Fiecare examen trebuie să aibă <code>level</code>, <code>stage</code>, <code>duration</code> (minute) și <code>variants[]</code>.
+          Descărcați un examen existent ca referință de format.
+        </div>
+
+        {/* Confirm delete */}
+        {toDelete && (()=>{
+          const ex = exams.find(e=>e.id===toDelete);
+          const sessCount = sessions.filter(s=>s.examId===toDelete).length;
+          return (
+            <div className="alert alert-err" style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:12}}>
+              <span>Sigur ștergi <strong>{ex?.title||ex?.id}</strong>? {sessCount > 0 && <><strong>{sessCount} sesiuni</strong> vor pierde referința la subiect.</>}</span>
+              <div style={{display:"flex",gap:8}}>
+                <button className="btn btn-danger btn-sm" onClick={()=>doDelete(toDelete)}>Șterge</button>
+                <button className="btn btn-ghost btn-sm" onClick={()=>setToDelete(null)}>Anulează</button>
+              </div>
+            </div>
+          );
+        })()}
+
+        {exams.length===0
+          ? <div style={{background:"#fff",borderRadius:10,padding:40,textAlign:"center",color:"#aaa",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+              Niciun examen. Importați un JSON sau adăugați un examen stub.
+            </div>
+          : exams.map(exam => {
+            const sessCount = sessions.filter(s=>s.examId===exam.id).length;
+            const isOpen = expanded===exam.id;
+            return (
+              <div key={exam.id} style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:12,overflow:"hidden"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",gap:8,flexWrap:"wrap"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,flex:1,minWidth:0}}>
+                    <span className={`badge b-${exam.level}`}>{exam.level}</span>
+                    <span className="badge b-dark">{ADMIN.stageLabel[exam.stage]||exam.stage}</span>
+                    <div style={{minWidth:0}}>
+                      <div style={{fontWeight:700,color:C.dark,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{exam.title||exam.id}</div>
+                      <div style={{fontSize:11,color:"#888"}}>
+                        {exam.variants?.length||0} variant(e) · {exam.duration} min · {sessCount} sesiuni
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:6}}>
+                    <button className="btn btn-outline btn-sm" onClick={()=>setExpanded(isOpen?null:exam.id)}>
+                      {isOpen?"Ascunde JSON":"Afișează JSON"}
+                    </button>
+                    <button className="btn btn-mid btn-sm" onClick={()=>downloadJSON(exam)}>⬇ JSON</button>
+                    <button className="btn btn-outline btn-sm" onClick={()=>window.location.href=`exam-builder.html?id=${exam.id}`}>✏ Editează</button>
+                    <button className="btn btn-danger btn-sm" onClick={()=>setToDelete(exam.id)}>✕</button>
+                  </div>
+                </div>
+                {isOpen && (
+                  <div style={{borderTop:"1px solid #eee",padding:"12px 18px",background:"#f8f9fa"}}>
+                    <pre style={{fontSize:11,lineHeight:1.5,overflowX:"auto",maxHeight:320,margin:0,whiteSpace:"pre-wrap"}}>
+                      {JSON.stringify(exam,null,2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        }
+      </div></div>
+    </div>
+  );
+}
+
+CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<ExamsPage/>));
+</script>
+</body>
+</html>

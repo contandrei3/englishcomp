@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Examen – CPEEN 2026</title>
+<link rel="stylesheet" href="css/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+const fmt = s => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+const LVL_C = {A2:"#27AE60",B1:"#E67E22",B2:"#8E44AD",C1:"#2E75B6"};
+const C = {dark:"#1F3864",mid:"#2E75B6",light:"#D6E4F0",accent:"#E8F4FD",red:"#C0392B",green:"#1D6027"};
+
+function Navbar({participant}) {
+  return (
+    <nav className="nav">
+      <a href="index.html" className="nav-brand">
+        <span className="nav-domain">englishgrammarchallenge.ro</span>
+        <span className="nav-title">CPEEN 2026</span>
+      </a>
+      <div className="nav-links">
+        <a href="register.html" className="nav-link">Înregistrare</a>
+        <a href="exam.html" className="nav-link active">Acces Examen</a>
+        <a href="admin/index.html" className="nav-link">Admin</a>
+      </div>
+    </nav>
+  );
+}
+
+function S3Text({segments}) {
+  return <span>{segments.map((seg,i) =>
+    typeof seg === "string"
+      ? <span key={i}>{seg}</span>
+      : <span key={i} style={{background:C.dark,color:"#fff",borderRadius:4,fontSize:11,fontWeight:700,padding:"1px 6px",margin:"0 2px"}}>({seg.g})</span>
+  )}</span>;
+}
+
+function ExamApp() {
+  CPEEN.seedInitialData();
+
+  const [view,    setView]    = useState("code");
+  const [code,    setCode]    = useState("");
+  const [codeErr, setCodeErr] = useState("");
+  const [ptcp,    setPtcp]    = useState(null);
+  const [sess,    setSess]    = useState(null);
+  const [exam,    setExam]    = useState(null);
+  const [variant, setVariant] = useState(null);
+  const [answers, setAnswers] = useState({s1:[],s2:[],s3:[],s4:[],writing:""});
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [result,  setResult]  = useState(null);
+  const timerRef   = useRef(null);
+  const subRef     = useRef(false);
+  const sessIdRef  = useRef(null);
+  // Refs so the timer callback always sees current values without stale closures
+  const answersRef = useRef({s1:[],s2:[],s3:[],s4:[],writing:""});
+  const sessRef    = useRef(null);
+  const examRef    = useRef(null);
+  const variantRef = useRef(null);
+
+  const setAns = (sec, i, v) => {
+    setAnswers(prev => {
+      const next = {...prev,[sec]:typeof i==="number"?prev[sec].map((x,j)=>j===i?v:x):v};
+      answersRef.current = next;
+      if(sessIdRef.current) CPEEN.updateSession(sessIdRef.current, {answers: next});
+      return next;
+    });
+  };
+
+  const doSubmit = useCallback((curAnswers, curSess, curExam, curVariant) => {
+    if(subRef.current) return;
+    subRef.current = true;
+    clearInterval(timerRef.current);
+    const res = CPEEN.gradeSession({...curSess, answers: curAnswers}, curExam);
+    const updated = CPEEN.updateSession(curSess.id, {
+      answers: curAnswers, result: res, status: "submitted",
+      submittedAt: Date.now(), locked: true
+    });
+    setResult(res);
+    setSess(updated);
+    setVariant(curVariant);
+    setView("result");
+  }, []);
+
+  const enterCode = () => {
+    setCodeErr("");
+    const p = CPEEN.findParticipantByCode(code);
+    if(!p) { setCodeErr("Cod de acces invalid. Verificați și reîncercați."); return; }
+
+    let s = CPEEN.getSessionByParticipant(p.id);
+
+    // Already submitted → show results
+    if(s && s.status === "submitted") {
+      const ex = CPEEN.getExams().find(e => e.id === s.examId) ||
+                 CPEEN.getExamForParticipant(s.level, s.stage);
+      const v  = ex?.variants?.find(v => v.id === s.variantId);
+      setPtcp(p); setSess(s); setExam(ex); setVariant(v); setResult(s.result);
+      setView("result");
+      return;
+    }
+
+    // Check activation — skip if already in progress
+    if(!s || s.status === "pending") {
+      const cfg = CPEEN.getConfig();
+      if(!cfg.activeExams?.[p.level]?.[p.stage]) {
+        setPtcp(p); setView("noExam"); return;
+      }
+    }
+
+    const ex = CPEEN.getExamForParticipant(p.level, p.stage);
+    if(!ex) { setPtcp(p); setView("noExam"); return; }
+
+    if(!s) {
+      const vIdx = Math.floor(Math.random() * ex.variants.length);
+      s = CPEEN.createSession(p.id, ex, ex.variants[vIdx].id);
+    }
+
+    if(s.status === "pending") {
+      s = CPEEN.updateSession(s.id, {status:"in_progress", startedAt: Date.now()});
+    }
+
+    const v = ex.variants.find(v => v.id === s.variantId);
+    const remaining = Math.max(0, ex.duration * 60 - Math.floor((Date.now() - s.startedAt) / 1000));
+
+    if(remaining === 0) {
+      doSubmit(s.answers, s, ex, v);
+      return;
+    }
+
+    subRef.current = false;
+    sessIdRef.current = s.id;
+    examRef.current = ex;
+    variantRef.current = v;
+    sessRef.current = s;
+    answersRef.current = s.answers;
+    setPtcp(p); setSess(s); setExam(ex); setVariant(v);
+    setAnswers(s.answers);
+    setTimeLeft(remaining);
+    setView("exam");
+  };
+
+  // Timer — uses refs so auto-submit always sees current values
+  useEffect(() => {
+    if(view !== "exam") return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft(t => {
+        if(t <= 1) {
+          clearInterval(timerRef.current);
+          setTimeout(() => doSubmit(answersRef.current, sessRef.current, examRef.current, variantRef.current), 0);
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [view]);
+
+  // ── Code entry view ─────────────────────────────────────────────────────
+  if(view === "code") return (
+    <>
+      <Navbar/>
+      <div className="page-center">
+        <div className="wrap-sm">
+          <div className="card">
+            <div className="card-head" style={{textAlign:"center"}}>
+              <h2>Acces Examen</h2>
+              <p>CPEEN 2026 · Introduceți codul de acces</p>
+            </div>
+            <div className="card-body">
+              <div className="fg">
+                <label>Cod de acces<span className="req">*</span></label>
+                <input className={`inp${codeErr?" err":""}`}
+                  value={code} onChange={e=>setCode(e.target.value.toUpperCase())}
+                  onKeyDown={e=>e.key==="Enter"&&enterCode()}
+                  placeholder="ex: ABC12345" maxLength={8}
+                  style={{letterSpacing:4,fontSize:20,fontFamily:"monospace",textAlign:"center"}}/>
+                {codeErr && <div className="ferr">{codeErr}</div>}
+              </div>
+              <button className="btn btn-primary btn-lg btn-block" onClick={enterCode}>
+                Accesează examenul →
+              </button>
+              <div style={{textAlign:"center",marginTop:14}}>
+                <a href="register.html" style={{fontSize:13}}>Nu ai un cod? Înregistrează-te →</a>
+              </div>
+            </div>
+          </div>
+          <div className="text-center text-muted" style={{marginTop:14}}>CPEEN 2026 · englishgrammarchallenge.ro</div>
+        </div>
+      </div>
+    </>
+  );
+
+  // ── No exam available ───────────────────────────────────────────────────
+  if(view === "noExam") return (
+    <>
+      <Navbar/>
+      <div className="page-center">
+        <div className="wrap-sm">
+          <div className="card">
+            <div className="card-head" style={{textAlign:"center"}}>
+              <div style={{fontSize:36,marginBottom:8}}>⏳</div>
+              <h2 style={{color:"#fff"}}>Subiecte în pregătire</h2>
+              <p>Codul este valid — subiectele nu sunt disponibile încă.</p>
+            </div>
+            <div className="card-body" style={{textAlign:"center"}}>
+              <p style={{fontSize:14,color:"#555",marginBottom:8}}>Bun venit, <strong>{ptcp?.name}</strong>.</p>
+              <p style={{fontSize:13,color:"#777",marginBottom:20}}>
+                Subiectele pentru nivelul <strong>{ptcp?.level}</strong> – {ptcp?.stage==="finala"?"Finală":"Calificare"} nu au fost activate încă de administrator.
+                Reveniți mai târziu.
+              </p>
+              <a href="index.html" className="btn btn-primary">← Pagina principală</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
+  // ── Result view ─────────────────────────────────────────────────────────
+  if(view === "result" && result && variant) {
+    const cfg = CPEEN.getConfig();
+    if(!cfg.showResultsImmediately) return (
+      <>
+        <Navbar/>
+        <div className="page-center">
+          <div className="wrap-sm">
+            <div className="card">
+              <div className="card-head" style={{textAlign:"center"}}>
+                <div style={{fontSize:36,marginBottom:8}}>✅</div>
+                <h2>Lucrare trimisă!</h2>
+                <p>Răspunsurile tale au fost salvate.</p>
+              </div>
+              <div className="card-body" style={{textAlign:"center"}}>
+                <p style={{fontSize:14,color:"#555",marginBottom:20}}>Rezultatele vor fi afișate după activarea de administrator.</p>
+                <a href="index.html" className="btn btn-primary">← Pagina principală</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+
+    const secs = [
+      {k:"s1",lbl:"KWT",       max:variant.s1.key.length*variant.s1.pts},
+      {k:"s2",lbl:"Error Corr",max:variant.s2.key.length*variant.s2.pts},
+      {k:"s3",lbl:"Open Cloze",max:variant.s3.key.length*variant.s3.pts},
+      {k:"s4",lbl:"Word Form", max:variant.s4.key.length*variant.s4.pts},
+    ];
+    return (
+      <>
+        <Navbar/>
+        <div className="page-center" style={{alignItems:"flex-start",paddingTop:32}}>
+          <div className="wrap-sm">
+            <div className="card">
+              <div className="card-head" style={{textAlign:"center",padding:"28px"}}>
+                <div style={{color:"#D6E4F0",fontSize:11,letterSpacing:2,marginBottom:6}}>
+                  CPEEN 2026 · {ptcp?.level} · {ptcp?.stage==="finala"?"Finală":"Calificare"} · {variant.id}
+                </div>
+                <div style={{color:"#fff",fontSize:46,fontWeight:700}}>{result.total}</div>
+                <div style={{color:"#D6E4F0",fontSize:13}}>puncte din 100 · Nota: <strong style={{fontSize:18}}>{(result.total/10).toFixed(2)}</strong></div>
+              </div>
+              <div className="card-body">
+                <div style={{fontWeight:700,color:C.dark}}>{ptcp?.name}</div>
+                <div style={{fontSize:13,color:"#888",marginBottom:20}}>{ptcp?.school} · {ptcp?.grade} · {ptcp?.county}</div>
+                {secs.map(({k,lbl,max})=>{
+                  const sc = result.det[k].filter(Boolean).length * (max/result.det[k].length);
+                  return (
+                    <div key={k} style={{marginBottom:12}}>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:3}}>
+                        <span style={{color:C.dark,fontWeight:600}}>{lbl}</span>
+                        <span style={{fontWeight:700,color:C.mid}}>{sc}/{max}p</span>
+                      </div>
+                      <div style={{background:"#eee",borderRadius:4,height:7}}>
+                        <div style={{background:C.mid,width:`${(sc/max)*100}%`,height:7,borderRadius:4}}/>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="alert alert-warn" style={{marginTop:12}}>
+                  Secțiunea KWT poate fi reverificată manual de profesor.
+                </div>
+                {sess?.answers?.writing && (
+                  <div className="alert alert-info" style={{marginTop:8}}>
+                    Răspunsul la secțiunea Writing a fost salvat și va fi corectat manual.
+                    {sess.writingGrade !== null && <> · <strong>Notă writing: {sess.writingGrade}/20</strong></>}
+                  </div>
+                )}
+                <div style={{textAlign:"center",marginTop:14,color:"#888",fontSize:11}}>
+                  Răspunsurile au fost salvate.<br/>
+                  <span style={{color:C.mid}}>englishgrammarchallenge.ro · CPEEN 2026</span>
+                </div>
+                <a href="index.html" className="btn btn-primary btn-block mt16" style={{display:"flex"}}>← Pagina principală</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ── Exam view ───────────────────────────────────────────────────────────
+  if(view === "exam" && variant) {
+    const urgent = timeLeft < 300;
+    const hasWriting = !!variant.writing;
+    return (
+      <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
+        {/* Sticky header */}
+        <div style={{position:"sticky",top:0,zIndex:100,background:C.dark,padding:"9px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>
+          <div style={{color:"#D6E4F0",fontSize:11,fontWeight:600,letterSpacing:1}}>
+            <span style={{background:LVL_C[ptcp?.level],color:"#fff",borderRadius:6,padding:"1px 7px",marginRight:8,fontWeight:700}}>{ptcp?.level}</span>
+            {ptcp?.stage==="finala"?"Finală":"Calificare"} · {variant.id} · {ptcp?.name}
+          </div>
+          <div className={`timer${urgent?" urgent":""}`}>⏱ {fmt(timeLeft)}</div>
+          <div style={{display:"flex",gap:5}}>
+            {[1,2,3,4].map(n=>(
+              <button key={n} onClick={()=>document.getElementById(`sec${n}`)?.scrollIntoView({behavior:"smooth"})}
+                style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"none",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:600}}>S{n}</button>
+            ))}
+            {hasWriting && (
+              <button onClick={()=>document.getElementById("sec5")?.scrollIntoView({behavior:"smooth"})}
+                style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"none",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:600}}>S5</button>
+            )}
+          </div>
+        </div>
+
+        <div style={{maxWidth:750,margin:"0 auto",padding:"22px 16px 80px"}}>
+
+          {/* S1 – KWT */}
+          <div id="sec1" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+            <div className="sec-badge">
+              <span>SECTION 1 — KEY WORD TRANSFORMATIONS</span>
+              <span>{variant.s1.items.length} × {variant.s1.pts} = {variant.s1.items.length*variant.s1.pts} pts</span>
+            </div>
+            <div className="instr">Complete the second sentence using the word given. Do NOT change the word given. Use between THREE and SIX words including the word given.</div>
+            {variant.s1.items.map((item,i)=>(
+              <div key={i} style={{borderBottom:"1px solid #eee",paddingBottom:14,marginBottom:14}}>
+                <div style={{fontSize:13,color:"#333",marginBottom:5}}><strong style={{color:C.dark,marginRight:5}}>{i+1}.</strong>{item.s1}</div>
+                <div style={{display:"inline-block",background:C.dark,color:"#fff",fontWeight:700,fontSize:10,letterSpacing:2,padding:"2px 9px",borderRadius:4,marginBottom:7}}>{item.kw}</div>
+                <div style={{fontSize:13,color:"#333",display:"flex",alignItems:"center",flexWrap:"wrap",gap:4}}>
+                  {item.before&&<span>{item.before}</span>}
+                  <input className="ans-inp" value={answers.s1[i]||""} onChange={e=>setAns("s1",i,e.target.value)}
+                    placeholder="3–6 words..." style={{width:210}}/>
+                  {item.after&&<span>{item.after}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* S2 – Error Correction */}
+          <div id="sec2" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+            <div className="sec-badge">
+              <span>SECTION 2 — ERROR CORRECTION</span>
+              <span>{variant.s2.key.length} × {variant.s2.pts} = {variant.s2.key.length*variant.s2.pts} pts</span>
+            </div>
+            <div className="instr">Each numbered line contains ONE error. Write the correct word. Write DELETE if a word should be removed.</div>
+            <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:12,marginBottom:14,fontFamily:"'Courier New',monospace",fontSize:12,lineHeight:2}}>
+              <div style={{color:"#999",marginBottom:4}}>{variant.s2.intro}</div>
+              <strong style={{color:C.dark,display:"block",marginBottom:6}}>{variant.s2.text}</strong>
+              {variant.s2.lines.map((line,i)=>(
+                <div key={i} style={{display:"flex",gap:6,alignItems:"baseline"}}>
+                  <span style={{color:C.dark,fontWeight:700,minWidth:18}}>{i+1}.</span>
+                  <span>{line}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+              {variant.s2.key.map((_,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontWeight:700,color:C.dark,minWidth:24,fontSize:12}}>{i+1}.</span>
+                  <input className="ans-inp" value={answers.s2[i]||""} onChange={e=>setAns("s2",i,e.target.value)}
+                    placeholder="correct word / DELETE" style={{flex:1}}/>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* S3 – Open Cloze */}
+          <div id="sec3" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+            <div className="sec-badge">
+              <span>SECTION 3 — OPEN CLOZE</span>
+              <span>{variant.s3.key.length} × {variant.s3.pts} = {variant.s3.key.length*variant.s3.pts} pts</span>
+            </div>
+            <div className="instr">Read the text and think of ONE word which best fits each gap.</div>
+            <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:14,marginBottom:14,fontSize:13,lineHeight:1.9}}>
+              <strong style={{color:C.dark,display:"block",marginBottom:8}}>{variant.s3.title}</strong>
+              <S3Text segments={variant.s3.segments}/>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+              {variant.s3.key.map((_,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({i+1})</span>
+                  <input className="ans-inp" value={answers.s3[i]||""} onChange={e=>setAns("s3",i,e.target.value)}
+                    placeholder="one word" style={{flex:1}}/>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* S4 – Word Formation */}
+          <div id="sec4" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+            <div className="sec-badge">
+              <span>SECTION 4 — WORD FORMATION</span>
+              <span>{variant.s4.items.length} × {variant.s4.pts} = {variant.s4.items.length*variant.s4.pts} pts</span>
+            </div>
+            <div className="instr">Use the word in CAPITALS to form a word that fits the gap.</div>
+            {variant.s4.items.map((item,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:9,flexWrap:"wrap"}}>
+                <span style={{fontWeight:700,color:C.dark,minWidth:22,fontSize:12}}>{i+1}.</span>
+                <span style={{fontSize:13}}>{item.before}</span>
+                <input className="ans-inp" value={answers.s4[i]||""} onChange={e=>setAns("s4",i,e.target.value)}
+                  placeholder="..." style={{width:160}}/>
+                <span style={{fontSize:13}}>{item.after}</span>
+                <span style={{background:"#D6E4F0",color:C.dark,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:4,letterSpacing:1}}>{item.kw}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* S5 – Writing (optional) */}
+          {hasWriting && (
+            <div id="sec5" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+              <div className="sec-badge">
+                <span>SECTION 5 — WRITING</span>
+                <span>corectat manual</span>
+              </div>
+              <div className="instr">{variant.writing.prompt}</div>
+              {variant.writing.minWords && (
+                <div style={{fontSize:11,color:"#888",marginBottom:8}}>{variant.writing.minWords}–{variant.writing.maxWords} cuvinte</div>
+              )}
+              <textarea className="inp" value={answers.writing||""} onChange={e=>setAns("writing",null,e.target.value)}
+                rows={10} style={{resize:"vertical",lineHeight:1.6}} placeholder="Scrie răspunsul tău aici..."/>
+              <div style={{fontSize:11,color:"#888",marginTop:4}}>
+                Cuvinte: {(answers.writing||"").trim().split(/\s+/).filter(Boolean).length}
+              </div>
+            </div>
+          )}
+
+          {/* Submit */}
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:12,color:"#888",marginBottom:8}}>Verificați toate răspunsurile înainte de a trimite.</div>
+            <button onClick={()=>doSubmit(answersRef.current,sessRef.current,examRef.current,variantRef.current)}
+              style={{background:C.dark,color:"#fff",border:"none",borderRadius:10,padding:"14px 44px",fontSize:15,fontWeight:700,cursor:"pointer",letterSpacing:1,boxShadow:"0 4px 16px rgba(31,56,100,.3)"}}>
+              TRIMITE LUCRAREA ✓
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<ExamApp/>));
+</script>
+</body>
+</html>

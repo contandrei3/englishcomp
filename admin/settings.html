@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Setări – Admin CPEEN 2026</title>
+<link rel="stylesheet" href="../css/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/admin.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+const C = {dark:"#1F3864",mid:"#2E75B6",red:"#C0392B",green:"#1D6027"};
+
+function Section({title, children}) {
+  return (
+    <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:20,overflow:"hidden"}}>
+      <div style={{background:C.dark,padding:"12px 20px"}}>
+        <div style={{color:"#fff",fontWeight:700,fontSize:15}}>{title}</div>
+      </div>
+      <div style={{padding:20}}>{children}</div>
+    </div>
+  );
+}
+
+function SettingsPage() {
+  if(!ADMIN.isAuthed()) { window.location.replace("index.html"); return null; }
+
+  const cfg0 = CPEEN.getConfig();
+
+  // Concurs settings
+  const [maxPerSchool,     setMaxPerSchool]     = useState(String(cfg0.maxPerSchoolPerLevel||0));
+  const [showResults,      setShowResults]      = useState(cfg0.showResultsImmediately!==false);
+  const [configSaved,      setConfigSaved]      = useState(false);
+
+  // Password change
+  const [curPw,  setCurPw]  = useState("");
+  const [newPw,  setNewPw]  = useState("");
+  const [confPw, setConfPw] = useState("");
+  const [pwMsg,  setPwMsg]  = useState({type:"",text:""});
+
+  // Danger zone
+  const [resetWord, setResetWord] = useState("");
+  const RESET_CONFIRM = "CPEEN2026";
+
+  const saveConfig = () => {
+    const cfg = CPEEN.getConfig();
+    CPEEN.saveConfig({...cfg,
+      maxPerSchoolPerLevel: Math.max(0, parseInt(maxPerSchool)||0),
+      showResultsImmediately: showResults
+    });
+    setConfigSaved(true);
+    setTimeout(()=>setConfigSaved(false),2000);
+  };
+
+  const changePassword = () => {
+    setPwMsg({type:"",text:""});
+    if(!curPw || !newPw || !confPw) { setPwMsg({type:"err",text:"Completați toate câmpurile."}); return; }
+    if(newPw !== confPw) { setPwMsg({type:"err",text:"Parola nouă nu coincide cu confirmarea."}); return; }
+    if(newPw.length < 6) { setPwMsg({type:"err",text:"Parola nouă trebuie să aibă cel puțin 6 caractere."}); return; }
+
+    CPEEN.hashPass(curPw).then(curHash => {
+      const cfg = CPEEN.getConfig();
+      if(curHash !== cfg.adminHash) {
+        setPwMsg({type:"err",text:"Parola curentă este incorectă."}); return;
+      }
+      CPEEN.hashPass(newPw).then(newHash => {
+        CPEEN.saveConfig({...cfg, adminHash: newHash});
+        setCurPw(""); setNewPw(""); setConfPw("");
+        setPwMsg({type:"ok",text:"Parola a fost schimbată. La următoarea autentificare folosiți parola nouă."});
+      });
+    });
+  };
+
+  const doClearData = () => {
+    if(resetWord !== RESET_CONFIRM) return;
+    CPEEN.saveParticipants([]);
+    CPEEN.saveSessions([]);
+    setResetWord("");
+    alert("Toți participanții și sesiunile au fost șterse. Examenele au fost păstrate.");
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
+      <ADMIN.Nav active="settings"/>
+      <div className="page"><div style={{maxWidth:680,margin:"0 auto"}}>
+
+        {/* Concurs settings */}
+        <Section title="Configurare concurs">
+          <div className="fg">
+            <label style={{fontSize:13,fontWeight:600,color:C.dark,display:"block",marginBottom:4}}>
+              Limită participanți per școală per nivel
+              <span style={{fontSize:11,color:"#888",fontWeight:400,marginLeft:8}}>(0 = nelimitat)</span>
+            </label>
+            <input type="number" className="inp inp-sm" style={{width:100}} min="0"
+              value={maxPerSchool} onChange={e=>{ setMaxPerSchool(e.target.value); setConfigSaved(false); }}/>
+          </div>
+          <div className="fg" style={{display:"flex",alignItems:"center",gap:12}}>
+            <label style={{fontSize:13,fontWeight:600,color:C.dark}}>Afișare rezultate imediat după submit</label>
+            <input type="checkbox" style={{width:18,height:18,cursor:"pointer"}}
+              checked={showResults} onChange={e=>{ setShowResults(e.target.checked); setConfigSaved(false); }}/>
+            <span style={{fontSize:12,color:"#888"}}>{showResults?"Elevul vede scorul imediat":"Scorul e afișat doar după activare"}</span>
+          </div>
+          {configSaved && <div className="alert alert-ok" style={{marginBottom:8}}>✓ Salvat!</div>}
+          <button className="btn btn-primary" onClick={saveConfig}>Salvează setările</button>
+        </Section>
+
+        {/* Password change */}
+        <Section title="Schimbare parolă administrator">
+          {pwMsg.text && <div className={`alert alert-${pwMsg.type==="ok"?"ok":"err"}`} style={{marginBottom:12}}>{pwMsg.text}</div>}
+          <div className="fg">
+            <label style={{fontSize:13,fontWeight:600,color:C.dark,display:"block",marginBottom:4}}>Parola curentă</label>
+            <input type="password" className="inp inp-sm" style={{maxWidth:300}} value={curPw}
+              onChange={e=>{ setCurPw(e.target.value); setPwMsg({type:"",text:""}); }}/>
+          </div>
+          <div className="fg">
+            <label style={{fontSize:13,fontWeight:600,color:C.dark,display:"block",marginBottom:4}}>Parola nouă (min. 6 caractere)</label>
+            <input type="password" className="inp inp-sm" style={{maxWidth:300}} value={newPw}
+              onChange={e=>{ setNewPw(e.target.value); setPwMsg({type:"",text:""}); }}/>
+          </div>
+          <div className="fg">
+            <label style={{fontSize:13,fontWeight:600,color:C.dark,display:"block",marginBottom:4}}>Confirmare parolă nouă</label>
+            <input type="password" className="inp inp-sm" style={{maxWidth:300}} value={confPw}
+              onChange={e=>{ setConfPw(e.target.value); setPwMsg({type:"",text:""}); }}/>
+          </div>
+          <button className="btn btn-primary" onClick={changePassword}>Schimbă parola</button>
+        </Section>
+
+        {/* Danger zone */}
+        <Section title="⚠️ Zonă periculoasă">
+          <div className="alert alert-warn" style={{marginBottom:14}}>
+            Această acțiune șterge <strong>toți participanții și toate sesiunile</strong> de examen. Examenele (subiectele) nu sunt șterse. Acțiunea este <strong>ireversibilă</strong>.
+          </div>
+          <div className="fg">
+            <label style={{fontSize:13,fontWeight:600,color:C.dark,display:"block",marginBottom:4}}>
+              Tastați <code style={{background:"#f0f0f0",padding:"1px 6px",borderRadius:4}}>{RESET_CONFIRM}</code> pentru confirmare
+            </label>
+            <input className="inp inp-sm" style={{maxWidth:200}} value={resetWord}
+              onChange={e=>setResetWord(e.target.value)} placeholder={RESET_CONFIRM}/>
+          </div>
+          <button className="btn btn-danger" disabled={resetWord!==RESET_CONFIRM} onClick={doClearData}>
+            Șterge toți participanții și sesiunile
+          </button>
+        </Section>
+
+        <div style={{textAlign:"center",color:"#aaa",fontSize:11,paddingBottom:24}}>
+          CPEEN 2026 · englishgrammarchallenge.ro
+        </div>
+      </div></div>
+    </div>
+  );
+}
+
+CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<SettingsPage/>));
+</script>
+</body>
+</html>
