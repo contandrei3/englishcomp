@@ -13,10 +13,11 @@ var CPEEN = (function () {
 
   function syncToSheets(action, data) {
     if (!SHEETS_URL) return;
-    var body = new URLSearchParams();
-    body.append('action', action);
-    body.append('data', JSON.stringify(data));
-    fetch(SHEETS_URL, { method: 'POST', body: body, mode: 'no-cors' }).catch(function() {});
+    fetch(SHEETS_URL + '?action=' + encodeURIComponent(action), {
+      method: 'POST',
+      body: JSON.stringify(data),
+      mode: 'no-cors'
+    }).catch(function() {});
   }
 
   function init() {

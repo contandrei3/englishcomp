@@ -125,7 +125,7 @@ function doPost(e) {
   var ss     = SpreadsheetApp.getActiveSpreadsheet();
   var action = e.parameter.action;
   var data;
-  try { data = JSON.parse(e.parameter.data || 'null'); } catch(ex) { data = null; }
+  try { data = JSON.parse(e.postData ? e.postData.contents : 'null'); } catch(ex) { data = null; }
 
   if (action === 'saveParticipants') {
     objectsToSheet(ss.getSheetByName('Participants'), data, COLS.participants);
