@@ -9,6 +9,32 @@ var CPEEN = (function () {
     SESSIONS:     'cpeen_sessions'
   };
 
+  var SHEETS_URL = '';
+
+  function syncToSheets(action, data) {
+    if (!SHEETS_URL) return;
+    fetch(SHEETS_URL + '?action=' + encodeURIComponent(action), {
+      method: 'POST',
+      body: JSON.stringify(data),
+      mode: 'no-cors'
+    }).catch(function() {});
+  }
+
+  function init() {
+    var url = (typeof CPEEN_SHEETS_URL !== 'undefined') ? CPEEN_SHEETS_URL : '';
+    if (!url || url.indexOf('YOUR_APPS') !== -1) return Promise.resolve();
+    SHEETS_URL = url;
+    return fetch(url + '?action=getAll')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.participants) ss(KEYS.PARTICIPANTS, d.participants);
+        if (d.sessions)     ss(KEYS.SESSIONS,     d.sessions);
+        if (d.exams)        ss(KEYS.EXAMS,         d.exams);
+        if (d.config)       ss(KEYS.CONFIG,         d.config);
+      })
+      .catch(function() {}); // offline: use localStorage cache
+  }
+
   var DEFAULT_ADMIN_HASH = '214d1f1c62239db83286301ef9ce31e93144e98570370de2f035560e13b2a7d9'; // cpeen2026
 
   // ── Storage ───────────────────────────────────────────────────────────────
@@ -53,11 +79,11 @@ var CPEEN = (function () {
   function getConfig() {
     return Object.assign({ maxPerSchoolPerLevel: 0, showResultsImmediately: true, adminHash: DEFAULT_ADMIN_HASH, activeExams: {} }, sg(KEYS.CONFIG, {}));
   }
-  function saveConfig(cfg) { return ss(KEYS.CONFIG, cfg); }
+  function saveConfig(cfg) { ss(KEYS.CONFIG, cfg); syncToSheets('saveConfig', cfg); }
 
   // ── Participants ──────────────────────────────────────────────────────────
   function getParticipants() { return sg(KEYS.PARTICIPANTS, []); }
-  function saveParticipants(ps) { return ss(KEYS.PARTICIPANTS, ps); }
+  function saveParticipants(ps) { ss(KEYS.PARTICIPANTS, ps); syncToSheets('saveParticipants', ps); }
 
   function addParticipant(data) {
     var ps = getParticipants();
@@ -88,7 +114,7 @@ var CPEEN = (function () {
 
   // ── Sessions ──────────────────────────────────────────────────────────────
   function getSessions() { return sg(KEYS.SESSIONS, []); }
-  function saveSessions(ss_) { return ss(KEYS.SESSIONS, ss_); }
+  function saveSessions(ss_) { ss(KEYS.SESSIONS, ss_); syncToSheets('saveSessions', ss_); }
 
   function getSessionByParticipant(pid) {
     return getSessions().find(function (s) { return s.participantId === pid; }) || null;
@@ -128,7 +154,7 @@ var CPEEN = (function () {
 
   // ── Exams ─────────────────────────────────────────────────────────────────
   function getExams() { return sg(KEYS.EXAMS, []); }
-  function saveExams(exams) { return ss(KEYS.EXAMS, exams); }
+  function saveExams(exams) { ss(KEYS.EXAMS, exams); syncToSheets('saveExams', exams); }
 
   function getExamForParticipant(level, stage) {
     return getExams().find(function (e) { return e.level === level && e.stage === stage && e.variants && e.variants.length; }) || null;
@@ -238,6 +264,7 @@ var CPEEN = (function () {
   }
 
   return {
+    init,
     genId, genCode, hashPass, norm,
     getConfig, saveConfig,
     getParticipants, saveParticipants, addParticipant, findParticipantByCode, updateParticipant, deleteParticipant,

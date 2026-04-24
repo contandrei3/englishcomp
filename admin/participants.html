@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="../js/config.js"></script>
 <script src="../js/db.js"></script>
 <script src="../js/admin.js"></script>
 </head>
@@ -196,7 +197,7 @@ function ParticipantsPage() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<ParticipantsPage/>);
+CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<ParticipantsPage/>));
 </script>
 </body>
 </html>
