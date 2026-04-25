@@ -31,11 +31,12 @@ const PARTS_META = [
   { id:'p8', num:8, label:'Multiple Matching',            hint:'Potrivești întrebări la secțiuni A–F',         defPts:1 },
 ];
 
-const IMPLEMENTED = { p1:true };
+const IMPLEMENTED = { p1:true, p2:true };
 
 function initPart(id, defPts) {
   const pts = String(defPts);
   if (id==='p1') return { title:'', text:'', pts, items:[] };
+  if (id==='p2') return { title:'', text:'', pts, answers:[] };
   return { pts };
 }
 
@@ -51,6 +52,12 @@ function toDBVariant(meta, enabled, partData) {
           options:[it.a||'', it.b||'', it.c||'', it.d||''],
           answer:['a','b','c','d'].indexOf(it.correct||'a')
         }))
+      });
+    } else if (id==='p2') {
+      const n = (d.text.match(/\[\d+\]/g)||[]).length;
+      parts.push({ type:'p2', title:d.title, text:d.text, pts,
+        key: Array.from({length:n}, (_,i) =>
+          (d.answers[i]||'').split(';').map(x=>x.trim()).filter(Boolean))
       });
     }
   });
@@ -78,6 +85,11 @@ function fromDB(exam) {
           a: it.options?.[0]||'', b: it.options?.[1]||'', c: it.options?.[2]||'', d: it.options?.[3]||'',
           correct: ['a','b','c','d'][it.answer]||'a'
         }))
+      };
+    } else if (id==='p2') {
+      partData.p2 = {
+        title: part.title||'', text: part.text||'', pts: String(part.pts||1),
+        answers: (part.key||[]).map(a => a.join('; '))
       };
     }
   });
@@ -192,7 +204,54 @@ function P1Edit({data,onChange}) {
   );
 }
 
-const EDITORS = { p1: P1Edit };
+// ── Part 2 — Open Cloze ───────────────────────────────────────────────────
+function P2Edit({data,onChange}) {
+  const upd = (k,v) => onChange({...data,[k]:v});
+  const gapN = (data.text.match(/\[\d+\]/g)||[]).length;
+  const setGap = (i,v) => {
+    const a = [...(data.answers||[])];
+    while (a.length <= i) a.push('');
+    a[i] = v;
+    onChange({...data, answers:a});
+  };
+  const onTextChange = t => {
+    const n = (t.match(/\[\d+\]/g)||[]).length;
+    const ans = [...(data.answers||[])];
+    while (ans.length < n) ans.push('');
+    onChange({...data, text:t, answers:ans.slice(0, Math.max(n, ans.length))});
+  };
+  return (
+    <>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,marginBottom:14}}>
+        <Fld label="Titlu text">
+          <Inp value={data.title} onChange={e=>upd('title',e.target.value)} placeholder="SOCIAL MEDIA"/>
+        </Fld>
+        <Fld label={`Text cu goluri [1] [2]... (${gapN} detectate)`}>
+          <Ta value={data.text} onChange={e=>onTextChange(e.target.value)} rows={6}
+            placeholder="Social media has [1] the way we [2] information. Many people now [3] their news online rather than from traditional sources..."/>
+        </Fld>
+      </div>
+      {gapN > 0 && (
+        <>
+          <div style={{fontSize:12,fontWeight:600,color:"#444",marginBottom:6}}>
+            Răspunsuri acceptate per gol
+            <span style={{color:"#999",fontWeight:400,marginLeft:6}}>variante separate prin ;</span>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:6}}>
+            {Array.from({length:gapN},(_,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({i+1})</span>
+                <Inp value={data.answers?.[i]||''} onChange={e=>setGap(i,e.target.value)} placeholder="answer; alternative"/>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+const EDITORS = { p1: P1Edit, p2: P2Edit };
 
 // ── Main ──────────────────────────────────────────────────────────────────
 function ExamBuilder() {
