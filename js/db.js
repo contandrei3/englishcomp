@@ -86,7 +86,9 @@ var CPEEN = (function () {
 
   // ── Config ────────────────────────────────────────────────────────────────
   function getConfig() {
-    return Object.assign({ maxPerSchoolPerLevel: 0, showResultsImmediately: true, adminHash: DEFAULT_ADMIN_HASH, activeExams: {} }, sg(KEYS.CONFIG, {}));
+    var cfg = Object.assign({ maxPerSchoolPerLevel: 0, showResultsImmediately: true, adminHash: DEFAULT_ADMIN_HASH, activeExams: {} }, sg(KEYS.CONFIG, {}));
+    if (!cfg.adminHash) cfg.adminHash = DEFAULT_ADMIN_HASH;
+    return cfg;
   }
   function saveConfig(cfg) { ss(KEYS.CONFIG, cfg); syncToFirebase('config', cfg); }
 
