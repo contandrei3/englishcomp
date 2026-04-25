@@ -131,19 +131,36 @@ var CPEEN = (function () {
     return getSessions().find(function (s) { return s.participantId === pid; }) || null;
   }
 
+  function partAnswerCount(part) {
+    if (part.type === 'p2') return (part.key || []).length;
+    if (part.type === 'p7') return (part.key || []).length;
+    return (part.items || []).length;
+  }
+
   function createSession(pid, exam, variantId) {
     var v = exam.variants.find(function (v) { return v.id === variantId; });
     if (!v) return null;
-    var session = {
-      id: genId('s'), participantId: pid, examId: exam.id,
-      level: exam.level, stage: exam.stage, variantId: variantId,
-      answers: {
+    var answers;
+    if (v.parts && v.parts.length) {
+      answers = {
+        parts: v.parts.map(function(part) {
+          return new Array(partAnswerCount(part)).fill('');
+        }),
+        writing: ''
+      };
+    } else {
+      answers = {
         s1: new Array(v.s1.items.length).fill(''),
         s2: new Array(v.s2.key.length).fill(''),
         s3: new Array(v.s3.key.length).fill(''),
         s4: new Array(v.s4.items.length).fill(''),
         writing: ''
-      },
+      };
+    }
+    var session = {
+      id: genId('s'), participantId: pid, examId: exam.id,
+      level: exam.level, stage: exam.stage, variantId: variantId,
+      answers: answers,
       startedAt: null, submittedAt: null, result: null,
       status: 'pending', locked: false,
       writingGrade: null, writingFeedback: ''
@@ -194,12 +211,49 @@ var CPEEN = (function () {
   function gradeSession(session, exam) {
     var v = exam.variants.find(function (x) { return x.id === session.variantId; });
     if (!v) return null;
+    if (v.parts && v.parts.length) return gradeNewParts(session.answers, v);
     var a = session.answers, total = 10, det = { s1: [], s2: [], s3: [], s4: [] };
     v.s1.key.forEach(function (acc, i) { var ok = acc.some(function (x) { return norm(x) === norm(a.s1[i]); }); det.s1.push(ok); if (ok) total += v.s1.pts; });
     v.s2.key.forEach(function (x, i)   { var ok = norm(x) === norm(a.s2[i]); det.s2.push(ok); if (ok) total += v.s2.pts; });
     v.s3.key.forEach(function (acc, i) { var ok = acc.some(function (x) { return norm(x) === norm(a.s3[i]); }); det.s3.push(ok); if (ok) total += v.s3.pts; });
     v.s4.key.forEach(function (acc, i) { var ok = acc.some(function (x) { return norm(x) === norm(a.s4[i]); }); det.s4.push(ok); if (ok) total += v.s4.pts; });
     return { total: total, det: det };
+  }
+
+  function gradeNewParts(answers, v) {
+    var total = 10, details = [];
+    v.parts.forEach(function(part, pi) {
+      var ans = (answers.parts && answers.parts[pi]) || [];
+      var det = [];
+      if (part.type === 'p1' || part.type === 'p5') {
+        (part.items || []).forEach(function(item, i) {
+          var ok = parseInt(ans[i]) === item.answer;
+          det.push(ok); if (ok) total += part.pts;
+        });
+      } else if (part.type === 'p2') {
+        (part.key || []).forEach(function(accepted, i) {
+          var ok = accepted.some(function(x) { return norm(x) === norm(ans[i]); });
+          det.push(ok); if (ok) total += part.pts;
+        });
+      } else if (part.type === 'p3' || part.type === 'p4') {
+        (part.items || []).forEach(function(item, i) {
+          var ok = (item.key || []).some(function(x) { return norm(x) === norm(ans[i]); });
+          det.push(ok); if (ok) total += part.pts;
+        });
+      } else if (part.type === 'p6' || part.type === 'p8') {
+        (part.items || []).forEach(function(item, i) {
+          var ok = norm(ans[i]) === norm(item.answer);
+          det.push(ok); if (ok) total += part.pts;
+        });
+      } else if (part.type === 'p7') {
+        (part.key || []).forEach(function(expected, i) {
+          var ok = norm(ans[i]) === norm(expected);
+          det.push(ok); if (ok) total += part.pts;
+        });
+      }
+      details.push(det);
+    });
+    return { total: total, details: details };
   }
 
   // ── Seed ──────────────────────────────────────────────────────────────────
