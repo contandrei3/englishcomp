@@ -98,10 +98,14 @@ var CPEEN = (function () {
 
   function addParticipant(data) {
     var ps = getParticipants();
-    var p = Object.assign({}, data, { id: genId('p'), accessCode: uniqueCode(ps), registeredAt: Date.now(), status: 'registered' });
+    var p = Object.assign({ qualified: false }, data, { id: genId('p'), accessCode: uniqueCode(ps), registeredAt: Date.now(), status: 'registered' });
     ps.push(p);
     saveParticipants(ps);
     return p;
+  }
+
+  function isQualified(p) {
+    return !!(p && (p.qualified === true || p.stage === 'finala'));
   }
 
   function findParticipantByCode(code) {
@@ -129,6 +133,10 @@ var CPEEN = (function () {
 
   function getSessionByParticipant(pid) {
     return getSessions().find(function (s) { return s.participantId === pid; }) || null;
+  }
+
+  function getSessionsByParticipant(pid) {
+    return getSessions().filter(function (s) { return s.participantId === pid; });
   }
 
   function partAnswerCount(part) {
@@ -332,8 +340,8 @@ var CPEEN = (function () {
     init,
     genId, genCode, hashPass, norm,
     getConfig, saveConfig,
-    getParticipants, saveParticipants, addParticipant, findParticipantByCode, updateParticipant, deleteParticipant,
-    getSessions, saveSessions, getSessionByParticipant, createSession, updateSession,
+    getParticipants, saveParticipants, addParticipant, findParticipantByCode, updateParticipant, deleteParticipant, isQualified,
+    getSessions, saveSessions, getSessionByParticipant, getSessionsByParticipant, createSession, updateSession,
     getExams, saveExams, getExamForParticipant, addExam, updateExam, deleteExam,
     gradeSession, seedInitialData
   };
