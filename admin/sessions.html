@@ -58,10 +58,23 @@ function SessionsPage() {
   };
 
   // ── Allocation ────────────────────────────────────────────────────────────
-  const sessMap = useMemo(()=>{ const m={}; sessions.forEach(s=>{m[s.participantId]=s;}); return m; }, [sessions]);
+  // sessMapByStage[pid][stage] = session
+  const sessMapByStage = useMemo(()=>{
+    const m={};
+    sessions.forEach(s=>{
+      if(!m[s.participantId]) m[s.participantId]={};
+      m[s.participantId][s.stage] = s;
+    });
+    return m;
+  }, [sessions]);
   const allocExams = exams.filter(e=>e.level===allocLvl&&e.stage===allocStage&&e.variants?.length);
   const selExam    = allocExams.find(e=>e.id===allocExamId)||null;
-  const candidates = participants.filter(p=>p.level===allocLvl&&p.stage===allocStage&&!sessMap[p.id]);
+  const candidates = participants.filter(p=>{
+    if(p.level !== allocLvl) return false;
+    if(sessMapByStage[p.id]?.[allocStage]) return false;       // already has a session for this stage
+    if(allocStage === 'finala' && !CPEEN.isQualified(p)) return false; // finala = only qualified
+    return true;
+  });
 
   const toggle = id => setSelected(prev=>{ const s=new Set(prev); s.has(id)?s.delete(id):s.add(id); return s; });
 
@@ -166,7 +179,11 @@ function SessionsPage() {
             )}
 
             {candidates.length===0
-              ? <div style={{color:"#aaa",fontSize:13,padding:"12px 0"}}>Toți participanții {allocLvl} – {allocStage==="finala"?"Finală":"Calificare"} au sesiuni sau nu există participanți.</div>
+              ? <div style={{color:"#aaa",fontSize:13,padding:"12px 0"}}>
+                  {allocStage==="finala"
+                    ? `Niciun participant calificat ${allocLvl} fără sesiune de finală.`
+                    : `Toți participanții ${allocLvl} au deja sesiune de calificare sau nu există participanți.`}
+                </div>
               : (<>
                 <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
                   <span style={{fontSize:13,color:"#666"}}>{candidates.length} fără sesiune</span>
