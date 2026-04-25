@@ -31,7 +31,7 @@ const PARTS_META = [
   { id:'p8', num:8, label:'Multiple Matching',            hint:'Potrivești întrebări la secțiuni A–F',         defPts:1 },
 ];
 
-const IMPLEMENTED = { p1:true, p2:true, p3:true, p4:true, p5:true };
+const IMPLEMENTED = { p1:true, p2:true, p3:true, p4:true, p5:true, p6:true };
 
 function initPart(id, defPts) {
   const pts = String(defPts);
@@ -40,6 +40,7 @@ function initPart(id, defPts) {
   if (id==='p3') return { pts, items:[] };
   if (id==='p4') return { pts, items:[] };
   if (id==='p5') return { title:'', text:'', pts, items:[] };
+  if (id==='p6') return { pts, texts:['A','B','C','D'].map(l=>({label:l,title:'',content:''})), items:[] };
   return { pts };
 }
 
@@ -83,6 +84,11 @@ function toDBVariant(meta, enabled, partData) {
           options:[it.a||'',it.b||'',it.c||'',it.d||''],
           answer:['a','b','c','d'].indexOf(it.correct||'a')
         }))
+      });
+    } else if (id==='p6') {
+      parts.push({ type:'p6', pts,
+        texts: d.texts.map(t=>({label:t.label, title:t.title||'', content:t.content||''})),
+        items: d.items.map(it=>({question:it.question||'', answer:it.answer||'A'}))
       });
     }
   });
@@ -140,6 +146,12 @@ function fromDB(exam) {
           a:it.options?.[0]||'', b:it.options?.[1]||'', c:it.options?.[2]||'', d:it.options?.[3]||'',
           correct:['a','b','c','d'][it.answer]||'a'
         }))
+      };
+    } else if (id==='p6') {
+      partData.p6 = {
+        pts:String(part.pts||2),
+        texts:(part.texts||[]).map(t=>({label:t.label||'A', title:t.title||'', content:t.content||''})),
+        items:(part.items||[]).map(it=>({question:it.question||'', answer:it.answer||'A'}))
       };
     }
   });
@@ -405,7 +417,56 @@ function P5Edit({data,onChange}) {
   );
 }
 
-const EDITORS = { p1: P1Edit, p2: P2Edit, p3: P3Edit, p4: P4Edit, p5: P5Edit };
+// ── Part 6 — Cross-text Multiple Matching ────────────────────────────────
+function P6Edit({data,onChange}) {
+  const updTxt = (i,f,v) => onChange({...data, texts:data.texts.map((t,j)=>j===i?{...t,[f]:v}:t)});
+  const updIt  = (i,f,v) => onChange({...data, items:data.items.map((it,j)=>j===i?{...it,[f]:v}:it)});
+  const addIt  = () => onChange({...data, items:[...data.items, {question:'', answer:data.texts[0]?.label||'A'}]});
+  const delIt  = i => onChange({...data, items:data.items.filter((_,j)=>j!==i)});
+  return (
+    <>
+      <div style={{fontSize:12,color:"#888",marginBottom:12}}>
+        4 texte scurte (scriitori / recenzori). Elevul potrivește întrebările la textul corect.
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+        {(data.texts||[]).map((t,i)=>(
+          <div key={i} style={{border:"1px solid #e0e8f0",borderRadius:8,padding:12,background:"#f8fbff"}}>
+            <div style={{fontWeight:700,color:C.mid,marginBottom:8}}>Text {t.label}</div>
+            <Fld label="Titlu / Autor">
+              <Inp value={t.title} onChange={e=>updTxt(i,'title',e.target.value)} placeholder="Writer A — The Guardian"/>
+            </Fld>
+            <Fld label="Conținut">
+              <Ta value={t.content} onChange={e=>updTxt(i,'content',e.target.value)} rows={5}
+                placeholder="This writer argues that social media has fundamentally changed..."/>
+            </Fld>
+          </div>
+        ))}
+      </div>
+      <div style={{fontSize:12,fontWeight:600,color:"#444",marginBottom:8}}>
+        Întrebări de potrivire
+        <span style={{color:"#999",fontWeight:400,marginLeft:6}}>(selectați textul corect din dropdown)</span>
+      </div>
+      {data.items.map((it,i)=>(
+        <ItemCard key={i} num={i+1} onDelete={()=>delIt(i)}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:10,alignItems:"end"}}>
+            <Fld label="Enunț">
+              <Ta value={it.question} onChange={e=>updIt(i,'question',e.target.value)} rows={2}
+                placeholder="Which writer expresses doubt about the long-term benefits of social media?"/>
+            </Fld>
+            <Fld label="Răspuns">
+              <select value={it.answer} onChange={e=>updIt(i,'answer',e.target.value)} style={{...IS,width:75}}>
+                {(data.texts||[]).map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
+              </select>
+            </Fld>
+          </div>
+        </ItemCard>
+      ))}
+      <AddBtn onClick={addIt} label="Adaugă întrebare"/>
+    </>
+  );
+}
+
+const EDITORS = { p1: P1Edit, p2: P2Edit, p3: P3Edit, p4: P4Edit, p5: P5Edit, p6: P6Edit };
 
 // ── Main ──────────────────────────────────────────────────────────────────
 function ExamBuilder() {
