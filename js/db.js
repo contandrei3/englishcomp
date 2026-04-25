@@ -27,25 +27,27 @@ var CPEEN = (function () {
     DB.collection('cpeen').doc(docId).set(payload).catch(function() {});
   }
 
+  // FIX: returnăm promisiunea Firestore și așteptăm răspunsul înainte de a rezolva.
+  // Fallback la localStorage (Promise.resolve) dacă Firestore e inaccesibil.
   function init() {
-  initFirebase();
-  if (!DB) return Promise.resolve();
+    initFirebase();
+    if (!DB) return Promise.resolve();
 
-  return DB.collection('cpeen').get()
-    .then(function(snapshot) {
-      snapshot.forEach(function(doc) {
-        var d = doc.data();
-        if (doc.id === 'participants') ss(KEYS.PARTICIPANTS, d.items || []);
-        if (doc.id === 'sessions')     ss(KEYS.SESSIONS,     d.items || []);
-        if (doc.id === 'exams')        ss(KEYS.EXAMS,         d.items || []);
-        if (doc.id === 'config')       ss(KEYS.CONFIG,         d);
+    return DB.collection('cpeen').get()
+      .then(function(snapshot) {
+        snapshot.forEach(function(doc) {
+          var d = doc.data();
+          if (doc.id === 'participants') ss(KEYS.PARTICIPANTS, d.items || []);
+          if (doc.id === 'sessions')     ss(KEYS.SESSIONS,     d.items || []);
+          if (doc.id === 'exams')        ss(KEYS.EXAMS,         d.items || []);
+          if (doc.id === 'config')       ss(KEYS.CONFIG,         d);
+        });
+      })
+      .catch(function() {
+        // Firestore inaccesibil (offline / reguli / timeout) → continuăm din localStorage
+        return Promise.resolve();
       });
-    })
-    .catch(function() {
-      // Firestore inaccesibil → continuăm cu ce e în localStorage
-      return Promise.resolve();
-    });
-}
+  }
 
   var DEFAULT_ADMIN_HASH = '214d1f1c62239db83286301ef9ce31e93144e98570370de2f035560e13b2a7d9'; // cpeen2026
 
@@ -339,8 +341,8 @@ var CPEEN = (function () {
     });
   }
 
-  // ── Proctor flags (read from Firestore proctorFlags collection) ──────────
-  var _proctorFlags = {};  // cache: { [participantCode]: { disqualified, suspicious_count, ... } }
+  // ── Proctor flags ─────────────────────────────────────────────────────────
+  var _proctorFlags = {};
 
   function loadProctorFlags() {
     if (!DB) return Promise.resolve({});
