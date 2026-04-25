@@ -22,7 +22,7 @@
   </a>
   <div class="nav-links">
     <a href="register.html" class="nav-link active">Înregistrare</a>
-    <a href="exam.html" class="nav-link">Acces Examen</a>
+    <a href="dashboard.html" class="nav-link">Dashboard Elev</a>
     <a href="admin/index.html" class="nav-link">Admin</a>
   </div>
 </nav>
@@ -34,7 +34,6 @@ const { useState } = React;
 
 const COUNTIES = ["Alba","Arad","Argeș","Bacău","Bihor","Bistrița-Năsăud","Botoșani","Brăila","Brașov","București","Buzău","Călărași","Caraș-Severin","Cluj","Constanța","Covasna","Dâmbovița","Dolj","Galați","Giurgiu","Gorj","Harghita","Hunedoara","Ialomița","Iași","Ilfov","Maramureș","Mehedinți","Mureș","Neamț","Olt","Prahova","Sălaj","Satu Mare","Sibiu","Suceava","Teleorman","Timiș","Tulcea","Vâlcea","Vaslui","Vrancea"];
 const LEVELS  = [{v:"A2",l:"A2 – Elementar"},{v:"B1",l:"B1 – Intermediar"},{v:"B2",l:"B2 – Avansat"},{v:"C1",l:"C1 – Performanță"}];
-const STAGES  = [{v:"calificare",l:"🖥 Calificare (Online · 45 min)"},{v:"finala",l:"🏆 Finală (Supervizat · 60 min)"}];
 const BLOCKED = /[<>"'&;\\{}[\]/]/;
 
 function validate(f) {
@@ -52,7 +51,6 @@ function validate(f) {
   else if(BLOCKED.test(f.teacher))  e.teacher = "Caractere speciale nepermise.";
 
   if(!f.level)            e.level   = "Selectați nivelul.";
-  if(!f.stage)            e.stage   = "Selectați etapa.";
 
   if(!c(f.email))         e.email   = "Email-ul este obligatoriu.";
   else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email.trim())) e.email = "Format email invalid.";
@@ -75,7 +73,7 @@ function FG({label, name, req, hint, err, children}) {
 function RegisterApp() {
   CPEEN.seedInitialData();
 
-  const [f,  setF]  = useState({name:"",school:"",county:"",teacher:"",level:"",stage:"",email:"",grade:""});
+  const [f,  setF]  = useState({name:"",school:"",county:"",teacher:"",level:"",email:"",grade:""});
   const [e,  setE]  = useState({});
   const [sub, setSub] = useState(null);
   const [err, setErr] = useState("");
@@ -90,7 +88,7 @@ function RegisterApp() {
     if(cfg.maxPerSchoolPerLevel > 0) {
       const dupes = CPEEN.getParticipants().filter(p =>
         p.school.trim().toLowerCase() === f.school.trim().toLowerCase() &&
-        p.level === f.level && p.stage === f.stage
+        p.level === f.level
       );
       if(dupes.length >= cfg.maxPerSchoolPerLevel) {
         setErr(`Limita de ${cfg.maxPerSchoolPerLevel} participanți per școală per nivel a fost atinsă.`);
@@ -100,7 +98,7 @@ function RegisterApp() {
 
     const p = CPEEN.addParticipant({
       name: f.name.trim(), school: f.school.trim(), county: f.county,
-      teacher: f.teacher.trim(), level: f.level, stage: f.stage,
+      teacher: f.teacher.trim(), level: f.level,
       email: f.email.trim().toLowerCase(), grade: f.grade.trim()
     });
     setSub(p);
@@ -117,13 +115,13 @@ function RegisterApp() {
           </div>
           <div className="card-body" style={{textAlign:"center"}}>
             <p style={{marginBottom:6,fontSize:14,color:"#555"}}><strong>{sub.name}</strong></p>
-            <p style={{fontSize:13,color:"#777",marginBottom:20}}>{sub.school} · {sub.county} · <span className={`badge b-${sub.level}`}>{sub.level}</span> · {sub.stage==="finala"?"Finală":"Calificare"}</p>
+            <p style={{fontSize:13,color:"#777",marginBottom:20}}>{sub.school} · {sub.county} · <span className={`badge b-${sub.level}`}>{sub.level}</span></p>
             <p style={{fontSize:13,color:"#555",marginBottom:10,fontWeight:600}}>Codul tău de acces:</p>
             <div className="code-box">{sub.accessCode}</div>
             <div className="alert alert-warn" style={{marginTop:18,textAlign:"left"}}>
-              <strong>Notează codul!</strong> Este necesar pentru a accesa examenul. Nu poate fi recuperat ulterior.
+              <strong>Notează codul!</strong> Este necesar pentru a accesa dashboard-ul tău și examenul. Nu poate fi recuperat ulterior.
             </div>
-            <a href="exam.html" className="btn btn-primary btn-lg btn-block mt16">Mergi la examen →</a>
+            <a href="dashboard.html" className="btn btn-primary btn-lg btn-block mt16">Mergi la dashboard →</a>
             <a href="index.html" className="btn btn-ghost btn-block mt8" style={{color:"var(--mid)"}}>← Pagina principală</a>
           </div>
         </div>
@@ -178,20 +176,15 @@ function RegisterApp() {
               {inp("email","email","ex: maria.ionescu@scoala.ro")}
             </FG>
 
-            <div className="grid2">
-              <FG label="Nivel" name="level" req err={e.level}>
-                {sel("level", LEVELS, "Selectează nivelul")}
-              </FG>
-              <FG label="Etapa" name="stage" req err={e.stage}>
-                {sel("stage", STAGES, "Selectează etapa")}
-              </FG>
-            </div>
+            <FG label="Nivel" name="level" req err={e.level}>
+              {sel("level", LEVELS, "Selectează nivelul")}
+            </FG>
 
             <button className="btn btn-primary btn-lg btn-block mt8" onClick={submit}>
               Înregistrează-te →
             </button>
             <div style={{textAlign:"center",marginTop:12}}>
-              <a href="exam.html" style={{fontSize:13}}>Am deja un cod de acces →</a>
+              <a href="dashboard.html" style={{fontSize:13}}>Am deja un cod de acces →</a>
             </div>
           </div>
         </div>
