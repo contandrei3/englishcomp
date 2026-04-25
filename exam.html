@@ -31,10 +31,219 @@ function Navbar({participant}) {
       </a>
       <div className="nav-links">
         <a href="register.html" className="nav-link">Înregistrare</a>
-        <a href="exam.html" className="nav-link active">Acces Examen</a>
+        <a href="dashboard.html" className="nav-link">Dashboard Elev</a>
         <a href="admin/index.html" className="nav-link">Admin</a>
       </div>
     </nav>
+  );
+}
+
+// ── New parts rendering ───────────────────────────────────────────────────
+const PART_LABELS = {p1:"Multiple Choice Cloze",p2:"Open Cloze",p3:"Word Formation",
+  p4:"Key Word Transformations",p5:"Multiple Choice",p6:"Cross-text Multiple Matching",
+  p7:"Gapped Text",p8:"Multiple Matching"};
+const PART_INSTRS = {
+  p1:"Read the text and decide which answer (A, B, C or D) best fits each gap.",
+  p2:"Read the text and think of ONE word which best fits each gap.",
+  p3:"Use the word in CAPITALS to form a word that fits the gap.",
+  p4:"Complete the second sentence using the word given. Do NOT change the word given. Use between THREE and SIX words including the word given.",
+  p5:"Read the text and choose the answer (A, B, C or D) which you think fits best.",
+  p6:"Read the four texts. For each question, choose from the texts (A–D).",
+  p7:"Read the text. Six paragraphs have been removed. Choose from paragraphs A–G the one which fits each gap.",
+  p8:"Read the text. For each question choose from the sections (A–F). The sections may be chosen more than once."
+};
+
+function GapText({text}) {
+  return <span>{text.split(/(\[\d+\])/).map((p,i)=>{
+    const m=p.match(/^\[(\d+)\]$/);
+    return m
+      ? <span key={i} style={{background:C.dark,color:"#fff",borderRadius:4,fontSize:11,fontWeight:700,padding:"1px 6px",margin:"0 2px"}}>({m[1]})</span>
+      : <span key={i}>{p}</span>;
+  })}</span>;
+}
+
+function PartSection({part, pi, ans, setAns}) {
+  const secStyle = {background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"};
+  const ansInp = (i,val,ph,w) => (
+    <input className="ans-inp" value={val||""} onChange={e=>setAns(pi,i,e.target.value)}
+      placeholder={ph} style={{width:w||160}}/>
+  );
+  const totalPts = part.type==='p2'||part.type==='p7'
+    ? (part.key||[]).length * part.pts
+    : (part.items||[]).length * part.pts;
+
+  return (
+    <div id={`part${pi}`} style={secStyle}>
+      <div className="sec-badge">
+        <span>PART {pi+1} — {(PART_LABELS[part.type]||"").toUpperCase()}</span>
+        <span>{totalPts} pts</span>
+      </div>
+      <div className="instr">{PART_INSTRS[part.type]}</div>
+
+      {/* P1 — Multiple Choice Cloze */}
+      {part.type==='p1' && <>
+        {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
+        {part.text && <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:14,marginBottom:16,fontSize:13,lineHeight:1.9}}><GapText text={part.text}/></div>}
+        {(part.items||[]).map((item,i)=>(
+          <div key={i} style={{marginBottom:14}}>
+            <div style={{fontWeight:700,color:C.dark,marginBottom:6,fontSize:13}}>{i+1}.</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {(item.options||[]).map((opt,oi)=>{
+                const sel = parseInt(ans[i])===oi;
+                return (
+                  <label key={oi} onClick={()=>setAns(pi,i,String(oi))} style={{
+                    display:"flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:8,cursor:"pointer",
+                    border:`2px solid ${sel?C.mid:"#dde"}`,background:sel?"#e8f4fd":"#fff",fontSize:13,userSelect:"none"
+                  }}>
+                    <span style={{fontWeight:700,color:C.mid}}>{['A','B','C','D'][oi]}.</span> {opt}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </>}
+
+      {/* P2 — Open Cloze */}
+      {part.type==='p2' && <>
+        {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
+        {part.text && <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:14,marginBottom:14,fontSize:13,lineHeight:1.9}}><GapText text={part.text}/></div>}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+          {(part.key||[]).map((_,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({i+1})</span>
+              {ansInp(i,ans[i],"one word",undefined)}
+            </div>
+          ))}
+        </div>
+      </>}
+
+      {/* P3 — Word Formation */}
+      {part.type==='p3' && (part.items||[]).map((item,i)=>(
+        <div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:9,flexWrap:"wrap"}}>
+          <span style={{fontWeight:700,color:C.dark,minWidth:22,fontSize:12}}>{i+1}.</span>
+          {item.before && <span style={{fontSize:13}}>{item.before}</span>}
+          {ansInp(i,ans[i],"...",160)}
+          {item.after && <span style={{fontSize:13}}>{item.after}</span>}
+          <span style={{background:"#D6E4F0",color:C.dark,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:4,letterSpacing:1}}>{item.kw}</span>
+        </div>
+      ))}
+
+      {/* P4 — KWT */}
+      {part.type==='p4' && (part.items||[]).map((item,i)=>(
+        <div key={i} style={{borderBottom:"1px solid #eee",paddingBottom:14,marginBottom:14}}>
+          <div style={{fontSize:13,color:"#333",marginBottom:5}}><strong style={{color:C.dark,marginRight:5}}>{i+1}.</strong>{item.s1}</div>
+          <div style={{display:"inline-block",background:C.dark,color:"#fff",fontWeight:700,fontSize:10,letterSpacing:2,padding:"2px 9px",borderRadius:4,marginBottom:7}}>{item.kw}</div>
+          <div style={{fontSize:13,display:"flex",alignItems:"center",flexWrap:"wrap",gap:4}}>
+            {item.before && <span>{item.before}</span>}
+            {ansInp(i,ans[i],"3–6 words...",210)}
+            {item.after && <span>{item.after}</span>}
+          </div>
+        </div>
+      ))}
+
+      {/* P5 — Multiple Choice Reading */}
+      {part.type==='p5' && <>
+        {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
+        {part.text && <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:14,marginBottom:16,fontSize:13,lineHeight:1.9,whiteSpace:"pre-wrap"}}>{part.text}</div>}
+        {(part.items||[]).map((item,i)=>(
+          <div key={i} style={{marginBottom:16}}>
+            <div style={{fontWeight:600,color:C.dark,fontSize:13,marginBottom:8}}>{i+1}. {item.question}</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {(item.options||[]).map((opt,oi)=>{
+                const sel=parseInt(ans[i])===oi;
+                return (
+                  <label key={oi} onClick={()=>setAns(pi,i,String(oi))} style={{
+                    display:"flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:8,cursor:"pointer",
+                    border:`2px solid ${sel?C.mid:"#dde"}`,background:sel?"#e8f4fd":"#fff",fontSize:13,userSelect:"none"
+                  }}>
+                    <span style={{fontWeight:700,color:C.mid}}>{['A','B','C','D'][oi]}.</span> {opt}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </>}
+
+      {/* P6 — Cross-text Multiple Matching */}
+      {part.type==='p6' && <>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+          {(part.texts||[]).map((t,i)=>(
+            <div key={i} style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:12,fontSize:12,lineHeight:1.7}}>
+              <strong style={{color:C.dark,display:"block",marginBottom:4}}>{t.label}. {t.title}</strong>
+              {t.content}
+            </div>
+          ))}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+          {(part.items||[]).map((item,i)=>(
+            <div key={i} style={{display:"flex",gap:8,alignItems:"center",fontSize:13}}>
+              <span style={{fontWeight:700,color:C.dark,minWidth:22}}>{i+1}.</span>
+              <span style={{flex:1}}>{item.question}</span>
+              <select value={ans[i]||''} onChange={e=>setAns(pi,i,e.target.value)}
+                style={{border:"1px solid #ccd",borderRadius:4,padding:"4px 6px",fontSize:13,minWidth:60}}>
+                <option value="">—</option>
+                {(part.texts||[]).map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+      </>}
+
+      {/* P7 — Gapped Text */}
+      {part.type==='p7' && <>
+        {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
+        {part.text && <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:14,marginBottom:16,fontSize:13,lineHeight:1.9}}><GapText text={part.text}/></div>}
+        <div style={{marginBottom:14}}>
+          <div style={{fontWeight:600,color:C.dark,fontSize:12,marginBottom:8}}>Paragrafe disponibile:</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            {(part.paragraphs||[]).map((p,i)=>(
+              <div key={i} style={{background:"#f0f4f8",borderRadius:6,padding:"8px 10px",fontSize:12,lineHeight:1.6}}>
+                <strong style={{color:C.mid}}>{p.label}. </strong>{p.content}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+          {(part.key||[]).map((_,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+              <span style={{fontWeight:700,color:C.dark,fontSize:12}}>({i+1})</span>
+              <select value={ans[i]||''} onChange={e=>setAns(pi,i,e.target.value)}
+                style={{border:"1px solid #ccd",borderRadius:4,padding:"4px 6px",fontSize:13,minWidth:65}}>
+                <option value="">—</option>
+                {(part.paragraphs||[]).map(p=><option key={p.label} value={p.label}>{p.label}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+      </>}
+
+      {/* P8 — Multiple Matching */}
+      {part.type==='p8' && <>
+        <div style={{marginBottom:16}}>
+          {(part.texts||[]).map((t,i)=>(
+            <div key={i} style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:12,marginBottom:8,fontSize:12,lineHeight:1.7}}>
+              <strong style={{color:C.dark,display:"block",marginBottom:4}}>{t.label}. {t.title}</strong>
+              {t.content}
+            </div>
+          ))}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+          {(part.items||[]).map((item,i)=>(
+            <div key={i} style={{display:"flex",gap:8,alignItems:"center",fontSize:13}}>
+              <span style={{fontWeight:700,color:C.dark,minWidth:22}}>{i+1}.</span>
+              <span style={{flex:1}}>{item.question}</span>
+              <select value={ans[i]||''} onChange={e=>setAns(pi,i,e.target.value)}
+                style={{border:"1px solid #ccd",borderRadius:4,padding:"4px 6px",fontSize:13,minWidth:60}}>
+                <option value="">—</option>
+                {(part.texts||[]).map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+      </>}
+    </div>
   );
 }
 
@@ -49,7 +258,12 @@ function S3Text({segments}) {
 function ExamApp() {
   CPEEN.seedInitialData();
 
-  const [view,    setView]    = useState("code");
+  const initialView = (()=>{
+    const sid = new URLSearchParams(window.location.search).get("sid");
+    return sid ? "loading" : "code";
+  })();
+
+  const [view,    setView]    = useState(initialView);
   const [code,    setCode]    = useState("");
   const [codeErr, setCodeErr] = useState("");
   const [ptcp,    setPtcp]    = useState(null);
@@ -59,10 +273,10 @@ function ExamApp() {
   const [answers, setAnswers] = useState({s1:[],s2:[],s3:[],s4:[],writing:""});
   const [timeLeft, setTimeLeft] = useState(0);
   const [result,  setResult]  = useState(null);
+  const [bootErr, setBootErr] = useState("");
   const timerRef   = useRef(null);
   const subRef     = useRef(false);
   const sessIdRef  = useRef(null);
-  // Refs so the timer callback always sees current values without stale closures
   const answersRef = useRef({s1:[],s2:[],s3:[],s4:[],writing:""});
   const sessRef    = useRef(null);
   const examRef    = useRef(null);
@@ -70,7 +284,17 @@ function ExamApp() {
 
   const setAns = (sec, i, v) => {
     setAnswers(prev => {
-      const next = {...prev,[sec]:typeof i==="number"?prev[sec].map((x,j)=>j===i?v:x):v};
+      let next;
+      if (typeof sec === 'number') {
+        // new parts[] format: sec = partIndex, i = itemIndex
+        const parts = (prev.parts||[]).map((p,pi)=>pi===sec?p.map((x,j)=>j===i?v:x):p);
+        next = {...prev, parts};
+      } else if (sec === 'writing') {
+        next = {...prev, writing: v};
+      } else {
+        // old s1/s2/s3/s4 format
+        next = {...prev,[sec]:typeof i==="number"?prev[sec].map((x,j)=>j===i?v:x):v};
+      }
       answersRef.current = next;
       if(sessIdRef.current) CPEEN.updateSession(sessIdRef.current, {answers: next});
       return next;
@@ -92,15 +316,10 @@ function ExamApp() {
     setView("result");
   }, []);
 
-  const enterCode = () => {
-    setCodeErr("");
-    const p = CPEEN.findParticipantByCode(code);
-    if(!p) { setCodeErr("Cod de acces invalid. Verificați și reîncercați."); return; }
-
-    let s = CPEEN.getSessionByParticipant(p.id);
-
-    // Already submitted → show results
-    if(s && s.status === "submitted") {
+  // Loads a session into the view: "result" if submitted, else "exam" (timer started).
+  const loadSession = (p, s) => {
+    // Submitted → result view
+    if(s.status === "submitted") {
       const ex = CPEEN.getExams().find(e => e.id === s.examId) ||
                  CPEEN.getExamForParticipant(s.level, s.stage);
       const v  = ex?.variants?.find(v => v.id === s.variantId);
@@ -109,21 +328,17 @@ function ExamApp() {
       return;
     }
 
-    // Check activation — skip if already in progress
-    if(!s || s.status === "pending") {
+    // Pending or in_progress → check activation, then start
+    if(s.status === "pending") {
       const cfg = CPEEN.getConfig();
-      if(!cfg.activeExams?.[p.level]?.[p.stage]) {
+      if(!cfg.activeExams?.[s.level]?.[s.stage]) {
         setPtcp(p); setView("noExam"); return;
       }
     }
 
-    const ex = CPEEN.getExamForParticipant(p.level, p.stage);
+    const ex = CPEEN.getExams().find(e => e.id === s.examId) ||
+               CPEEN.getExamForParticipant(s.level, s.stage);
     if(!ex) { setPtcp(p); setView("noExam"); return; }
-
-    if(!s) {
-      const vIdx = Math.floor(Math.random() * ex.variants.length);
-      s = CPEEN.createSession(p.id, ex, ex.variants[vIdx].id);
-    }
 
     if(s.status === "pending") {
       s = CPEEN.updateSession(s.id, {status:"in_progress", startedAt: Date.now()});
@@ -149,6 +364,46 @@ function ExamApp() {
     setView("exam");
   };
 
+  // Bootstrap from ?sid= URL param (called from dashboard)
+  useEffect(() => {
+    const sid = new URLSearchParams(window.location.search).get("sid");
+    if(!sid) return;
+    const s = CPEEN.getSessions().find(x => x.id === sid);
+    if(!s) {
+      setBootErr("Sesiunea nu a fost găsită. Reveniți la dashboard și încercați din nou.");
+      setView("bootErr");
+      return;
+    }
+    const p = CPEEN.getParticipants().find(x => x.id === s.participantId);
+    if(!p) {
+      setBootErr("Participantul asociat sesiunii nu a fost găsit.");
+      setView("bootErr");
+      return;
+    }
+    loadSession(p, s);
+  }, []);
+
+  const enterCode = () => {
+    setCodeErr("");
+    const p = CPEEN.findParticipantByCode(code);
+    if(!p) { setCodeErr("Cod de acces invalid. Verificați și reîncercați."); return; }
+
+    let s = CPEEN.getSessionByParticipant(p.id);
+
+    if(s) { loadSession(p, s); return; }
+
+    // No session yet — old fallback path: check activation + auto-create from p.level/p.stage
+    const cfg = CPEEN.getConfig();
+    if(!cfg.activeExams?.[p.level]?.[p.stage]) {
+      setPtcp(p); setView("noExam"); return;
+    }
+    const ex = CPEEN.getExamForParticipant(p.level, p.stage);
+    if(!ex) { setPtcp(p); setView("noExam"); return; }
+    const vIdx = Math.floor(Math.random() * ex.variants.length);
+    s = CPEEN.createSession(p.id, ex, ex.variants[vIdx].id);
+    loadSession(p, s);
+  };
+
   // Timer — uses refs so auto-submit always sees current values
   useEffect(() => {
     if(view !== "exam") return;
@@ -164,6 +419,37 @@ function ExamApp() {
     }, 1000);
     return () => clearInterval(timerRef.current);
   }, [view]);
+
+  // ── Loading view (while bootstrapping from ?sid=) ───────────────────────
+  if(view === "loading") return (
+    <>
+      <Navbar/>
+      <div className="page-center"><div className="wrap-sm">
+        <div className="card"><div className="card-body" style={{textAlign:"center",padding:40}}>
+          <div style={{fontSize:14,color:C.mid}}>Se încarcă sesiunea…</div>
+        </div></div>
+      </div></div>
+    </>
+  );
+
+  // ── Boot error (sid invalid) ─────────────────────────────────────────────
+  if(view === "bootErr") return (
+    <>
+      <Navbar/>
+      <div className="page-center"><div className="wrap-sm">
+        <div className="card">
+          <div className="card-head" style={{textAlign:"center"}}>
+            <div style={{fontSize:36,marginBottom:8}}>⚠️</div>
+            <h2>Sesiune indisponibilă</h2>
+          </div>
+          <div className="card-body" style={{textAlign:"center"}}>
+            <p style={{marginBottom:16,color:"#666"}}>{bootErr}</p>
+            <a href="dashboard.html" className="btn btn-primary btn-lg btn-block">← Înapoi la dashboard</a>
+          </div>
+        </div>
+      </div></div>
+    </>
+  );
 
   // ── Code entry view ─────────────────────────────────────────────────────
   if(view === "code") return (
@@ -250,12 +536,19 @@ function ExamApp() {
       </>
     );
 
-    const secs = [
-      {k:"s1",lbl:"KWT",       max:variant.s1.key.length*variant.s1.pts},
-      {k:"s2",lbl:"Error Corr",max:variant.s2.key.length*variant.s2.pts},
-      {k:"s3",lbl:"Open Cloze",max:variant.s3.key.length*variant.s3.pts},
-      {k:"s4",lbl:"Word Form", max:variant.s4.key.length*variant.s4.pts},
-    ];
+    const isNew = !!(variant.parts && variant.parts.length);
+    const secs = isNew
+      ? variant.parts.map((part,pi) => {
+          const count = part.type==='p2'||part.type==='p7' ? (part.key||[]).length : (part.items||[]).length;
+          const correct = (result.details?.[pi]||[]).filter(Boolean).length;
+          return { lbl:`Part ${pi+1} — ${PART_LABELS[part.type]||part.type}`, score:correct*part.pts, max:count*part.pts };
+        })
+      : [
+          {k:"s1",lbl:"KWT",       max:variant.s1.key.length*variant.s1.pts},
+          {k:"s2",lbl:"Error Corr",max:variant.s2.key.length*variant.s2.pts},
+          {k:"s3",lbl:"Open Cloze",max:variant.s3.key.length*variant.s3.pts},
+          {k:"s4",lbl:"Word Form", max:variant.s4.key.length*variant.s4.pts},
+        ];
     return (
       <>
         <Navbar/>
@@ -272,16 +565,16 @@ function ExamApp() {
               <div className="card-body">
                 <div style={{fontWeight:700,color:C.dark}}>{ptcp?.name}</div>
                 <div style={{fontSize:13,color:"#888",marginBottom:20}}>{ptcp?.school} · {ptcp?.grade} · {ptcp?.county}</div>
-                {secs.map(({k,lbl,max})=>{
-                  const sc = result.det[k].filter(Boolean).length * (max/result.det[k].length);
+                {secs.map((sec,idx)=>{
+                  const sc = isNew ? sec.score : result.det[sec.k].filter(Boolean).length*(sec.max/Math.max(1,result.det[sec.k].length));
                   return (
-                    <div key={k} style={{marginBottom:12}}>
+                    <div key={idx} style={{marginBottom:12}}>
                       <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:3}}>
-                        <span style={{color:C.dark,fontWeight:600}}>{lbl}</span>
-                        <span style={{fontWeight:700,color:C.mid}}>{sc}/{max}p</span>
+                        <span style={{color:C.dark,fontWeight:600}}>{sec.lbl}</span>
+                        <span style={{fontWeight:700,color:C.mid}}>{Math.round(sc)}/{sec.max}p</span>
                       </div>
                       <div style={{background:"#eee",borderRadius:4,height:7}}>
-                        <div style={{background:C.mid,width:`${(sc/max)*100}%`,height:7,borderRadius:4}}/>
+                        <div style={{background:C.mid,width:`${sec.max?(sc/sec.max*100):0}%`,height:7,borderRadius:4}}/>
                       </div>
                     </div>
                   );
@@ -299,7 +592,7 @@ function ExamApp() {
                   Răspunsurile au fost salvate.<br/>
                   <span style={{color:C.mid}}>englishgrammarchallenge.ro · CPEEN 2026</span>
                 </div>
-                <a href="index.html" className="btn btn-primary btn-block mt16" style={{display:"flex"}}>← Pagina principală</a>
+                <a href="dashboard.html" className="btn btn-primary btn-block mt16" style={{display:"flex"}}>← Înapoi la dashboard</a>
               </div>
             </div>
           </div>
@@ -312,6 +605,7 @@ function ExamApp() {
   if(view === "exam" && variant) {
     const urgent = timeLeft < 300;
     const hasWriting = !!variant.writing;
+    const isNewFormat = !!(variant.parts && variant.parts.length);
     return (
       <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
         {/* Sticky header */}
@@ -321,14 +615,20 @@ function ExamApp() {
             {ptcp?.stage==="finala"?"Finală":"Calificare"} · {variant.id} · {ptcp?.name}
           </div>
           <div className={`timer${urgent?" urgent":""}`}>⏱ {fmt(timeLeft)}</div>
-          <div style={{display:"flex",gap:5}}>
-            {[1,2,3,4].map(n=>(
-              <button key={n} onClick={()=>document.getElementById(`sec${n}`)?.scrollIntoView({behavior:"smooth"})}
-                style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"none",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:600}}>S{n}</button>
-            ))}
+          <div style={{display:"flex",gap:5"}}>
+            {isNewFormat
+              ? (variant.parts||[]).map((_,pi)=>(
+                  <button key={pi} onClick={()=>document.getElementById(`part${pi}`)?.scrollIntoView({behavior:"smooth"})}
+                    style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"none",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:600}}>P{pi+1}</button>
+                ))
+              : [1,2,3,4].map(n=>(
+                  <button key={n} onClick={()=>document.getElementById(`sec${n}`)?.scrollIntoView({behavior:"smooth"})}
+                    style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"none",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:600}}>S{n}</button>
+                ))
+            }
             {hasWriting && (
               <button onClick={()=>document.getElementById("sec5")?.scrollIntoView({behavior:"smooth"})}
-                style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"none",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:600}}>S5</button>
+                style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"none",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:600}}>W</button>
             )}
           </div>
         </div>
