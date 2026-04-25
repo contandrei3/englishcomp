@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard Elev – CPEEN 2026</title>
+<link rel="stylesheet" href="css/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+const C = {dark:"#1F3864",mid:"#2E75B6",light:"#D6E4F0",green:"#1D6027",amber:"#B45309"};
+const STORE_KEY = "cpeen_student_code";
+
+function Navbar() {
+  return (
+    <nav className="nav">
+      <a href="index.html" className="nav-brand">
+        <span className="nav-domain">englishgrammarchallenge.ro</span>
+        <span className="nav-title">CPEEN 2026</span>
+      </a>
+      <div className="nav-links">
+        <a href="register.html" className="nav-link">Înregistrare</a>
+        <a href="dashboard.html" className="nav-link active">Dashboard Elev</a>
+        <a href="admin/index.html" className="nav-link">Admin</a>
+      </div>
+    </nav>
+  );
+}
+
+const stageLabel = stg => stg === "finala" ? "Finală" : stg === "calificare" ? "Calificare" : (stg||"—");
+
+function StatusBadge({status}) {
+  if(status === "submitted")    return <span className="badge b-ok">Trimis</span>;
+  if(status === "in_progress")  return <span className="badge b-mid">În desfășurare</span>;
+  return <span className="badge b-gray">Alocat</span>;
+}
+
+function SessionCard({s, exam}) {
+  const stageL = stageLabel(s.stage);
+  const examTitle = exam?.title || s.examId || "—";
+  const variantId = s.variantId;
+  const link = `exam.html?sid=${encodeURIComponent(s.id)}`;
+  const btnLabel = s.status === "submitted"
+    ? "Vezi rezultatele →"
+    : s.status === "in_progress"
+      ? "Continuă examenul →"
+      : "Începe examenul →";
+  const btnClass = s.status === "submitted" ? "btn btn-mid btn-sm" : "btn btn-primary btn-sm";
+  const score = s.result?.total;
+
+  return (
+    <div style={{border:"1px solid #e3e8ef",borderRadius:10,padding:14,marginBottom:10,background:"#fff"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+        <div style={{flex:1,minWidth:200}}>
+          <div style={{fontWeight:700,color:C.dark,fontSize:14,marginBottom:4}}>{examTitle}</div>
+          <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+            <span className={`badge b-${s.level}`}>{s.level}</span>
+            <span style={{fontSize:12,color:"#666"}}>{stageL}</span>
+            <span style={{fontSize:11,color:"#aaa",fontFamily:"monospace"}}>· var. {variantId}</span>
+            <StatusBadge status={s.status}/>
+          </div>
+          {s.status === "submitted" && typeof score === "number" && (
+            <div style={{marginTop:8,fontSize:13,color:C.green,fontWeight:700}}>
+              Scor: {score}{s.submittedAt && <span style={{color:"#999",fontWeight:400,marginLeft:8,fontSize:12}}>· {new Date(s.submittedAt).toLocaleString("ro-RO")}</span>}
+            </div>
+          )}
+        </div>
+        <a href={link} className={btnClass} style={{whiteSpace:"nowrap"}}>{btnLabel}</a>
+      </div>
+    </div>
+  );
+}
+
+function DashboardView({participant, onLogout}) {
+  const [refreshKey, setRefreshKey] = useState(0);
+  const sessions = CPEEN.getSessionsByParticipant(participant.id);
+  const exams    = CPEEN.getExams();
+  const examMap  = {};
+  exams.forEach(e => { examMap[e.id] = e; });
+
+  // Sort: in_progress > pending > submitted
+  const order = {in_progress: 0, pending: 1, submitted: 2};
+  const sorted = [...sessions].sort((a,b) => (order[a.status]??9) - (order[b.status]??9));
+
+  const qualified = CPEEN.isQualified(participant);
+
+  return (
+    <>
+      <Navbar/>
+      <div className="page">
+        <div className="container" style={{maxWidth:780}}>
+
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
+            <h2 style={{color:C.dark,fontSize:20}}>Dashboard-ul tău</h2>
+            <div style={{display:"flex",gap:8}}>
+              <button className="btn btn-mid btn-sm" onClick={()=>setRefreshKey(k=>k+1)}>↻ Actualizează</button>
+              <button className="btn btn-ghost btn-sm" onClick={onLogout}>Logout</button>
+            </div>
+          </div>
+
+          {/* Profil */}
+          <div style={{background:"#fff",borderRadius:10,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:16}}>
+            <div style={{fontSize:11,color:"#888",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>Profil</div>
+            <div style={{fontSize:18,fontWeight:700,color:C.dark,marginBottom:4}}>{participant.name}</div>
+            <div style={{fontSize:13,color:"#555",marginBottom:8}}>
+              {participant.school} · {participant.county}
+              {participant.grade && <> · clasa {participant.grade}</>}
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:12,color:"#666"}}>
+              <span className={`badge b-${participant.level}`}>{participant.level}</span>
+              {participant.teacher && <span>Prof. {participant.teacher}</span>}
+              <span>· Cod: <span style={{fontFamily:"monospace",background:"#f0f4f8",padding:"2px 6px",borderRadius:4,letterSpacing:2}}>{participant.accessCode}</span></span>
+            </div>
+          </div>
+
+          {/* Calificare */}
+          <div style={{
+            background: qualified ? "#e8f7ec" : "#fff8e1",
+            border: `2px solid ${qualified ? "#27AE60" : "#f0c14b"}`,
+            borderRadius:10, padding:18, marginBottom:16
+          }}>
+            <div style={{fontSize:11,color:"#888",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Status calificare</div>
+            <div style={{fontSize:18,fontWeight:700,color: qualified ? C.green : C.amber}}>
+              {qualified ? "✓ Calificat pentru Finală" : "În etapa de Calificare"}
+            </div>
+            <div style={{fontSize:12,color:"#666",marginTop:4}}>
+              {qualified
+                ? "Felicitări! Administratorul te-a calificat pentru etapa de finală."
+                : "Pentru a accesa etapa de finală, trebuie să fii calificat de către un administrator."}
+            </div>
+          </div>
+
+          {/* Sesiuni */}
+          <div style={{background:"#fff",borderRadius:10,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:16}}>
+            <div style={{fontSize:11,color:"#888",textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>
+              Sesiunile mele ({sessions.length})
+            </div>
+            {sessions.length === 0 ? (
+              <div style={{padding:"20px 0",textAlign:"center",color:"#999",fontSize:13}}>
+                Nicio sesiune alocată momentan.<br/>
+                Așteaptă confirmarea administratorului.
+              </div>
+            ) : sorted.map(s => (
+              <SessionCard key={s.id} s={s} exam={examMap[s.examId]}/>
+            ))}
+          </div>
+
+          <div className="text-center text-muted" style={{marginTop:14}}>CPEEN 2026 · englishgrammarchallenge.ro</div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function CodeEntry({onLogin, presetCode, presetErr}) {
+  const [code, setCode] = useState(presetCode || "");
+  const [err,  setErr]  = useState(presetErr  || "");
+
+  const submit = () => {
+    setErr("");
+    const c = (code||"").toUpperCase().trim();
+    if(c.length < 4) { setErr("Cod de acces invalid."); return; }
+    const p = CPEEN.findParticipantByCode(c);
+    if(!p) { setErr("Cod de acces invalid. Verificați și reîncercați."); return; }
+    onLogin(p);
+  };
+
+  return (
+    <>
+      <Navbar/>
+      <div className="page-center">
+        <div className="wrap-sm">
+          <div className="card">
+            <div className="card-head" style={{textAlign:"center"}}>
+              <h2>Dashboard Elev</h2>
+              <p>CPEEN 2026 · Introduceți codul de acces</p>
+            </div>
+            <div className="card-body">
+              <div className="fg">
+                <label>Cod de acces<span className="req">*</span></label>
+                <input className={`inp${err?" err":""}`}
+                  value={code} onChange={e=>setCode(e.target.value.toUpperCase())}
+                  onKeyDown={e=>e.key==="Enter"&&submit()}
+                  placeholder="ex: ABC12345" maxLength={8}
+                  style={{letterSpacing:4,fontSize:20,fontFamily:"monospace",textAlign:"center"}}/>
+                {err && <div className="ferr">{err}</div>}
+              </div>
+              <button className="btn btn-primary btn-lg btn-block" onClick={submit}>
+                Accesează dashboard-ul →
+              </button>
+              <div style={{textAlign:"center",marginTop:14}}>
+                <a href="register.html" style={{fontSize:13}}>Nu ai un cod? Înregistrează-te →</a>
+              </div>
+            </div>
+          </div>
+          <div className="text-center text-muted" style={{marginTop:14}}>CPEEN 2026 · englishgrammarchallenge.ro</div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function App() {
+  CPEEN.seedInitialData();
+  const [participant, setParticipant] = useState(null);
+  const [autoErr, setAutoErr] = useState("");
+  const [autoCode, setAutoCode] = useState("");
+
+  // Auto-login: ?code=XXX in URL, or saved sessionStorage
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlCode = (params.get("code") || "").toUpperCase().trim();
+    const stored  = sessionStorage.getItem(STORE_KEY) || "";
+    const tryCode = urlCode || stored;
+    if(tryCode) {
+      const p = CPEEN.findParticipantByCode(tryCode);
+      if(p) {
+        sessionStorage.setItem(STORE_KEY, tryCode);
+        setParticipant(p);
+      } else if(urlCode) {
+        setAutoCode(urlCode);
+        setAutoErr("Cod de acces invalid. Verificați și reîncercați.");
+      }
+    }
+  }, []);
+
+  const onLogin = (p) => {
+    sessionStorage.setItem(STORE_KEY, p.accessCode);
+    setParticipant(p);
+  };
+
+  const onLogout = () => {
+    sessionStorage.removeItem(STORE_KEY);
+    setParticipant(null);
+    setAutoCode("");
+    setAutoErr("");
+  };
+
+  if(participant) return <DashboardView participant={participant} onLogout={onLogout}/>;
+  return <CodeEntry onLogin={onLogin} presetCode={autoCode} presetErr={autoErr}/>;
+}
+
+document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Georgia,serif;color:#2E75B6;font-size:15px;">Se încarcă…</div>';
+CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<App/>));
+</script>
+</body>
+</html>
