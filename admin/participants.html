@@ -28,10 +28,11 @@ function ParticipantsPage() {
   const [all,    setAll]    = useState(() => CPEEN.getParticipants());
   const [search, setSearch] = useState("");
   const [fLvl,   setFLvl]   = useState("all");
-  const [fStage, setFStage] = useState("all");
+  const [fQual,  setFQual]  = useState("all");
   const [fCounty,setFCounty]= useState("all");
   const [copied, setCopied] = useState(null);
   const [toConfirm, setToConfirm] = useState(null); // id pending delete
+  const [toDequal, setToDequal] = useState(null);   // id pending decalificare
 
   const sessions  = CPEEN.getSessions();
   const counties  = useMemo(()=>[...new Set(all.map(p=>p.county).filter(Boolean))].sort(),[all]);
@@ -40,13 +41,14 @@ function ParticipantsPage() {
 
   const filtered = useMemo(()=>{
     const q = search.toLowerCase();
-    return all.filter(p =>
-      (fLvl==="all"   || p.level===fLvl) &&
-      (fStage==="all" || p.stage===fStage) &&
-      (fCounty==="all"|| p.county===fCounty) &&
-      (!q || p.name.toLowerCase().includes(q) || p.school.toLowerCase().includes(q) || (p.email||"").toLowerCase().includes(q))
-    );
-  },[all,search,fLvl,fStage,fCounty]);
+    return all.filter(p => {
+      const qual = CPEEN.isQualified(p);
+      return (fLvl==="all"   || p.level===fLvl) &&
+        (fQual==="all" || (fQual==="yes" ? qual : !qual)) &&
+        (fCounty==="all"|| p.county===fCounty) &&
+        (!q || p.name.toLowerCase().includes(q) || p.school.toLowerCase().includes(q) || (p.email||"").toLowerCase().includes(q));
+    });
+  },[all,search,fLvl,fQual,fCounty]);
 
   const copyCode = (p) => {
     navigator.clipboard.writeText(p.accessCode).catch(()=>{});
@@ -60,11 +62,27 @@ function ParticipantsPage() {
     reload();
   };
 
+  const toggleQualified = (p) => {
+    const cur = CPEEN.isQualified(p);
+    if(cur) {
+      setToDequal(p.id);
+      return;
+    }
+    CPEEN.updateParticipant(p.id, {qualified: true});
+    reload();
+  };
+
+  const doDequal = (id) => {
+    CPEEN.updateParticipant(id, {qualified: false, stage: ""});
+    setToDequal(null);
+    reload();
+  };
+
   const exportCSV = () => {
-    const header = ["Nume","Scoala","Judet","Clasa","Profesor","Email","Nivel","Etapa","Cod acces","Inregistrat","Status"];
+    const header = ["Nume","Scoala","Judet","Clasa","Profesor","Email","Nivel","Calificat","Cod acces","Inregistrat","Status"];
     const rows = filtered.map(p => [
       p.name, p.school, p.county, p.grade||"", p.teacher, p.email||"",
-      p.level, ADMIN.stageLabel[p.stage]||p.stage, p.accessCode,
+      p.level, CPEEN.isQualified(p)?"Da":"Nu", p.accessCode,
       new Date(p.registeredAt).toLocaleString("ro-RO"), p.status
     ]);
     ADMIN.csv(header, rows, "cpeen_participanti.csv");
@@ -108,10 +126,10 @@ function ParticipantsPage() {
               <option value="all">Toate nivelurile</option>
               {LVL.map(l=><option key={l} value={l}>{l}</option>)}
             </select>
-            <select className="inp inp-sm" style={{width:130}} value={fStage} onChange={e=>setFStage(e.target.value)}>
-              <option value="all">Ambele etape</option>
-              <option value="calificare">Calificare</option>
-              <option value="finala">Finală</option>
+            <select className="inp inp-sm" style={{width:140}} value={fQual} onChange={e=>setFQual(e.target.value)}>
+              <option value="all">Toți (calificat?)</option>
+              <option value="yes">Doar calificați</option>
+              <option value="no">Doar ne-calificați</option>
             </select>
             <select className="inp inp-sm" style={{width:150}} value={fCounty} onChange={e=>setFCounty(e.target.value)}>
               <option value="all">Toate județele</option>
@@ -133,6 +151,20 @@ function ParticipantsPage() {
             );
           })()}
 
+          {/* Confirm decalificare dialog */}
+          {toDequal && (()=>{
+            const p = all.find(x=>x.id===toDequal);
+            return (
+              <div style={{background:"#fff3e0",border:"1px solid #ffb74d",borderRadius:8,padding:"12px 16px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+                <span style={{fontSize:13,color:"#7a4f00"}}>Sigur vrei să decalifici <strong>{p?.name}</strong>? Va pierde accesul la finală.</span>
+                <div style={{display:"flex",gap:8}}>
+                  <button className="btn btn-mid btn-sm" onClick={()=>doDequal(toDequal)}>Decalifică</button>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>setToDequal(null)}>Anulează</button>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Table */}
           <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
             {filtered.length === 0
@@ -148,7 +180,7 @@ function ParticipantsPage() {
                         <th>Județ</th>
                         <th>Cls</th>
                         <th>Nivel</th>
-                        <th>Etapă</th>
+                        <th>Calificat</th>
                         <th>Cod acces</th>
                         <th>Status</th>
                         <th>Înregistrat</th>
@@ -167,7 +199,11 @@ function ParticipantsPage() {
                           <td style={{fontSize:12}}>{p.county}</td>
                           <td style={{fontSize:12}}>{p.grade||"—"}</td>
                           <td><span className={`badge b-${p.level}`}>{p.level}</span></td>
-                          <td style={{fontSize:12}}>{ADMIN.stageLabel[p.stage]||p.stage}</td>
+                          <td style={{fontSize:12}}>
+                            {CPEEN.isQualified(p)
+                              ? <span className="badge b-ok" style={{fontWeight:700}}>✓ Calificat</span>
+                              : <span style={{color:"#aaa"}}>—</span>}
+                          </td>
                           <td>
                             <span style={{fontFamily:"monospace",fontSize:12,letterSpacing:2,background:"#f0f4f8",padding:"2px 6px",borderRadius:4}}>{p.accessCode}</span>
                           </td>
@@ -175,6 +211,12 @@ function ParticipantsPage() {
                           <td style={{fontSize:11,color:"#999",whiteSpace:"nowrap"}}>{new Date(p.registeredAt).toLocaleDateString("ro-RO")}</td>
                           <td>
                             <div style={{display:"flex",gap:4}}>
+                              <button className={`btn btn-sm ${CPEEN.isQualified(p)?"btn-ghost":"btn-success"}`}
+                                title={CPEEN.isQualified(p)?"Decalifică":"Califică pentru finală"}
+                                onClick={()=>toggleQualified(p)}
+                                style={{padding:"3px 8px",fontSize:11}}>
+                                {CPEEN.isQualified(p)?"✕ Decalifică":"✓ Califică"}
+                              </button>
                               <button className="btn btn-sm btn-outline" title="Copiază codul"
                                 onClick={()=>copyCode(p)}
                                 style={{padding:"3px 8px",fontSize:11}}>
