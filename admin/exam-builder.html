@@ -31,12 +31,13 @@ const PARTS_META = [
   { id:'p8', num:8, label:'Multiple Matching',            hint:'Potrivești întrebări la secțiuni A–F',         defPts:1 },
 ];
 
-const IMPLEMENTED = { p1:true, p2:true };
+const IMPLEMENTED = { p1:true, p2:true, p3:true };
 
 function initPart(id, defPts) {
   const pts = String(defPts);
   if (id==='p1') return { title:'', text:'', pts, items:[] };
   if (id==='p2') return { title:'', text:'', pts, answers:[] };
+  if (id==='p3') return { pts, items:[] };
   return { pts };
 }
 
@@ -58,6 +59,13 @@ function toDBVariant(meta, enabled, partData) {
       parts.push({ type:'p2', title:d.title, text:d.text, pts,
         key: Array.from({length:n}, (_,i) =>
           (d.answers[i]||'').split(';').map(x=>x.trim()).filter(Boolean))
+      });
+    } else if (id==='p3') {
+      parts.push({ type:'p3', pts,
+        items: d.items.map(it => ({
+          before:it.before||'', kw:it.kw||'', after:it.after||'',
+          key:(it.answers||'').split(';').map(x=>x.trim()).filter(Boolean)
+        }))
       });
     }
   });
@@ -90,6 +98,14 @@ function fromDB(exam) {
       partData.p2 = {
         title: part.title||'', text: part.text||'', pts: String(part.pts||1),
         answers: (part.key||[]).map(a => a.join('; '))
+      };
+    } else if (id==='p3') {
+      partData.p3 = {
+        pts: String(part.pts||1),
+        items: (part.items||[]).map(it => ({
+          before:it.before||'', kw:it.kw||'', after:it.after||'',
+          answers:(it.key||[]).join('; ')
+        }))
       };
     }
   });
@@ -251,7 +267,41 @@ function P2Edit({data,onChange}) {
   );
 }
 
-const EDITORS = { p1: P1Edit, p2: P2Edit };
+// ── Part 3 — Word Formation ───────────────────────────────────────────────
+function P3Edit({data,onChange}) {
+  const updIt = (i,f,v) => onChange({...data, items:data.items.map((it,j)=>j===i?{...it,[f]:f==='kw'?v.toUpperCase():v}:it)});
+  const addIt = () => onChange({...data, items:[...data.items, {before:'',kw:'',after:'',answers:''}]});
+  const delIt = i => onChange({...data, items:data.items.filter((_,j)=>j!==i)});
+  return (
+    <>
+      <div style={{fontSize:12,color:"#888",marginBottom:12}}>
+        Completați contextul și cuvântul cheie. Elevul trebuie să transforme cuvântul cheie pentru a completa golul.
+      </div>
+      {data.items.map((it,i)=>(
+        <ItemCard key={i} num={i+1} onDelete={()=>delIt(i)}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:8,alignItems:"end",marginBottom:8}}>
+            <Fld label="Text înainte">
+              <Inp value={it.before} onChange={e=>updIt(i,'before',e.target.value)} placeholder="The"/>
+            </Fld>
+            <Fld label="CUVÂNT CHEIE">
+              <input value={it.kw} onChange={e=>updIt(i,'kw',e.target.value)} placeholder="HAPPY"
+                style={{...IS,width:110,textAlign:"center",fontWeight:700,textTransform:"uppercase"}}/>
+            </Fld>
+            <Fld label="Text după">
+              <Inp value={it.after} onChange={e=>updIt(i,'after',e.target.value)} placeholder="of the people around him was obvious."/>
+            </Fld>
+          </div>
+          <Fld label="Forme acceptate" hint="separate prin ;">
+            <Inp value={it.answers} onChange={e=>updIt(i,'answers',e.target.value)} placeholder="happiness; Happiness"/>
+          </Fld>
+        </ItemCard>
+      ))}
+      <AddBtn onClick={addIt} label="Adaugă item"/>
+    </>
+  );
+}
+
+const EDITORS = { p1: P1Edit, p2: P2Edit, p3: P3Edit };
 
 // ── Main ──────────────────────────────────────────────────────────────────
 function ExamBuilder() {
