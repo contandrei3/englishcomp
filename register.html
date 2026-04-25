@@ -201,7 +201,7 @@ function RegisterApp() {
   );
 }
 
-(document.getElementById("root")).render(<RegisterApp/>));
+CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<RegisterApp/>));
 </script>
 </body>
 </html>
