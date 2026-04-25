@@ -9,29 +9,37 @@ var CPEEN = (function () {
     SESSIONS:     'cpeen_sessions'
   };
 
-  var SHEETS_URL = '';
+  var DB = null;
 
-  function syncToSheets(action, data) {
-    if (!SHEETS_URL) return;
-    fetch(SHEETS_URL + '?action=' + encodeURIComponent(action), {
-      method: 'POST',
-      body: JSON.stringify(data),
-      mode: 'no-cors'
-    }).catch(function() {});
+  function initFirebase() {
+    var cfg = (typeof FIREBASE_CONFIG !== 'undefined') ? FIREBASE_CONFIG : null;
+    if (!cfg || !cfg.projectId) return;
+    if (typeof firebase === 'undefined') return;
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(cfg);
+      DB = firebase.firestore();
+    } catch(e) {}
+  }
+
+  function syncToFirebase(docId, data) {
+    if (!DB) return;
+    var payload = docId === 'config' ? data : { items: data };
+    DB.collection('cpeen').doc(docId).set(payload).catch(function() {});
   }
 
   function init() {
-    var url = (typeof CPEEN_SHEETS_URL !== 'undefined') ? CPEEN_SHEETS_URL : '';
-    if (!url || url.indexOf('YOUR_APPS') !== -1) return Promise.resolve();
-    SHEETS_URL = url;
-    // Always render immediately from cache; sync Sheets in background
-    fetch(url + '?action=getAll')
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (d.participants) ss(KEYS.PARTICIPANTS, d.participants);
-        if (d.sessions)     ss(KEYS.SESSIONS,     d.sessions);
-        if (d.exams)        ss(KEYS.EXAMS,         d.exams);
-        if (d.config)       ss(KEYS.CONFIG,         d.config);
+    initFirebase();
+    if (!DB) return Promise.resolve();
+    // Always render immediately from cache; sync Firebase in background
+    DB.collection('cpeen').get()
+      .then(function(snapshot) {
+        snapshot.forEach(function(doc) {
+          var d = doc.data();
+          if (doc.id === 'participants') ss(KEYS.PARTICIPANTS, d.items || []);
+          if (doc.id === 'sessions')     ss(KEYS.SESSIONS,     d.items || []);
+          if (doc.id === 'exams')        ss(KEYS.EXAMS,         d.items || []);
+          if (doc.id === 'config')       ss(KEYS.CONFIG,         d);
+        });
       }).catch(function() {});
     return Promise.resolve();
   }
@@ -80,11 +88,11 @@ var CPEEN = (function () {
   function getConfig() {
     return Object.assign({ maxPerSchoolPerLevel: 0, showResultsImmediately: true, adminHash: DEFAULT_ADMIN_HASH, activeExams: {} }, sg(KEYS.CONFIG, {}));
   }
-  function saveConfig(cfg) { ss(KEYS.CONFIG, cfg); syncToSheets('saveConfig', cfg); }
+  function saveConfig(cfg) { ss(KEYS.CONFIG, cfg); syncToFirebase('config', cfg); }
 
   // ── Participants ──────────────────────────────────────────────────────────
   function getParticipants() { return sg(KEYS.PARTICIPANTS, []); }
-  function saveParticipants(ps) { ss(KEYS.PARTICIPANTS, ps); syncToSheets('saveParticipants', ps); }
+  function saveParticipants(ps) { ss(KEYS.PARTICIPANTS, ps); syncToFirebase('participants', ps); }
 
   function addParticipant(data) {
     var ps = getParticipants();
@@ -115,7 +123,7 @@ var CPEEN = (function () {
 
   // ── Sessions ──────────────────────────────────────────────────────────────
   function getSessions() { return sg(KEYS.SESSIONS, []); }
-  function saveSessions(ss_) { ss(KEYS.SESSIONS, ss_); syncToSheets('saveSessions', ss_); }
+  function saveSessions(ss_) { ss(KEYS.SESSIONS, ss_); syncToFirebase('sessions', ss_); }
 
   function getSessionByParticipant(pid) {
     return getSessions().find(function (s) { return s.participantId === pid; }) || null;
@@ -155,7 +163,7 @@ var CPEEN = (function () {
 
   // ── Exams ─────────────────────────────────────────────────────────────────
   function getExams() { return sg(KEYS.EXAMS, []); }
-  function saveExams(exams) { ss(KEYS.EXAMS, exams); syncToSheets('saveExams', exams); }
+  function saveExams(exams) { ss(KEYS.EXAMS, exams); syncToFirebase('exams', exams); }
 
   function getExamForParticipant(level, stage) {
     return getExams().find(function (e) { return e.level === level && e.stage === stage && e.variants && e.variants.length; }) || null;
