@@ -336,6 +336,45 @@ var CPEEN = (function () {
     });
   }
 
+  // ── Proctor flags (read from Firestore proctorFlags collection) ──────────
+  var _proctorFlags = {};  // cache: { [participantCode]: { disqualified, suspicious_count, ... } }
+
+  function loadProctorFlags() {
+    if (!DB) return Promise.resolve({});
+    return DB.collection('proctorFlags').get()
+      .then(function(snapshot) {
+        snapshot.forEach(function(doc) {
+          _proctorFlags[doc.id] = doc.data();
+        });
+        return _proctorFlags;
+      })
+      .catch(function() { return {}; });
+  }
+
+  function getProctorFlag(participantCode) {
+    return _proctorFlags[(participantCode || '').toUpperCase()] || null;
+  }
+
+  function disqualifyParticipant(participantCode, reason) {
+    if (!DB) return;
+    var code = (participantCode || '').toUpperCase();
+    var data = {
+      participantCode: code,
+      disqualified: true,
+      reason: reason || 'Marcat manual de admin',
+      tsStr: new Date().toISOString()
+    };
+    _proctorFlags[code] = data;
+    DB.collection('proctorFlags').doc(code).set(data).catch(function() {});
+  }
+
+  function clearDisqualification(participantCode) {
+    if (!DB) return;
+    var code = (participantCode || '').toUpperCase();
+    delete _proctorFlags[code];
+    DB.collection('proctorFlags').doc(code).delete().catch(function() {});
+  }
+
   return {
     init,
     genId, genCode, hashPass, norm,
@@ -343,6 +382,7 @@ var CPEEN = (function () {
     getParticipants, saveParticipants, addParticipant, findParticipantByCode, updateParticipant, deleteParticipant, isQualified,
     getSessions, saveSessions, getSessionByParticipant, getSessionsByParticipant, createSession, updateSession,
     getExams, saveExams, getExamForParticipant, addExam, updateExam, deleteExam,
-    gradeSession, seedInitialData
+    gradeSession, seedInitialData,
+    loadProctorFlags, getProctorFlag, disqualifyParticipant, clearDisqualification
   };
 })();
