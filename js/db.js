@@ -28,21 +28,24 @@ var CPEEN = (function () {
   }
 
   function init() {
-    initFirebase();
-    if (!DB) return Promise.resolve();
-    // Always render immediately from cache; sync Firebase in background
-    DB.collection('cpeen').get()
-      .then(function(snapshot) {
-        snapshot.forEach(function(doc) {
-          var d = doc.data();
-          if (doc.id === 'participants') ss(KEYS.PARTICIPANTS, d.items || []);
-          if (doc.id === 'sessions')     ss(KEYS.SESSIONS,     d.items || []);
-          if (doc.id === 'exams')        ss(KEYS.EXAMS,         d.items || []);
-          if (doc.id === 'config')       ss(KEYS.CONFIG,         d);
-        });
-      }).catch(function() {});
-    return Promise.resolve();
-  }
+  initFirebase();
+  if (!DB) return Promise.resolve();
+
+  return DB.collection('cpeen').get()
+    .then(function(snapshot) {
+      snapshot.forEach(function(doc) {
+        var d = doc.data();
+        if (doc.id === 'participants') ss(KEYS.PARTICIPANTS, d.items || []);
+        if (doc.id === 'sessions')     ss(KEYS.SESSIONS,     d.items || []);
+        if (doc.id === 'exams')        ss(KEYS.EXAMS,         d.items || []);
+        if (doc.id === 'config')       ss(KEYS.CONFIG,         d);
+      });
+    })
+    .catch(function() {
+      // Firestore inaccesibil → continuăm cu ce e în localStorage
+      return Promise.resolve();
+    });
+}
 
   var DEFAULT_ADMIN_HASH = '214d1f1c62239db83286301ef9ce31e93144e98570370de2f035560e13b2a7d9'; // cpeen2026
 
