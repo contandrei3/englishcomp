@@ -31,7 +31,7 @@ const PARTS_META = [
   { id:'p8', num:8, label:'Multiple Matching',            hint:'Potrivești întrebări la secțiuni A–F',         defPts:1 },
 ];
 
-const IMPLEMENTED = { p1:true, p2:true, p3:true, p4:true, p5:true, p6:true };
+const IMPLEMENTED = { p1:true, p2:true, p3:true, p4:true, p5:true, p6:true, p7:true };
 
 function initPart(id, defPts) {
   const pts = String(defPts);
@@ -41,6 +41,7 @@ function initPart(id, defPts) {
   if (id==='p4') return { pts, items:[] };
   if (id==='p5') return { title:'', text:'', pts, items:[] };
   if (id==='p6') return { pts, texts:['A','B','C','D'].map(l=>({label:l,title:'',content:''})), items:[] };
+  if (id==='p7') return { title:'', text:'', pts, paragraphs:[], key:[] };
   return { pts };
 }
 
@@ -89,6 +90,12 @@ function toDBVariant(meta, enabled, partData) {
       parts.push({ type:'p6', pts,
         texts: d.texts.map(t=>({label:t.label, title:t.title||'', content:t.content||''})),
         items: d.items.map(it=>({question:it.question||'', answer:it.answer||'A'}))
+      });
+    } else if (id==='p7') {
+      const gapN = (d.text.match(/\[\d+\]/g)||[]).length;
+      parts.push({ type:'p7', title:d.title, text:d.text, pts,
+        paragraphs:(d.paragraphs||[]).map(p=>({label:p.label, content:p.content||''})),
+        key:(d.key||[]).slice(0, gapN)
       });
     }
   });
@@ -152,6 +159,12 @@ function fromDB(exam) {
         pts:String(part.pts||2),
         texts:(part.texts||[]).map(t=>({label:t.label||'A', title:t.title||'', content:t.content||''})),
         items:(part.items||[]).map(it=>({question:it.question||'', answer:it.answer||'A'}))
+      };
+    } else if (id==='p7') {
+      partData.p7 = {
+        title:part.title||'', text:part.text||'', pts:String(part.pts||2),
+        paragraphs:(part.paragraphs||[]).map(p=>({label:p.label||'', content:p.content||''})),
+        key:[...(part.key||[])]
       };
     }
   });
@@ -466,7 +479,67 @@ function P6Edit({data,onChange}) {
   );
 }
 
-const EDITORS = { p1: P1Edit, p2: P2Edit, p3: P3Edit, p4: P4Edit, p5: P5Edit, p6: P6Edit };
+// ── Part 7 — Gapped Text ─────────────────────────────────────────────────
+function P7Edit({data,onChange}) {
+  const upd = (k,v) => onChange({...data,[k]:v});
+  const LETTERS = 'ABCDEFGHIJKLMNOP';
+  const gapN = (data.text.match(/\[\d+\]/g)||[]).length;
+  const paraLabels = LETTERS.slice(0, gapN+1).split('');
+
+  const syncText = t => {
+    const n = (t.match(/\[\d+\]/g)||[]).length;
+    const labels = LETTERS.slice(0, n+1).split('');
+    const paras  = labels.map((l,i) => data.paragraphs?.[i] || {label:l, content:''});
+    const key    = Array.from({length:n}, (_,i) => data.key?.[i] || '');
+    onChange({...data, text:t, paragraphs:paras, key});
+  };
+  const updPara = (i,v) => onChange({...data, paragraphs:data.paragraphs.map((p,j)=>j===i?{...p,content:v}:p)});
+  const setKey  = (i,v) => { const k=[...(data.key||[])]; k[i]=v.toUpperCase(); onChange({...data,key:k}); };
+
+  return (
+    <>
+      <div style={{fontSize:12,color:"#888",marginBottom:12}}>
+        Marcați cu [1] [2]... locurile din text unde lipsesc paragrafele. Sistemul detectează automat numărul de goluri și creează N+1 paragrafe (unul e distractor).
+      </div>
+      <Fld label="Titlu">
+        <Inp value={data.title} onChange={e=>upd('title',e.target.value)} placeholder="THE HISTORY OF FLIGHT"/>
+      </Fld>
+      <Fld label={`Text principal — [1] [2]... pentru paragrafe lipsă (${gapN} detectate)`}>
+        <Ta value={data.text} onChange={e=>syncText(e.target.value)} rows={8}
+          placeholder="The history of aviation begins with the Wright Brothers. [1] Early experiments repeatedly failed before success was achieved. [2] By the 20th century, commercial flight had transformed the world."/>
+      </Fld>
+      {gapN > 0 && (
+        <>
+          <div style={{fontSize:12,fontWeight:600,color:"#444",marginBottom:8}}>
+            Paragrafe ({paraLabels.join(', ')})
+            <span style={{color:"#999",fontWeight:400,marginLeft:6}}>— ultimul este distractor (nu intră în cheie)</span>
+          </div>
+          {(data.paragraphs||[]).map((p,i)=>(
+            <div key={i} style={{border:"1px solid #e0e8f0",borderRadius:8,padding:12,marginBottom:8,background:"#f8fbff"}}>
+              <div style={{fontWeight:700,color:C.mid,marginBottom:6}}>Paragraful {p.label}</div>
+              <Ta value={p.content} onChange={e=>updPara(i,e.target.value)} rows={3}
+                placeholder={`Conținutul paragrafului ${p.label}...`}/>
+            </div>
+          ))}
+          <div style={{fontSize:12,fontWeight:600,color:"#444",marginBottom:6}}>Cheie — ce paragraf merge în fiecare gol</div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            {Array.from({length:gapN},(_,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+                <span style={{fontWeight:700,color:C.dark,fontSize:12}}>({i+1})</span>
+                <select value={data.key?.[i]||''} onChange={e=>setKey(i,e.target.value)} style={{...IS,width:65}}>
+                  <option value="">—</option>
+                  {paraLabels.map(l=><option key={l} value={l}>{l}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+const EDITORS = { p1: P1Edit, p2: P2Edit, p3: P3Edit, p4: P4Edit, p5: P5Edit, p6: P6Edit, p7: P7Edit };
 
 // ── Main ──────────────────────────────────────────────────────────────────
 function ExamBuilder() {
