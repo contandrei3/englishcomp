@@ -28,7 +28,9 @@ var CPEEN = (function () {
   }
 
   // FIX: returnăm promisiunea Firestore și așteptăm răspunsul înainte de a rezolva.
-  // Fallback la localStorage (Promise.resolve) dacă Firestore e inaccesibil.
+  // Fallback la localStorage dacă Firestore e inaccesibil.
+  // Nu suprascriem localStorage cu array gol din Firestore — Firestore câștigă doar dacă
+  // are date (items.length > 0), altfel păstrăm ce e deja local (ex: seed-uri).
   function init() {
     initFirebase();
     if (!DB) return Promise.resolve();
@@ -37,10 +39,25 @@ var CPEEN = (function () {
       .then(function(snapshot) {
         snapshot.forEach(function(doc) {
           var d = doc.data();
-          if (doc.id === 'participants') ss(KEYS.PARTICIPANTS, d.items || []);
-          if (doc.id === 'sessions')     ss(KEYS.SESSIONS,     d.items || []);
-          if (doc.id === 'exams')        ss(KEYS.EXAMS,         d.items || []);
-          if (doc.id === 'config')       ss(KEYS.CONFIG,         d);
+          if (doc.id === 'config') {
+            // config: suprascrie întotdeauna (nu e array)
+            ss(KEYS.CONFIG, d);
+          } else {
+            // pentru colecții cu items[]: Firestore câștigă numai dacă are date
+            var remote = d.items || [];
+            var keyMap = {
+              participants: KEYS.PARTICIPANTS,
+              sessions:     KEYS.SESSIONS,
+              exams:        KEYS.EXAMS
+            };
+            var key = keyMap[doc.id];
+            if (!key) return;
+            if (remote.length > 0) {
+              // Firestore are date → suprascrie localStorage
+              ss(key, remote);
+            }
+            // dacă remote e gol, păstrăm ce e în localStorage (seed-uri, date locale)
+          }
         });
       })
       .catch(function() {
