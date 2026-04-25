@@ -31,13 +31,14 @@ const PARTS_META = [
   { id:'p8', num:8, label:'Multiple Matching',            hint:'Potrivești întrebări la secțiuni A–F',         defPts:1 },
 ];
 
-const IMPLEMENTED = { p1:true, p2:true, p3:true };
+const IMPLEMENTED = { p1:true, p2:true, p3:true, p4:true };
 
 function initPart(id, defPts) {
   const pts = String(defPts);
   if (id==='p1') return { title:'', text:'', pts, items:[] };
   if (id==='p2') return { title:'', text:'', pts, answers:[] };
   if (id==='p3') return { pts, items:[] };
+  if (id==='p4') return { pts, items:[] };
   return { pts };
 }
 
@@ -64,6 +65,13 @@ function toDBVariant(meta, enabled, partData) {
       parts.push({ type:'p3', pts,
         items: d.items.map(it => ({
           before:it.before||'', kw:it.kw||'', after:it.after||'',
+          key:(it.answers||'').split(';').map(x=>x.trim()).filter(Boolean)
+        }))
+      });
+    } else if (id==='p4') {
+      parts.push({ type:'p4', pts,
+        items: d.items.map(it => ({
+          s1:it.s1||'', kw:it.kw||'', before:it.before||'', after:it.after||'',
           key:(it.answers||'').split(';').map(x=>x.trim()).filter(Boolean)
         }))
       });
@@ -104,6 +112,14 @@ function fromDB(exam) {
         pts: String(part.pts||1),
         items: (part.items||[]).map(it => ({
           before:it.before||'', kw:it.kw||'', after:it.after||'',
+          answers:(it.key||[]).join('; ')
+        }))
+      };
+    } else if (id==='p4') {
+      partData.p4 = {
+        pts: String(part.pts||2),
+        items: (part.items||[]).map(it => ({
+          s1:it.s1||'', kw:it.kw||'', before:it.before||'', after:it.after||'',
           answers:(it.key||[]).join('; ')
         }))
       };
@@ -301,7 +317,46 @@ function P3Edit({data,onChange}) {
   );
 }
 
-const EDITORS = { p1: P1Edit, p2: P2Edit, p3: P3Edit };
+// ── Part 4 — Key Word Transformations ────────────────────────────────────
+function P4Edit({data,onChange}) {
+  const updIt = (i,f,v) => onChange({...data, items:data.items.map((it,j)=>j===i?{...it,[f]:f==='kw'?v.toUpperCase():v}:it)});
+  const addIt = () => onChange({...data, items:[...data.items, {s1:'',kw:'',before:'',after:'',answers:''}]});
+  const delIt = i => onChange({...data, items:data.items.filter((_,j)=>j!==i)});
+  return (
+    <>
+      <div style={{fontSize:12,color:"#888",marginBottom:12}}>
+        Elevul rescrie propoziția folosind cuvântul cheie fără să îl modifice (3–6 cuvinte inclusiv cuvântul cheie).
+      </div>
+      {data.items.map((it,i)=>(
+        <ItemCard key={i} num={i+1} onDelete={()=>delIt(i)}>
+          <Fld label="Propoziție originală">
+            <Ta value={it.s1} onChange={e=>updIt(i,'s1',e.target.value)} rows={2}
+              placeholder="She had no idea how costly the renovation would turn out to be."/>
+          </Fld>
+          <div style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr",gap:8,alignItems:"end"}}>
+            <Fld label="CUVÂNT CHEIE">
+              <input value={it.kw} onChange={e=>updIt(i,'kw',e.target.value)} placeholder="DAWNED"
+                style={{...IS,width:120,textAlign:"center",fontWeight:700,textTransform:"uppercase"}}/>
+            </Fld>
+            <Fld label="Context înainte (fix)">
+              <Inp value={it.before} onChange={e=>updIt(i,'before',e.target.value)} placeholder="It only"/>
+            </Fld>
+            <Fld label="Context după (fix)">
+              <Inp value={it.after} onChange={e=>updIt(i,'after',e.target.value)} placeholder="costly the renovation would be."/>
+            </Fld>
+          </div>
+          <Fld label="Răspunsuri acceptate (partea de completat)" hint="separate prin ;">
+            <Inp value={it.answers} onChange={e=>updIt(i,'answers',e.target.value)}
+              placeholder="dawned on her how; only dawned on her how"/>
+          </Fld>
+        </ItemCard>
+      ))}
+      <AddBtn onClick={addIt} label="Adaugă item"/>
+    </>
+  );
+}
+
+const EDITORS = { p1: P1Edit, p2: P2Edit, p3: P3Edit, p4: P4Edit };
 
 // ── Main ──────────────────────────────────────────────────────────────────
 function ExamBuilder() {
