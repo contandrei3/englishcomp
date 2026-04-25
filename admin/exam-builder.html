@@ -31,7 +31,7 @@ const PARTS_META = [
   { id:'p8', num:8, label:'Multiple Matching',            hint:'Potrivești întrebări la secțiuni A–F',         defPts:1 },
 ];
 
-const IMPLEMENTED = { p1:true, p2:true, p3:true, p4:true, p5:true, p6:true, p7:true };
+const IMPLEMENTED = { p1:true, p2:true, p3:true, p4:true, p5:true, p6:true, p7:true, p8:true };
 
 function initPart(id, defPts) {
   const pts = String(defPts);
@@ -42,6 +42,7 @@ function initPart(id, defPts) {
   if (id==='p5') return { title:'', text:'', pts, items:[] };
   if (id==='p6') return { pts, texts:['A','B','C','D'].map(l=>({label:l,title:'',content:''})), items:[] };
   if (id==='p7') return { title:'', text:'', pts, paragraphs:[], key:[] };
+  if (id==='p8') return { pts, texts:[], items:[] };
   return { pts };
 }
 
@@ -96,6 +97,11 @@ function toDBVariant(meta, enabled, partData) {
       parts.push({ type:'p7', title:d.title, text:d.text, pts,
         paragraphs:(d.paragraphs||[]).map(p=>({label:p.label, content:p.content||''})),
         key:(d.key||[]).slice(0, gapN)
+      });
+    } else if (id==='p8') {
+      parts.push({ type:'p8', pts,
+        texts: d.texts.map(t=>({label:t.label, title:t.title||'', content:t.content||''})),
+        items: d.items.map(it=>({question:it.question||'', answer:it.answer||'A'}))
       });
     }
   });
@@ -165,6 +171,12 @@ function fromDB(exam) {
         title:part.title||'', text:part.text||'', pts:String(part.pts||2),
         paragraphs:(part.paragraphs||[]).map(p=>({label:p.label||'', content:p.content||''})),
         key:[...(part.key||[])]
+      };
+    } else if (id==='p8') {
+      partData.p8 = {
+        pts:String(part.pts||1),
+        texts:(part.texts||[]).map(t=>({label:t.label||'A', title:t.title||'', content:t.content||''})),
+        items:(part.items||[]).map(it=>({question:it.question||'', answer:it.answer||'A'}))
       };
     }
   });
@@ -539,7 +551,63 @@ function P7Edit({data,onChange}) {
   );
 }
 
-const EDITORS = { p1: P1Edit, p2: P2Edit, p3: P3Edit, p4: P4Edit, p5: P5Edit, p6: P6Edit, p7: P7Edit };
+// ── Part 8 — Multiple Matching ────────────────────────────────────────────
+function P8Edit({data,onChange}) {
+  const LETTERS = 'ABCDEFGHIJKLMNOP';
+  const addTxt = () => { const l=LETTERS[data.texts.length]||'X'; onChange({...data, texts:[...data.texts,{label:l,title:'',content:''}]}); };
+  const delTxt = i => onChange({...data, texts:data.texts.filter((_,j)=>j!==i)});
+  const updTxt = (i,f,v) => onChange({...data, texts:data.texts.map((t,j)=>j===i?{...t,[f]:v}:t)});
+  const addIt  = () => onChange({...data, items:[...data.items, {question:'', answer:data.texts[0]?.label||'A'}]});
+  const delIt  = i => onChange({...data, items:data.items.filter((_,j)=>j!==i)});
+  const updIt  = (i,f,v) => onChange({...data, items:data.items.map((it,j)=>j===i?{...it,[f]:v}:it)});
+  return (
+    <>
+      <div style={{fontSize:12,color:"#888",marginBottom:12}}>
+        Mai multe texte scurte (secțiuni A, B, C...). Elevul citește întrebările și selectează secțiunea care se potrivește.
+      </div>
+      <div style={{marginBottom:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:12,fontWeight:600,color:"#444"}}>Texte / Secțiuni</div>
+          <button onClick={addTxt} style={{background:C.mid,color:"#fff",border:"none",borderRadius:4,padding:"4px 10px",cursor:"pointer",fontSize:11}}>+ Adaugă text</button>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {data.texts.map((t,i)=>(
+            <div key={i} style={{border:"1px solid #e0e8f0",borderRadius:8,padding:12,background:"#f8fbff"}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                <div style={{fontWeight:700,color:C.mid}}>Secțiunea {t.label}</div>
+                <button onClick={()=>delTxt(i)} style={{background:C.red,color:"#fff",border:"none",borderRadius:4,padding:"2px 6px",cursor:"pointer",fontSize:10}}>✕</button>
+              </div>
+              <Fld label="Titlu"><Inp value={t.title} onChange={e=>updTxt(i,'title',e.target.value)} placeholder="Section A title"/></Fld>
+              <Fld label="Conținut"><Ta value={t.content} onChange={e=>updTxt(i,'content',e.target.value)} rows={4}/></Fld>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{fontSize:12,fontWeight:600,color:"#444",marginBottom:8}}>
+        Întrebări
+        <span style={{color:"#999",fontWeight:400,marginLeft:6}}>(selectați secțiunea cu răspunsul din dropdown)</span>
+      </div>
+      {data.items.map((it,i)=>(
+        <ItemCard key={i} num={i+1} onDelete={()=>delIt(i)}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:10,alignItems:"end"}}>
+            <Fld label="Enunț">
+              <Ta value={it.question} onChange={e=>updIt(i,'question',e.target.value)} rows={2}
+                placeholder="Which section mentions a specific historical event?"/>
+            </Fld>
+            <Fld label="Secțiune">
+              <select value={it.answer} onChange={e=>updIt(i,'answer',e.target.value)} style={{...IS,width:75}}>
+                {(data.texts||[]).map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
+              </select>
+            </Fld>
+          </div>
+        </ItemCard>
+      ))}
+      <AddBtn onClick={addIt} label="Adaugă întrebare"/>
+    </>
+  );
+}
+
+const EDITORS = { p1: P1Edit, p2: P2Edit, p3: P3Edit, p4: P4Edit, p5: P5Edit, p6: P6Edit, p7: P7Edit, p8: P8Edit };
 
 // ── Main ──────────────────────────────────────────────────────────────────
 function ExamBuilder() {
