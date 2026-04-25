@@ -24,9 +24,9 @@ const PARTS_META = [
   { id:'p1', num:1, label:'Multiple Choice Cloze',        hint:'Text cu goluri; alegi A/B/C/D pentru fiecare', defPts:1 },
   { id:'p2', num:2, label:'Open Cloze',                   hint:'Text cu goluri; scrii UN cuvânt per gol',      defPts:1 },
   { id:'p3', num:3, label:'Word Formation',               hint:'Transformi un cuvânt cheie',                   defPts:1 },
-  { id:'p4', num:4, label:'Key Word Transformations',     hint:'Rescrii propoziția folosind cuvântul cheie',  defPts:2 },
+  { id:'p4', num:4, label:'Key Word Transformations',     hint:'Rescrii propoziția folosind cuvântul cheie',   defPts:2 },
   { id:'p5', num:5, label:'Multiple Choice (Reading)',    hint:'Text cu întrebări; alegi A/B/C/D',             defPts:2 },
-  { id:'p6', num:6, label:'Cross-text Multiple Matching', hint:'4 texte; potrivești întrebări la scriitori',  defPts:2 },
+  { id:'p6', num:6, label:'Cross-text Multiple Matching', hint:'4 texte; potrivești întrebări la scriitori',   defPts:2 },
   { id:'p7', num:7, label:'Gapped Text',                  hint:'Plasezi paragrafele înapoi în text',           defPts:2 },
   { id:'p8', num:8, label:'Multiple Matching',            hint:'Potrivești întrebări la secțiuni A–F',         defPts:1 },
 ];
@@ -623,13 +623,23 @@ function ExamBuilder() {
     return d;
   });
   const [msg, setMsg] = useState({type:'',text:''});
+  const [loading, setLoading] = useState(!!editId); // arată spinner cât timp încărcăm
 
   useEffect(() => {
+    // init() e deja rezolvat când ajungem aici (apelat în CPEEN.init().then(...render))
+    // dar păstrăm un guard explicit pentru siguranță
     if (!editId) return;
-    const exam = CPEEN.getExams().find(e=>e.id===editId);
-    if (!exam) return;
+    const exam = CPEEN.getExams().find(e => e.id === editId);
+    if (!exam) {
+      setMsg({type:'err', text:`Subiectul cu ID "${editId}" nu a fost găsit.`});
+      setLoading(false);
+      return;
+    }
     const loaded = fromDB(exam);
-    setMeta(loaded.meta); setEnabled(loaded.enabled); setPartData(loaded.partData);
+    setMeta(loaded.meta);
+    setEnabled(loaded.enabled);
+    setPartData(loaded.partData);
+    setLoading(false);
   }, []);
 
   const toggle  = id => {
@@ -653,6 +663,17 @@ function ExamBuilder() {
   };
 
   const btnStyle = {background:C.dark,color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",fontSize:14,fontWeight:700,cursor:"pointer"};
+
+  if (loading) {
+    return (
+      <div style={{minHeight:"100vh",background:C.bg}}>
+        <ADMIN.Nav active="exams"/>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",color:C.mid,fontSize:15,fontFamily:"Georgia,serif"}}>
+          Se încarcă subiectul…
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{minHeight:"100vh",background:C.bg}}>
