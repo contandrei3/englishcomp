@@ -31,7 +31,7 @@ const PARTS_META = [
   { id:'p8', num:8, label:'Multiple Matching',            hint:'Potrivești întrebări la secțiuni A–F',         defPts:1 },
 ];
 
-const IMPLEMENTED = { p1:true, p2:true, p3:true, p4:true };
+const IMPLEMENTED = { p1:true, p2:true, p3:true, p4:true, p5:true };
 
 function initPart(id, defPts) {
   const pts = String(defPts);
@@ -39,6 +39,7 @@ function initPart(id, defPts) {
   if (id==='p2') return { title:'', text:'', pts, answers:[] };
   if (id==='p3') return { pts, items:[] };
   if (id==='p4') return { pts, items:[] };
+  if (id==='p5') return { title:'', text:'', pts, items:[] };
   return { pts };
 }
 
@@ -73,6 +74,14 @@ function toDBVariant(meta, enabled, partData) {
         items: d.items.map(it => ({
           s1:it.s1||'', kw:it.kw||'', before:it.before||'', after:it.after||'',
           key:(it.answers||'').split(';').map(x=>x.trim()).filter(Boolean)
+        }))
+      });
+    } else if (id==='p5') {
+      parts.push({ type:'p5', title:d.title, text:d.text, pts,
+        items: d.items.map(it => ({
+          question:it.question||'',
+          options:[it.a||'',it.b||'',it.c||'',it.d||''],
+          answer:['a','b','c','d'].indexOf(it.correct||'a')
         }))
       });
     }
@@ -121,6 +130,15 @@ function fromDB(exam) {
         items: (part.items||[]).map(it => ({
           s1:it.s1||'', kw:it.kw||'', before:it.before||'', after:it.after||'',
           answers:(it.key||[]).join('; ')
+        }))
+      };
+    } else if (id==='p5') {
+      partData.p5 = {
+        title:part.title||'', text:part.text||'', pts:String(part.pts||2),
+        items:(part.items||[]).map(it=>({
+          question:it.question||'',
+          a:it.options?.[0]||'', b:it.options?.[1]||'', c:it.options?.[2]||'', d:it.options?.[3]||'',
+          correct:['a','b','c','d'][it.answer]||'a'
         }))
       };
     }
@@ -356,7 +374,38 @@ function P4Edit({data,onChange}) {
   );
 }
 
-const EDITORS = { p1: P1Edit, p2: P2Edit, p3: P3Edit, p4: P4Edit };
+// ── Part 5 — Multiple Choice Reading ─────────────────────────────────────
+function P5Edit({data,onChange}) {
+  const upd   = (k,v) => onChange({...data,[k]:v});
+  const updIt = (i,f,v) => onChange({...data, items:data.items.map((it,j)=>j===i?{...it,[f]:v}:it)});
+  const addIt = () => onChange({...data, items:[...data.items, {question:'',a:'',b:'',c:'',d:'',correct:'a'}]});
+  const delIt = i => onChange({...data, items:data.items.filter((_,j)=>j!==i)});
+  return (
+    <>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,marginBottom:14}}>
+        <Fld label="Titlu text">
+          <Inp value={data.title} onChange={e=>upd('title',e.target.value)} placeholder="A PASSION FOR MAPS"/>
+        </Fld>
+        <Fld label="Text de citit (pasajul complet)">
+          <Ta value={data.text} onChange={e=>upd('text',e.target.value)} rows={10}
+            placeholder="Paste the full reading passage here..."/>
+        </Fld>
+      </div>
+      {data.items.map((it,i)=>(
+        <ItemCard key={i} num={i+1} onDelete={()=>delIt(i)}>
+          <Fld label="Întrebare">
+            <Ta value={it.question} onChange={e=>updIt(i,'question',e.target.value)} rows={2}
+              placeholder="The writer suggests that the main reason people enjoy maps is..."/>
+          </Fld>
+          <MCOpts item={it} onChange={(f,v)=>updIt(i,f,v)} nameKey={`p5-${i}`}/>
+        </ItemCard>
+      ))}
+      <AddBtn onClick={addIt} label="Adaugă întrebare"/>
+    </>
+  );
+}
+
+const EDITORS = { p1: P1Edit, p2: P2Edit, p3: P3Edit, p4: P4Edit, p5: P5Edit };
 
 // ── Main ──────────────────────────────────────────────────────────────────
 function ExamBuilder() {
