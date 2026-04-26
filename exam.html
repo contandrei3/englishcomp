@@ -388,16 +388,21 @@ function ExamApp() {
     const p = CPEEN.findParticipantByCode(code);
     if(!p) { setCodeErr("Cod de acces invalid. Verificați și reîncercați."); return; }
 
-    let s = CPEEN.getSessionByParticipant(p.id);
+    // Prefer in_progress, then pending, then latest submitted
+    const allSess = CPEEN.getSessionsByParticipant(p.id);
+    let s = allSess.find(x=>x.status==="in_progress") ||
+            allSess.find(x=>x.status==="pending") ||
+            allSess[allSess.length-1] || null;
 
     if(s) { loadSession(p, s); return; }
 
-    // No session yet — old fallback path: check activation + auto-create from p.level/p.stage
+    // No session yet — fallback: calificare stage (participants no longer carry p.stage)
+    const stage = CPEEN.isQualified(p) ? "finala" : "calificare";
     const cfg = CPEEN.getConfig();
-    if(!cfg.activeExams?.[p.level]?.[p.stage]) {
+    if(!cfg.activeExams?.[p.level]?.[stage]) {
       setPtcp(p); setView("noExam"); return;
     }
-    const ex = CPEEN.getExamForParticipant(p.level, p.stage);
+    const ex = CPEEN.getExamForParticipant(p.level, stage);
     if(!ex) { setPtcp(p); setView("noExam"); return; }
     const vIdx = Math.floor(Math.random() * ex.variants.length);
     s = CPEEN.createSession(p.id, ex, ex.variants[vIdx].id);
@@ -615,7 +620,7 @@ function ExamApp() {
             {ptcp?.stage==="finala"?"Finală":"Calificare"} · {variant.id} · {ptcp?.name}
           </div>
           <div className={`timer${urgent?" urgent":""}`}>⏱ {fmt(timeLeft)}</div>
-          <div style={{display:"flex",gap:5"}}>
+          <div style={{display:"flex",gap:5}}>
             {isNewFormat
               ? (variant.parts||[]).map((_,pi)=>(
                   <button key={pi} onClick={()=>document.getElementById(`part${pi}`)?.scrollIntoView({behavior:"smooth"})}
@@ -635,101 +640,111 @@ function ExamApp() {
 
         <div style={{maxWidth:750,margin:"0 auto",padding:"22px 16px 80px"}}>
 
-          {/* S1 – KWT */}
-          <div id="sec1" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
-            <div className="sec-badge">
-              <span>SECTION 1 — KEY WORD TRANSFORMATIONS</span>
-              <span>{variant.s1.items.length} × {variant.s1.pts} = {variant.s1.items.length*variant.s1.pts} pts</span>
-            </div>
-            <div className="instr">Complete the second sentence using the word given. Do NOT change the word given. Use between THREE and SIX words including the word given.</div>
-            {variant.s1.items.map((item,i)=>(
-              <div key={i} style={{borderBottom:"1px solid #eee",paddingBottom:14,marginBottom:14}}>
-                <div style={{fontSize:13,color:"#333",marginBottom:5}}><strong style={{color:C.dark,marginRight:5}}>{i+1}.</strong>{item.s1}</div>
-                <div style={{display:"inline-block",background:C.dark,color:"#fff",fontWeight:700,fontSize:10,letterSpacing:2,padding:"2px 9px",borderRadius:4,marginBottom:7}}>{item.kw}</div>
-                <div style={{fontSize:13,color:"#333",display:"flex",alignItems:"center",flexWrap:"wrap",gap:4}}>
-                  {item.before&&<span>{item.before}</span>}
-                  <input className="ans-inp" value={answers.s1[i]||""} onChange={e=>setAns("s1",i,e.target.value)}
-                    placeholder="3–6 words..." style={{width:210}}/>
-                  {item.after&&<span>{item.after}</span>}
-                </div>
+          {/* New parts[] format */}
+          {isNewFormat && (variant.parts||[]).map((part,pi)=>(
+            <PartSection key={pi} part={part} pi={pi}
+              ans={(answers.parts||[])[pi]||[]}
+              setAns={setAns}/>
+          ))}
+
+          {/* Legacy S1–S4 format */}
+          {!isNewFormat && <>
+            {/* S1 – KWT */}
+            <div id="sec1" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+              <div className="sec-badge">
+                <span>SECTION 1 — KEY WORD TRANSFORMATIONS</span>
+                <span>{variant.s1.items.length} × {variant.s1.pts} = {variant.s1.items.length*variant.s1.pts} pts</span>
               </div>
-            ))}
-          </div>
-
-          {/* S2 – Error Correction */}
-          <div id="sec2" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
-            <div className="sec-badge">
-              <span>SECTION 2 — ERROR CORRECTION</span>
-              <span>{variant.s2.key.length} × {variant.s2.pts} = {variant.s2.key.length*variant.s2.pts} pts</span>
-            </div>
-            <div className="instr">Each numbered line contains ONE error. Write the correct word. Write DELETE if a word should be removed.</div>
-            <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:12,marginBottom:14,fontFamily:"'Courier New',monospace",fontSize:12,lineHeight:2}}>
-              <div style={{color:"#999",marginBottom:4}}>{variant.s2.intro}</div>
-              <strong style={{color:C.dark,display:"block",marginBottom:6}}>{variant.s2.text}</strong>
-              {variant.s2.lines.map((line,i)=>(
-                <div key={i} style={{display:"flex",gap:6,alignItems:"baseline"}}>
-                  <span style={{color:C.dark,fontWeight:700,minWidth:18}}>{i+1}.</span>
-                  <span>{line}</span>
+              <div className="instr">Complete the second sentence using the word given. Do NOT change the word given. Use between THREE and SIX words including the word given.</div>
+              {variant.s1.items.map((item,i)=>(
+                <div key={i} style={{borderBottom:"1px solid #eee",paddingBottom:14,marginBottom:14}}>
+                  <div style={{fontSize:13,color:"#333",marginBottom:5}}><strong style={{color:C.dark,marginRight:5}}>{i+1}.</strong>{item.s1}</div>
+                  <div style={{display:"inline-block",background:C.dark,color:"#fff",fontWeight:700,fontSize:10,letterSpacing:2,padding:"2px 9px",borderRadius:4,marginBottom:7}}>{item.kw}</div>
+                  <div style={{fontSize:13,color:"#333",display:"flex",alignItems:"center",flexWrap:"wrap",gap:4}}>
+                    {item.before&&<span>{item.before}</span>}
+                    <input className="ans-inp" value={answers.s1[i]||""} onChange={e=>setAns("s1",i,e.target.value)}
+                      placeholder="3–6 words..." style={{width:210}}/>
+                    {item.after&&<span>{item.after}</span>}
+                  </div>
                 </div>
               ))}
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-              {variant.s2.key.map((_,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{fontWeight:700,color:C.dark,minWidth:24,fontSize:12}}>{i+1}.</span>
-                  <input className="ans-inp" value={answers.s2[i]||""} onChange={e=>setAns("s2",i,e.target.value)}
-                    placeholder="correct word / DELETE" style={{flex:1}}/>
-                </div>
-              ))}
-            </div>
-          </div>
 
-          {/* S3 – Open Cloze */}
-          <div id="sec3" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
-            <div className="sec-badge">
-              <span>SECTION 3 — OPEN CLOZE</span>
-              <span>{variant.s3.key.length} × {variant.s3.pts} = {variant.s3.key.length*variant.s3.pts} pts</span>
-            </div>
-            <div className="instr">Read the text and think of ONE word which best fits each gap.</div>
-            <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:14,marginBottom:14,fontSize:13,lineHeight:1.9}}>
-              <strong style={{color:C.dark,display:"block",marginBottom:8}}>{variant.s3.title}</strong>
-              <S3Text segments={variant.s3.segments}/>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-              {variant.s3.key.map((_,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({i+1})</span>
-                  <input className="ans-inp" value={answers.s3[i]||""} onChange={e=>setAns("s3",i,e.target.value)}
-                    placeholder="one word" style={{flex:1}}/>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* S4 – Word Formation */}
-          <div id="sec4" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
-            <div className="sec-badge">
-              <span>SECTION 4 — WORD FORMATION</span>
-              <span>{variant.s4.items.length} × {variant.s4.pts} = {variant.s4.items.length*variant.s4.pts} pts</span>
-            </div>
-            <div className="instr">Use the word in CAPITALS to form a word that fits the gap.</div>
-            {variant.s4.items.map((item,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:9,flexWrap:"wrap"}}>
-                <span style={{fontWeight:700,color:C.dark,minWidth:22,fontSize:12}}>{i+1}.</span>
-                <span style={{fontSize:13}}>{item.before}</span>
-                <input className="ans-inp" value={answers.s4[i]||""} onChange={e=>setAns("s4",i,e.target.value)}
-                  placeholder="..." style={{width:160}}/>
-                <span style={{fontSize:13}}>{item.after}</span>
-                <span style={{background:"#D6E4F0",color:C.dark,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:4,letterSpacing:1}}>{item.kw}</span>
+            {/* S2 – Error Correction */}
+            <div id="sec2" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+              <div className="sec-badge">
+                <span>SECTION 2 — ERROR CORRECTION</span>
+                <span>{variant.s2.key.length} × {variant.s2.pts} = {variant.s2.key.length*variant.s2.pts} pts</span>
               </div>
-            ))}
-          </div>
+              <div className="instr">Each numbered line contains ONE error. Write the correct word. Write DELETE if a word should be removed.</div>
+              <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:12,marginBottom:14,fontFamily:"'Courier New',monospace",fontSize:12,lineHeight:2}}>
+                <div style={{color:"#999",marginBottom:4}}>{variant.s2.intro}</div>
+                <strong style={{color:C.dark,display:"block",marginBottom:6}}>{variant.s2.text}</strong>
+                {variant.s2.lines.map((line,i)=>(
+                  <div key={i} style={{display:"flex",gap:6,alignItems:"baseline"}}>
+                    <span style={{color:C.dark,fontWeight:700,minWidth:18}}>{i+1}.</span>
+                    <span>{line}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                {variant.s2.key.map((_,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontWeight:700,color:C.dark,minWidth:24,fontSize:12}}>{i+1}.</span>
+                    <input className="ans-inp" value={answers.s2[i]||""} onChange={e=>setAns("s2",i,e.target.value)}
+                      placeholder="correct word / DELETE" style={{flex:1}}/>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-          {/* S5 – Writing (optional) */}
+            {/* S3 – Open Cloze */}
+            <div id="sec3" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+              <div className="sec-badge">
+                <span>SECTION 3 — OPEN CLOZE</span>
+                <span>{variant.s3.key.length} × {variant.s3.pts} = {variant.s3.key.length*variant.s3.pts} pts</span>
+              </div>
+              <div className="instr">Read the text and think of ONE word which best fits each gap.</div>
+              <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:14,marginBottom:14,fontSize:13,lineHeight:1.9}}>
+                <strong style={{color:C.dark,display:"block",marginBottom:8}}>{variant.s3.title}</strong>
+                <S3Text segments={variant.s3.segments}/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                {variant.s3.key.map((_,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({i+1})</span>
+                    <input className="ans-inp" value={answers.s3[i]||""} onChange={e=>setAns("s3",i,e.target.value)}
+                      placeholder="one word" style={{flex:1}}/>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* S4 – Word Formation */}
+            <div id="sec4" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+              <div className="sec-badge">
+                <span>SECTION 4 — WORD FORMATION</span>
+                <span>{variant.s4.items.length} × {variant.s4.pts} = {variant.s4.items.length*variant.s4.pts} pts</span>
+              </div>
+              <div className="instr">Use the word in CAPITALS to form a word that fits the gap.</div>
+              {variant.s4.items.map((item,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:9,flexWrap:"wrap"}}>
+                  <span style={{fontWeight:700,color:C.dark,minWidth:22,fontSize:12}}>{i+1}.</span>
+                  <span style={{fontSize:13}}>{item.before}</span>
+                  <input className="ans-inp" value={answers.s4[i]||""} onChange={e=>setAns("s4",i,e.target.value)}
+                    placeholder="..." style={{width:160}}/>
+                  <span style={{fontSize:13}}>{item.after}</span>
+                  <span style={{background:"#D6E4F0",color:C.dark,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:4,letterSpacing:1}}>{item.kw}</span>
+                </div>
+              ))}
+            </div>
+          </>}
+
+          {/* Writing (optional) — both formats */}
           {hasWriting && (
             <div id="sec5" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
               <div className="sec-badge">
-                <span>SECTION 5 — WRITING</span>
+                <span>WRITING</span>
                 <span>corectat manual</span>
               </div>
               <div className="instr">{variant.writing.prompt}</div>
