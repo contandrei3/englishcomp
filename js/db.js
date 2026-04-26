@@ -34,16 +34,13 @@ var CPEEN = (function () {
   function init() {
     initFirebase();
     if (!DB) return Promise.resolve();
-
     return DB.collection('cpeen').get()
       .then(function(snapshot) {
         snapshot.forEach(function(doc) {
           var d = doc.data();
           if (doc.id === 'config') {
-            // config: suprascrie întotdeauna (nu e array)
             ss(KEYS.CONFIG, d);
           } else {
-            // pentru colecții cu items[]: Firestore câștigă numai dacă are date
             var remote = d.items || [];
             var keyMap = {
               participants: KEYS.PARTICIPANTS,
@@ -53,15 +50,12 @@ var CPEEN = (function () {
             var key = keyMap[doc.id];
             if (!key) return;
             if (remote.length > 0) {
-              // Firestore are date → suprascrie localStorage
               ss(key, remote);
             }
-            // dacă remote e gol, păstrăm ce e în localStorage (seed-uri, date locale)
           }
         });
       })
       .catch(function() {
-        // Firestore inaccesibil (offline / reguli / timeout) → continuăm din localStorage
         return Promise.resolve();
       });
   }
