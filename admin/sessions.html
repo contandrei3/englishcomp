@@ -17,7 +17,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useMemo } = React;
+const { useState, useMemo, useEffect } = React;
 const C = {dark:"#1F3864",mid:"#2E75B6",red:"#C0392B",green:"#1D6027"};
 const LVL = ["A2","B1","B2","C1"];
 
@@ -30,7 +30,8 @@ function SessionsPage() {
   const participants             = CPEEN.getParticipants();
   const exams                   = CPEEN.getExams();
 
-  // Allocation state
+  // Allocation wizard state (step 1: category, step 2: students, step 3: subject)
+  const [allocStep,  setAllocStep]  = useState(1);
   const [allocLvl,   setAllocLvl]   = useState("B1");
   const [allocStage, setAllocStage] = useState("calificare");
   const [allocExamId,setAllocExamId]= useState("");
@@ -144,71 +145,139 @@ function SessionsPage() {
           </div>
         </div>
 
-        {/* ── Allocate ── */}
+        {/* ── Allocate (wizard) ── */}
         <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:20,overflow:"hidden"}}>
-          <div style={{background:C.mid,padding:"12px 20px"}}>
+          <div style={{background:C.mid,padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div style={{color:"#fff",fontWeight:700,fontSize:15}}>Alocare sesiuni</div>
+            <div style={{display:"flex",gap:6}}>
+              {[1,2,3].map(n=>(
+                <div key={n} style={{width:26,height:26,borderRadius:13,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,
+                  background:allocStep===n?"#fff":allocStep>n?"rgba(255,255,255,.5)":"rgba(255,255,255,.2)",
+                  color:allocStep===n?C.mid:allocStep>n?"#fff":"rgba(255,255,255,.6)"}}>
+                  {allocStep>n?"✓":n}
+                </div>
+              ))}
+            </div>
           </div>
           <div style={{padding:20}}>
-            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}>
-              <select className="inp inp-sm" style={{width:110}} value={allocLvl}
-                onChange={e=>{setAllocLvl(e.target.value);setSelected(new Set());setAllocMsg({type:"",text:""});}}>
-                {LVL.map(l=><option key={l} value={l}>{l}</option>)}
-              </select>
-              <select className="inp inp-sm" style={{width:130}} value={allocStage}
-                onChange={e=>{setAllocStage(e.target.value);setSelected(new Set());setAllocMsg({type:"",text:""});}}>
-                <option value="calificare">Calificare</option>
-                <option value="finala">Finală</option>
-              </select>
-              <select className="inp inp-sm" style={{flex:1,minWidth:200}} value={allocExamId} onChange={e=>setAllocExamId(e.target.value)}>
-                <option value="">— Selectează subiectul —</option>
-                {allocExams.map(e=><option key={e.id} value={e.id}>{e.title||e.id} ({e.variants?.length||0} var.)</option>)}
-              </select>
-              {selExam && selExam.variants?.length>1 && (
-                <select className="inp inp-sm" style={{width:160}} value={allocVar} onChange={e=>setAllocVar(e.target.value)}>
-                  <option value="random">Variantă aleatorie</option>
-                  {selExam.variants.map(v=><option key={v.id} value={v.id}>{v.id}</option>)}
-                </select>
-              )}
-            </div>
 
-            {allocExams.length===0 && (
-              <div className="alert alert-warn">Niciun subiect pentru {allocLvl} – {allocStage==="finala"?"Finală":"Calificare"}.
-                <a href="exam-builder.html" style={{marginLeft:8}}>Creați unul →</a>
+            {/* Step 1: pick category */}
+            {allocStep===1 && (<>
+              <div style={{fontSize:13,color:"#555",marginBottom:14,fontWeight:600}}>Pasul 1: Alege categoria</div>
+              <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:20}}>
+                <div style={{flex:1,minWidth:140}}>
+                  <label style={{fontSize:12,color:"#666",display:"block",marginBottom:4}}>Nivel</label>
+                  <select className="inp" value={allocLvl}
+                    onChange={e=>{setAllocLvl(e.target.value);setSelected(new Set());setAllocMsg({type:"",text:""});}}>
+                    {LVL.map(l=><option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+                <div style={{flex:1,minWidth:160}}>
+                  <label style={{fontSize:12,color:"#666",display:"block",marginBottom:4}}>Etapă</label>
+                  <select className="inp" value={allocStage}
+                    onChange={e=>{setAllocStage(e.target.value);setSelected(new Set());setAllocMsg({type:"",text:""});}}>
+                    <option value="calificare">Calificare</option>
+                    <option value="finala">Finală</option>
+                  </select>
+                </div>
               </div>
-            )}
+              {(()=>{
+                const active = sessions.filter(s=>s.level===allocLvl&&s.stage===allocStage&&(s.status==="pending"||s.status==="in_progress"));
+                if(active.length>0) return (
+                  <div className="alert alert-warn" style={{marginBottom:14}}>
+                    ⚠ Există {active.length} sesiune(i) active/pending pentru {allocLvl} – {allocStage==="finala"?"Finală":"Calificare"}.
+                    Asigurați-vă că nu alocați mai multe serii simultan.
+                  </div>
+                );
+              })()}
+              <button className="btn btn-primary" onClick={()=>setAllocStep(2)}>
+                Continuă: alege elevii →
+              </button>
+            </>)}
 
-            {candidates.length===0
-              ? <div style={{color:"#aaa",fontSize:13,padding:"12px 0"}}>
-                  {allocStage==="finala"
-                    ? `Niciun participant calificat ${allocLvl} fără sesiune de finală.`
-                    : `Toți participanții ${allocLvl} au deja sesiune de calificare sau nu există participanți.`}
-                </div>
-              : (<>
-                <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
-                  <span style={{fontSize:13,color:"#666"}}>{candidates.length} fără sesiune</span>
-                  <button onClick={()=>setSelected(new Set(candidates.map(p=>p.id)))} className="btn btn-ghost btn-sm">Toți</button>
-                  <button onClick={()=>setSelected(new Set())} className="btn btn-ghost btn-sm">Niciunul</button>
-                  <span style={{fontSize:12,color:C.mid,fontWeight:600}}>{selected.size} selectați</span>
-                </div>
-                <div style={{maxHeight:220,overflowY:"auto",border:"1px solid #eee",borderRadius:8,marginBottom:12}}>
-                  {candidates.map(p=>(
-                    <label key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderBottom:"1px solid #f5f5f5",cursor:"pointer",background:selected.has(p.id)?"#f0f7ff":"transparent"}}>
-                      <input type="checkbox" checked={selected.has(p.id)} onChange={()=>toggle(p.id)}/>
-                      <div>
-                        <div style={{fontWeight:700,color:C.dark,fontSize:13}}>{p.name}</div>
-                        <div style={{fontSize:11,color:"#888"}}>{p.school} · {p.county}</div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </>)
-            }
+            {/* Step 2: pick students */}
+            {allocStep===2 && (<>
+              <div style={{fontSize:13,color:"#555",marginBottom:14,fontWeight:600}}>
+                Pasul 2: Alege elevii — <span className={`badge b-${allocLvl}`}>{allocLvl}</span>&nbsp;
+                <span style={{fontWeight:400,color:"#888"}}>{allocStage==="finala"?"Finală":"Calificare"}</span>
+              </div>
+              {candidates.length===0
+                ? <div style={{color:"#aaa",fontSize:13,padding:"12px 0",marginBottom:14}}>
+                    {allocStage==="finala"
+                      ? `Niciun participant calificat ${allocLvl} fără sesiune de finală.`
+                      : `Toți participanții ${allocLvl} au deja sesiune de calificare sau nu există participanți.`}
+                  </div>
+                : (<>
+                  <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+                    <span style={{fontSize:13,color:"#666"}}>{candidates.length} disponibili</span>
+                    <button onClick={()=>setSelected(new Set(candidates.map(p=>p.id)))} className="btn btn-ghost btn-sm">Toți</button>
+                    <button onClick={()=>setSelected(new Set())} className="btn btn-ghost btn-sm">Niciunul</button>
+                    <span style={{fontSize:12,color:C.mid,fontWeight:600}}>{selected.size} selectați</span>
+                  </div>
+                  <div style={{maxHeight:240,overflowY:"auto",border:"1px solid #eee",borderRadius:8,marginBottom:14}}>
+                    {candidates.map(p=>(
+                      <label key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderBottom:"1px solid #f5f5f5",cursor:"pointer",background:selected.has(p.id)?"#f0f7ff":"transparent"}}>
+                        <input type="checkbox" checked={selected.has(p.id)} onChange={()=>toggle(p.id)}/>
+                        <div>
+                          <div style={{fontWeight:700,color:C.dark,fontSize:13}}>{p.name}</div>
+                          <div style={{fontSize:11,color:"#888"}}>{p.school} · {p.county}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </>)
+              }
+              <div style={{display:"flex",gap:8}}>
+                <button className="btn btn-ghost" onClick={()=>setAllocStep(1)}>← Înapoi</button>
+                <button className="btn btn-primary" onClick={()=>setAllocStep(3)} disabled={!selected.size}>
+                  Continuă: alege subiectul →
+                </button>
+              </div>
+            </>)}
 
-            {allocMsg.text && <div className={`alert alert-${allocMsg.type==="ok"?"ok":"err"}`} style={{marginBottom:10}}>{allocMsg.text}</div>}
-            <button className="btn btn-primary" onClick={doAllocate} disabled={!selected.size||!selExam}>
-              Alocă sesiuni ({selected.size})
-            </button>
+            {/* Step 3: pick subject + allocate */}
+            {allocStep===3 && (<>
+              <div style={{fontSize:13,color:"#555",marginBottom:14,fontWeight:600}}>
+                Pasul 3: Alege subiectul — {selected.size} elev(i) selectați
+              </div>
+              {allocExams.length===0
+                ? <div className="alert alert-warn" style={{marginBottom:14}}>
+                    Niciun subiect pentru {allocLvl} – {allocStage==="finala"?"Finală":"Calificare"}.
+                    <a href="exam-builder.html" style={{marginLeft:8}}>Creați unul →</a>
+                  </div>
+                : (<>
+                  <div style={{marginBottom:12}}>
+                    <label style={{fontSize:12,color:"#666",display:"block",marginBottom:4}}>Subiect</label>
+                    <select className="inp" value={allocExamId} onChange={e=>setAllocExamId(e.target.value)}>
+                      <option value="">— Selectează subiectul —</option>
+                      {allocExams.map(e=><option key={e.id} value={e.id}>{e.title||e.id} ({e.variants?.length||0} variante)</option>)}
+                    </select>
+                  </div>
+                  {selExam && selExam.variants?.length>1 && (
+                    <div style={{marginBottom:12}}>
+                      <label style={{fontSize:12,color:"#666",display:"block",marginBottom:4}}>Variantă</label>
+                      <select className="inp" style={{width:200}} value={allocVar} onChange={e=>setAllocVar(e.target.value)}>
+                        <option value="random">Variantă aleatorie</option>
+                        {selExam.variants.map(v=><option key={v.id} value={v.id}>{v.id}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </>)
+              }
+              {allocMsg.text && <div className={`alert alert-${allocMsg.type==="ok"?"ok":"err"}`} style={{marginBottom:10}}>{allocMsg.text}</div>}
+              <div style={{display:"flex",gap:8}}>
+                <button className="btn btn-ghost" onClick={()=>setAllocStep(2)}>← Înapoi</button>
+                <button className="btn btn-primary" onClick={doAllocate} disabled={!selected.size||!selExam}>
+                  Alocă sesiuni ({selected.size})
+                </button>
+                {allocMsg.type==="ok" && (
+                  <button className="btn btn-ghost" onClick={()=>{setAllocStep(1);setAllocMsg({type:"",text:""});setSelected(new Set());}}>
+                    Alocare nouă
+                  </button>
+                )}
+              </div>
+            </>)}
+
           </div>
         </div>
 
