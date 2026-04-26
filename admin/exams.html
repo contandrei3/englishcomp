@@ -17,7 +17,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useRef } = React;
+const { useState, useRef, useEffect } = React;
 const C = {dark:"#1F3864",mid:"#2E75B6",red:"#C0392B",green:"#1D6027"};
 
 function ExamsPage() {
@@ -33,6 +33,13 @@ function ExamsPage() {
   const sessions = CPEEN.getSessions();
 
   const reload = () => setExams(CPEEN.getExams());
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      CPEEN.init().then(() => setExams(CPEEN.getExams()));
+    }, 20000);
+    return () => clearInterval(id);
+  }, []);
 
   const downloadJSON = (exam) => {
     const blob = JSON.stringify(exam, null, 2);
@@ -100,7 +107,7 @@ function ExamsPage() {
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <button className="btn btn-mid btn-sm" onClick={reload}>↻ Actualizează</button>
             <button className="btn btn-mid btn-sm" onClick={()=>window.location.href="exam-builder.html"}>✏ Editor</button>
-            <button className="btn btn-outline btn-sm" onClick={addStub}>+ Stub</button>
+            <button className="btn btn-outline btn-sm" onClick={addStub}>+ Subiect gol</button>
             <button className="btn btn-primary btn-sm" onClick={()=>fileRef.current?.click()}>⬆ Import JSON</button>
             <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={handleImport}/>
           </div>
