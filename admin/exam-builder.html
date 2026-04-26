@@ -627,6 +627,7 @@ function ExamBuilder() {
   const [showImport, setShowImport] = useState(false);
   const [importJson, setImportJson] = useState('');
   const [importErr,  setImportErr]  = useState('');
+  const [editorKey, setEditorKey]   = useState(0); // increment forțează remount editori
 
   const applyImport = () => {
     setImportErr('');
@@ -635,8 +636,9 @@ function ExamBuilder() {
     if (!parsed.variants?.length) { setImportErr('JSON invalid: lipsesc variants[].'); return; }
     const loaded = fromDB(parsed);
     setMeta(loaded.meta); setEnabled(loaded.enabled); setPartData(loaded.partData);
+    setEditorKey(k => k + 1);   // forțează re-montarea tuturor editorilor de secțiuni
     setShowImport(false); setImportJson(''); setImportErr('');
-    setMsg({type:'ok', text:'JSON importat. Verifică și salvează.'});
+    setMsg({type:'ok', text:'JSON importat. Verifică câmpurile și salvează.'});
   };
 
   useEffect(() => {
@@ -783,11 +785,11 @@ function ExamBuilder() {
           </div>
         </div>
 
-        {/* Enabled part cards */}
+        {/* Enabled part cards — key={editorKey} forțează remount complet după import JSON */}
         {PARTS_META.filter(p => enabled[p.id]).map(p => {
           const Ed = EDITORS[p.id];
           return (
-            <PartCard key={p.id} num={p.num} label={p.label}
+            <PartCard key={`${p.id}_${editorKey}`} num={p.num} label={p.label}
               pts={partData[p.id]?.pts || String(p.defPts)}
               onPtsChange={e=>updPts(p.id, e.target.value)}
               onRemove={()=>toggle(p.id)}>
