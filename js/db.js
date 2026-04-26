@@ -23,7 +23,9 @@ var CPEEN = (function () {
 
   function syncToFirebase(docId, data) {
     if (!DB) return;
-    var payload = docId === 'config' ? data : { items: data };
+    // Firestore nu suportă nested arrays (ex: key[][] în subiecte).
+    // Serializăm items[] ca JSON string pentru a evita eroarea.
+    var payload = docId === 'config' ? data : { items_json: JSON.stringify(data) };
     DB.collection('cpeen').doc(docId).set(payload).catch(function() {});
   }
 
@@ -41,7 +43,8 @@ var CPEEN = (function () {
           if (doc.id === 'config') {
             ss(KEYS.CONFIG, d);
           } else {
-            var remote = d.items || [];
+            // Citim items_json (noul format) cu fallback la items (format vechi)
+            var remote = d.items_json ? JSON.parse(d.items_json) : (d.items || []);
             var keyMap = {
               participants: KEYS.PARTICIPANTS,
               sessions:     KEYS.SESSIONS,
