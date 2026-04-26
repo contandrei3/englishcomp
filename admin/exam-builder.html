@@ -624,21 +624,36 @@ function ExamBuilder() {
   });
   const [msg, setMsg] = useState({type:'',text:''});
   const [loading, setLoading] = useState(!!editId);
-  const [showImport, setShowImport] = useState(false);
-  const [importJson, setImportJson] = useState('');
-  const [importErr,  setImportErr]  = useState('');
-  const [editorKey, setEditorKey]   = useState(0); // increment forțează remount editori
+  const [showRaw, setShowRaw]   = useState(false);
+  const [rawJson, setRawJson]   = useState('');
+  const [rawErr,  setRawErr]    = useState('');
+  const [editorKey, setEditorKey] = useState(0);
 
-  const applyImport = () => {
-    setImportErr('');
+  const openRaw = () => {
+    // Pre-fill with the current exam state so the user can edit live
+    try {
+      const current = toDBVariant(meta, enabled, partData);
+      setRawJson(JSON.stringify(current, null, 2));
+    } catch(e) {
+      setRawJson('');
+    }
+    setRawErr('');
+    setShowRaw(true);
+  };
+
+  const applyRaw = () => {
+    setRawErr('');
     let parsed;
-    try { parsed = JSON.parse(importJson); } catch(e) { setImportErr('JSON invalid: ' + e.message); return; }
-    if (!parsed.variants?.length) { setImportErr('JSON invalid: lipsesc variants[].'); return; }
+    try { parsed = JSON.parse(rawJson); } catch(e) { setRawErr('JSON invalid: ' + e.message); return; }
+    if (!parsed.variants?.length) { setRawErr('JSON invalid: lipsesc variants[].'); return; }
     const loaded = fromDB(parsed);
+    const hasParts = PARTS_META.some(p => loaded.enabled[p.id]);
     setMeta(loaded.meta); setEnabled(loaded.enabled); setPartData(loaded.partData);
-    setEditorKey(k => k + 1);   // forțează re-montarea tuturor editorilor de secțiuni
-    setShowImport(false); setImportJson(''); setImportErr('');
-    setMsg({type:'ok', text:'JSON importat. Verifică câmpurile și salvează.'});
+    setEditorKey(k => k + 1);
+    setShowRaw(false); setRawErr('');
+    setMsg({type: hasParts ? 'ok' : 'err',
+            text: hasParts ? 'JSON aplicat. Verificați câmpurile și salvați.'
+                           : 'JSON aplicat, dar nu conține secțiuni (parts[]). Verificați formatul.'});
   };
 
   useEffect(() => {
@@ -699,30 +714,34 @@ function ExamBuilder() {
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
           <a href="exams.html" style={{color:C.mid,textDecoration:"none",fontSize:13}}>← Înapoi</a>
           <h2 style={{color:C.dark,fontSize:20,margin:0,flex:1}}>{editId?"Editare subiect":"Subiect nou"}</h2>
-          <button onClick={()=>{setShowImport(p=>!p);setImportErr('');}}
-            style={{background:"#fff",color:C.mid,border:`2px solid ${C.mid}`,borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-            📥 Import JSON
+          <button onClick={showRaw ? ()=>setShowRaw(false) : openRaw}
+            style={{background: showRaw ? C.mid : "#fff", color: showRaw ? "#fff" : C.mid,
+                    border:`2px solid ${C.mid}`,borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+            {showRaw ? "✕ Închide JSON" : "{ } JSON brut"}
           </button>
           <button onClick={save} style={btnStyle}>{editId?"Actualizează":"Salvează"}</button>
         </div>
 
-        {/* Import JSON panel */}
-        {showImport && (
-          <div style={{background:"#fff",borderRadius:12,boxShadow:"0 2px 10px rgba(0,0,0,.07)",padding:20,marginBottom:20,border:`1px solid ${C.mid}`}}>
-            <div style={{fontWeight:700,color:C.dark,fontSize:14,marginBottom:10}}>Import subiect din JSON</div>
-            <p style={{fontSize:12,color:"#666",marginBottom:8}}>Lipește un JSON de examen exportat din această platformă. Va popula toate câmpurile editorului.</p>
+        {/* Raw JSON editor panel */}
+        {showRaw && (
+          <div style={{background:"#fff",borderRadius:12,boxShadow:"0 2px 10px rgba(0,0,0,.07)",padding:20,marginBottom:20,border:`2px solid ${C.mid}`}}>
+            <div style={{fontWeight:700,color:C.dark,fontSize:14,marginBottom:6}}>JSON brut — editare directă</div>
+            <p style={{fontSize:12,color:"#666",marginBottom:8}}>
+              Editați JSON-ul direct sau lipiți unul nou. Clickul pe „Aplică" actualizează editorul vizual.
+            </p>
             <textarea
-              value={importJson} onChange={e=>setImportJson(e.target.value)}
-              placeholder={'{\n  "title": "...",\n  "level": "B2",\n  "stage": "calificare",\n  "duration": 75,\n  "variants": [{ "id": "V1", "parts": [...] }]\n}'}
-              style={{width:"100%",minHeight:140,fontFamily:"monospace",fontSize:12,padding:10,borderRadius:6,border:"1px solid #ccd",boxSizing:"border-box",resize:"vertical"}}
+              value={rawJson} onChange={e=>setRawJson(e.target.value)}
+              spellCheck={false}
+              style={{width:"100%",minHeight:280,fontFamily:"monospace",fontSize:12,padding:10,
+                      borderRadius:6,border:"1px solid #ccd",boxSizing:"border-box",resize:"vertical",lineHeight:1.5}}
             />
-            {importErr && <div style={{color:C.red,fontSize:12,marginTop:6}}>{importErr}</div>}
+            {rawErr && <div style={{color:C.red,fontSize:12,marginTop:6}}>{rawErr}</div>}
             <div style={{display:"flex",gap:8,marginTop:10}}>
-              <button onClick={applyImport}
+              <button onClick={applyRaw}
                 style={{background:C.mid,color:"#fff",border:"none",borderRadius:6,padding:"8px 20px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                Aplică
+                Aplică în editor
               </button>
-              <button onClick={()=>{setShowImport(false);setImportJson('');setImportErr('');}}
+              <button onClick={()=>{setShowRaw(false);setRawErr('');}}
                 style={{background:"#eee",color:"#555",border:"none",borderRadius:6,padding:"8px 16px",fontSize:13,cursor:"pointer"}}>
                 Anulează
               </button>
