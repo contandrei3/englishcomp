@@ -106,8 +106,7 @@ function toDBVariant(meta, enabled, partData) {
     }
   });
   return {
-    title: meta.title.trim(), level: meta.level, stage: meta.stage,
-    duration: parseInt(meta.duration)||75,
+    title: meta.title.trim(),
     variants:[{ id: meta.variantId.trim()||'V1', parts }]
   };
 }
@@ -182,8 +181,7 @@ function fromDB(exam) {
     }
   });
   return {
-    meta: { title:exam.title||'', level:exam.level||'B1', stage:exam.stage||'calificare',
-            duration:String(exam.duration||75), variantId:v.id||'V1' },
+    meta: { title:exam.title||'', variantId:v.id||'V1' },
     enabled, partData
   };
 }
@@ -625,7 +623,7 @@ function ExamBuilder() {
   const params = new URLSearchParams(window.location.search);
   const editId = params.get("id");
 
-  const [meta, setMeta] = useState({title:'',level:'B1',stage:'calificare',duration:'75',variantId:'V1'});
+  const [meta, setMeta] = useState({title:'',variantId:'V1'});
   const [enabled, setEnabled] = useState({p1:false,p2:false,p3:false,p4:false,p5:false,p6:false,p7:false,p8:false});
   const [partData, setPartData] = useState(()=>{
     const d = {};
@@ -762,23 +760,9 @@ function ExamBuilder() {
         {/* Metadata */}
         <div style={{background:"#fff",borderRadius:12,boxShadow:"0 2px 10px rgba(0,0,0,.07)",padding:20,marginBottom:20}}>
           <div style={{fontWeight:700,color:C.dark,fontSize:14,marginBottom:14}}>Informații generale</div>
-          <Fld label="Titlu subiect"><Inp value={meta.title} onChange={e=>setMeta(p=>({...p,title:e.target.value}))} placeholder="ex: B1 Calificare 2026"/></Fld>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
-            <Fld label="Nivel">
-              <select value={meta.level} onChange={e=>setMeta(p=>({...p,level:e.target.value}))} style={IS}>
-                {['A2','B1','B2','C1'].map(l=><option key={l}>{l}</option>)}
-              </select>
-            </Fld>
-            <Fld label="Etapă">
-              <select value={meta.stage} onChange={e=>setMeta(p=>({...p,stage:e.target.value}))} style={IS}>
-                <option value="calificare">Calificare</option>
-                <option value="finala">Finală</option>
-              </select>
-            </Fld>
-            <Fld label="Durată (min)">
-              <input type="number" value={meta.duration} min="10" max="180" onChange={e=>setMeta(p=>({...p,duration:e.target.value}))} style={IS}/>
-            </Fld>
-            <Fld label="ID Variantă"><Inp value={meta.variantId} onChange={e=>setMeta(p=>({...p,variantId:e.target.value}))} placeholder="V1"/></Fld>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:12,alignItems:"end"}}>
+            <Fld label="Titlu subiect"><Inp value={meta.title} onChange={e=>setMeta(p=>({...p,title:e.target.value}))} placeholder="ex: FCE Practice Paper 1"/></Fld>
+            <Fld label="ID Variantă" hint="Identificator intern (V1, V2…)"><Inp value={meta.variantId} onChange={e=>setMeta(p=>({...p,variantId:e.target.value}))} placeholder="V1" style={{width:80}}/></Fld>
           </div>
         </div>
 
