@@ -512,19 +512,7 @@ function SessionsPage() {
           </div>
         </div>
 
-        {/* Confirm delete */}
-        {toDelete && (()=>{
-          const g = groups.find(x => x.id === toDelete);
-          return (
-            <div className="alert alert-err" style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:12}}>
-              <span>Sigur ștergi sesiunea <strong>{g?.sessionType}</strong>? Se vor șterge și sesiunile individuale alocate.</span>
-              <div style={{display:"flex",gap:8}}>
-                <button className="btn btn-danger btn-sm" onClick={() => doDelete(toDelete)}>Șterge</button>
-                <button className="btn btn-ghost btn-sm" onClick={() => setToDelete(null)}>Anulează</button>
-              </div>
-            </div>
-          );
-        })()}
+        {/* Confirm delete modal */}
 
         {/* Active sessions */}
         {active.length > 0 && (
@@ -560,6 +548,32 @@ function SessionsPage() {
 
         <div style={{textAlign:"center",color:"#aaa",fontSize:11,paddingBottom:24,paddingTop:16}}>ECHO · englishgrammarchallenge.ro</div>
       </div></div>
+
+      {toDelete && (()=>{
+        const g = groups.find(x => x.id === toDelete);
+        return (
+          <div className="modal-overlay">
+            <div className="modal-box modal-box-sm">
+              <div className="modal-head modal-head-dark">
+                <div>
+                  <h3>Confirmare ștergere</h3>
+                  <p>{g?.sessionType}</p>
+                </div>
+                <button className="modal-close" onClick={() => setToDelete(null)}>✕</button>
+              </div>
+              <div className="modal-body">
+                <div className="alert alert-warn" style={{marginBottom:14}}>
+                  Se vor șterge și sesiunile individuale ale participanților alocați.
+                </div>
+                <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setToDelete(null)}>Anulează</button>
+                  <button className="btn btn-danger btn-sm" onClick={() => doDelete(toDelete)}>✕ Șterge</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {showWiz && (
         <Wizard exams={exams} participants={participants}
