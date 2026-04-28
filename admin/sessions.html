@@ -17,347 +17,573 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useMemo, useEffect } = React;
-const C = {dark:"#1F3864",mid:"#2E75B6",red:"#C0392B",green:"#1D6027"};
-const LVL = ["A2","B1","B2","C1"];
+const { useState, useEffect, useRef, useMemo } = React;
 
+const SESSION_TYPES = [
+  {v:"A2-calificare",  l:"A2 Calificare",  cls:"b-A2"},
+  {v:"A2-finala",      l:"A2 Finală",       cls:"b-A2"},
+  {v:"B1-calificare",  l:"B1 Calificare",   cls:"b-B1"},
+  {v:"B1-finala",      l:"B1 Finală",       cls:"b-B1"},
+  {v:"B2-calificare",  l:"B2 Calificare",   cls:"b-B2"},
+  {v:"B2-finala",      l:"B2 Finală",       cls:"b-B2"},
+  {v:"C1-calificare",  l:"C1 Calificare",   cls:"b-C1"},
+  {v:"C1-finala",      l:"C1 Finală",       cls:"b-C1"},
+  {v:"FCE",            l:"FCE",             cls:"b-FCE"},
+  {v:"CAE",            l:"CAE",             cls:"b-CAE"},
+];
+
+const FIXED_DUR = CPEEN.TYPE_DURATION; // {FCE:75, CAE:90}
+
+function fmtTime(ms) {
+  if (ms <= 0) return "00:00";
+  const s = Math.floor(ms / 1000);
+  return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+}
+
+function fmtHM(ts) {
+  if (!ts) return "—";
+  const d = new Date(ts);
+  return d.toLocaleTimeString("ro-RO", {hour:"2-digit",minute:"2-digit"});
+}
+
+// ── Wizard ────────────────────────────────────────────────────────────────────
+function Wizard({ exams, participants, onClose, onCreated }) {
+  const [step,      setStep]      = useState(1);
+  const [typeSel,   setTypeSel]   = useState("");
+  const [examId,    setExamId]    = useState("");
+  const [duration,  setDuration]  = useState("");
+  const [selected,  setSelected]  = useState(new Set());
+  const [err,       setErr]       = useState("");
+
+  const fixedDur = typeSel ? FIXED_DUR[typeSel] : null;
+
+  // Level quick-filters for step 3 participant selection
+  const { level: selLevel } = typeSel ? CPEEN.splitType(typeSel) : { level: "" };
+  const LEVELS = ["A2","B1","B2","C1","FCE","CAE"];
+
+  const toggleAll = (lvl) => {
+    const ids = participants.filter(p => p.level === lvl).map(p => p.id);
+    if (ids.length === 0) return;
+    const allOn = ids.every(id => selected.has(id));
+    setSelected(prev => {
+      const s = new Set(prev);
+      ids.forEach(id => allOn ? s.delete(id) : s.add(id));
+      return s;
+    });
+  };
+
+  const toggleOne = (id) => {
+    setSelected(prev => {
+      const s = new Set(prev);
+      s.has(id) ? s.delete(id) : s.add(id);
+      return s;
+    });
+  };
+
+  const selExam = exams.find(e => e.id === examId) || null;
+
+  const create = () => {
+    setErr("");
+    if (!typeSel)    { setErr("Selectați tipul sesiunii.");       return; }
+    if (!examId)     { setErr("Selectați un subiect.");           return; }
+    if (!selExam?.variants?.length) { setErr("Subiectul nu are variante."); return; }
+    const dur = fixedDur || parseInt(duration);
+    if (!dur || dur < 1) { setErr("Introduceți o durată validă (minute)."); return; }
+    if (!selected.size) { setErr("Selectați cel puțin un participant."); return; }
+
+    const group = CPEEN.addGroupSession(typeSel, examId, dur, "random");
+    CPEEN.addParticipantsToGroup(group.id, [...selected], selExam);
+    onCreated();
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-box modal-box-sm">
+        <div className="modal-head modal-head-mid">
+          <div>
+            <h3>Sesiune nouă</h3>
+            <p>Pasul {step} din 3</p>
+          </div>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          {err && <div className="alert alert-err" style={{marginBottom:12}}>{err}</div>}
+
+          {/* Step 1 — type picker */}
+          {step === 1 && (
+            <>
+              <div style={{fontSize:13,color:"#555",marginBottom:12,fontWeight:600}}>Pasul 1: Alege tipul sesiunii</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+                {SESSION_TYPES.map(t => (
+                  <div key={t.v}
+                    onClick={() => setTypeSel(t.v)}
+                    style={{
+                      border:`2px solid ${typeSel===t.v?"#2E75B6":"#ddd"}`,
+                      background: typeSel===t.v ? "#e8f4fd" : "#fafafa",
+                      borderRadius:10, padding:"10px 14px", cursor:"pointer",
+                      display:"flex", alignItems:"center", gap:10
+                    }}>
+                    <span className={`badge ${t.cls}`}>{t.v.split("-")[0]}</span>
+                    <span style={{fontSize:13,fontWeight:600,color:"#333"}}>{t.l}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
+                <button className="btn btn-ghost btn-sm" onClick={onClose}>Anulează</button>
+                <button className="btn btn-primary btn-sm" disabled={!typeSel} onClick={()=>{setErr("");setStep(2);}}>
+                  Continuă →
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Step 2 — exam + duration */}
+          {step === 2 && (
+            <>
+              <div style={{fontSize:13,color:"#555",marginBottom:12,fontWeight:600}}>Pasul 2: Subiect și durată</div>
+              <div className="fg">
+                <label>Subiect</label>
+                <select className="inp" value={examId} onChange={e => setExamId(e.target.value)}>
+                  <option value="">— Selectează subiectul —</option>
+                  {exams.filter(e => e.variants?.length).map(e => (
+                    <option key={e.id} value={e.id}>{e.title || e.id} ({e.variants.length} var.)</option>
+                  ))}
+                </select>
+              </div>
+              <div className="fg">
+                <label>Durată (minute){fixedDur ? " — fixă" : ""}</label>
+                <input className="inp" type="number" min="1" max="300"
+                  value={fixedDur ? String(fixedDur) : duration}
+                  disabled={!!fixedDur}
+                  onChange={e => setDuration(e.target.value)}
+                  placeholder="ex: 60"/>
+                {fixedDur && <div className="fhint">Durata pentru {typeSel} este fixată la {fixedDur} minute.</div>}
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                <button className="btn btn-ghost btn-sm" onClick={()=>{setErr("");setStep(1);}}>← Înapoi</button>
+                <button className="btn btn-primary btn-sm"
+                  disabled={!examId || (!fixedDur && !duration)}
+                  onClick={()=>{setErr("");setStep(3);}}>
+                  Continuă →
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Step 3 — participants */}
+          {step === 3 && (
+            <>
+              <div style={{fontSize:13,color:"#555",marginBottom:10,fontWeight:600}}>
+                Pasul 3: Participanți — {selected.size} selectați
+              </div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+                {LEVELS.map(lvl => {
+                  const count = participants.filter(p => p.level === lvl).length;
+                  if (!count) return null;
+                  return (
+                    <button key={lvl} className={`btn btn-sm btn-outline b-${lvl}`}
+                      style={{fontSize:11}}
+                      onClick={() => toggleAll(lvl)}>
+                      {lvl} ({count})
+                    </button>
+                  );
+                })}
+                <button className="btn btn-sm btn-ghost" onClick={() => setSelected(new Set())}>Niciunul</button>
+              </div>
+              <div className="checklist" style={{marginBottom:14}}>
+                {participants.length === 0
+                  ? <div style={{padding:16,color:"#aaa",textAlign:"center",fontSize:13}}>Niciun participant înregistrat.</div>
+                  : participants.map(p => (
+                    <label key={p.id} className={`checklist-row${selected.has(p.id)?" selected":""}`}
+                      onClick={() => toggleOne(p.id)}>
+                      <input type="checkbox" checked={selected.has(p.id)} readOnly/>
+                      <span className={`badge b-${p.level}`} style={{fontSize:10}}>{p.level}</span>
+                      <div>
+                        <div style={{fontWeight:700,color:"#1F3864",fontSize:13}}>{p.name}</div>
+                        <div style={{fontSize:11,color:"#888"}}>{p.school} · {p.county}</div>
+                      </div>
+                    </label>
+                  ))
+                }
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                <button className="btn btn-ghost btn-sm" onClick={()=>{setErr("");setStep(2);}}>← Înapoi</button>
+                <button className="btn btn-primary btn-sm" onClick={create}>
+                  Creează sesiunea ✓
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── EditModal ─────────────────────────────────────────────────────────────────
+function EditModal({ group, exams, participants, onClose, onSaved }) {
+  const [duration, setDuration]  = useState(String(group.duration));
+  const [selected, setSelected]  = useState(new Set(group.participantIds || []));
+  const [err,      setErr]        = useState("");
+
+  const fixedDur = FIXED_DUR[group.sessionType] || null;
+  const selExam  = exams.find(e => e.id === group.examId) || null;
+
+  const toggleOne = (id) => {
+    setSelected(prev => {
+      const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s;
+    });
+  };
+
+  const save = () => {
+    setErr("");
+    const dur = fixedDur || parseInt(duration);
+    if (!dur || dur < 1) { setErr("Durată invalidă."); return; }
+
+    const prevIds = group.participantIds || [];
+    const nextIds = [...selected];
+    const toAdd   = nextIds.filter(id => !prevIds.includes(id));
+    const toRemove = prevIds.filter(id => !nextIds.includes(id));
+
+    CPEEN.updateGroupSession(group.id, { duration: dur });
+    if (selExam && toAdd.length)    CPEEN.addParticipantsToGroup(group.id, toAdd, selExam);
+    toRemove.forEach(id => CPEEN.removeParticipantFromGroup(group.id, id));
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-box modal-box-sm">
+        <div className="modal-head modal-head-dark">
+          <div>
+            <h3>Editează sesiunea</h3>
+            <p>{group.sessionType} · {selExam?.title || group.examId}</p>
+          </div>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          {err && <div className="alert alert-err" style={{marginBottom:12}}>{err}</div>}
+          <div className="fg">
+            <label>Durată (minute){fixedDur ? " — fixă" : ""}</label>
+            <input className="inp" type="number" min="1" max="300"
+              value={fixedDur ? String(fixedDur) : duration}
+              disabled={!!fixedDur}
+              onChange={e => setDuration(e.target.value)}/>
+          </div>
+          <div style={{fontSize:13,fontWeight:600,color:"#555",marginBottom:8}}>
+            Participanți — {selected.size} selectați
+          </div>
+          <div className="checklist" style={{marginBottom:16}}>
+            {participants.map(p => (
+              <label key={p.id} className={`checklist-row${selected.has(p.id)?" selected":""}`}
+                onClick={() => toggleOne(p.id)}>
+                <input type="checkbox" checked={selected.has(p.id)} readOnly/>
+                <span className={`badge b-${p.level}`} style={{fontSize:10}}>{p.level}</span>
+                <div>
+                  <div style={{fontWeight:700,color:"#1F3864",fontSize:13}}>{p.name}</div>
+                  <div style={{fontSize:11,color:"#888"}}>{p.school}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+          <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
+            <button className="btn btn-ghost btn-sm" onClick={onClose}>Anulează</button>
+            <button className="btn btn-primary btn-sm" onClick={save}>Salvează ✓</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── ResultsModal ──────────────────────────────────────────────────────────────
+function ResultsModal({ group, exams, participants, sessions, onClose }) {
+  const exam = exams.find(e => e.id === group.examId);
+  const expired = group.finishedAt && (Date.now() - group.finishedAt) > 24*60*60*1000;
+
+  const rows = useMemo(() => {
+    return (group.participantIds || []).map(pid => {
+      const p = participants.find(x => x.id === pid) || {};
+      const s = sessions.find(x => x.participantId === pid && x.groupId === group.id) || null;
+      return { p, s };
+    });
+  }, [group, participants, sessions]);
+
+  const exportCSV = () => {
+    const BOM = "﻿";
+    const header = "Participant,Scoala,Judet,Nivel,Status,Scor,Nota";
+    const lines = rows.map(({p,s}) => {
+      const score = s?.result?.total ?? "";
+      const grade = score !== "" ? (score/10).toFixed(2) : "";
+      const status = !s ? "Nealocat" : s.status === "submitted" ? "Trimis" : s.status === "in_progress" ? "In desfasurare" : "Pending";
+      return [p.name||"",p.school||"",p.county||"",p.level||"",status,score,grade]
+        .map(v => `"${String(v).replace(/"/g,'""')}"`)
+        .join(",");
+    });
+    const csv = BOM + header + "\n" + lines.join("\n");
+    const a = document.createElement("a");
+    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+    a.download = `echo_rezultate_${group.id}.csv`;
+    a.click();
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-box">
+        <div className="modal-head modal-head-dark">
+          <div>
+            <h3>Rezultate — {group.sessionType}</h3>
+            <p>{exam?.title || group.examId} · {rows.length} participanți</p>
+          </div>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          {expired
+            ? <div className="alert alert-warn">Rezultatele au expirat (mai mult de 24h de la finalizare).</div>
+            : (
+              <>
+                <div style={{overflowX:"auto",marginBottom:14}}>
+                  <table className="tbl">
+                    <thead>
+                      <tr><th>Participant</th><th>Școală</th><th>Nivel</th><th>Status</th><th>Scor</th><th>Notă</th></tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(({p,s},i) => {
+                        const score = s?.result?.total;
+                        const submitted = s?.status === "submitted";
+                        return (
+                          <tr key={i}>
+                            <td style={{fontWeight:700,fontSize:13}}>{p.name||"—"}</td>
+                            <td style={{fontSize:12,color:"#666"}}>{p.school||"—"}</td>
+                            <td><span className={`badge b-${p.level}`}>{p.level}</span></td>
+                            <td>
+                              {submitted
+                                ? <span className="status-finished">Trimis</span>
+                                : s?.status === "in_progress"
+                                  ? <span className="status-active">Activ</span>
+                                  : <span className="status-pending">{s ? "Pending" : "—"}</span>
+                              }
+                            </td>
+                            <td style={{fontWeight:700,fontFamily:"monospace"}}>
+                              {submitted && score !== undefined ? score : "—"}
+                            </td>
+                            <td style={{fontWeight:700,color:"#2E75B6"}}>
+                              {submitted && score !== undefined ? (score/10).toFixed(2) : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <button className="btn btn-success btn-sm" onClick={exportCSV}>⬇ Export CSV</button>
+              </>
+            )
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SessionCard ───────────────────────────────────────────────────────────────
+function SessionCard({ group, exams, participants, sessions, tick, onStart, onStop, onDelete, onEdit, onResults }) {
+  const exam = exams.find(e => e.id === group.examId);
+  const pCount = (group.participantIds || []).length;
+  const typeInfo = SESSION_TYPES.find(t => t.v === group.sessionType) || {l:group.sessionType,cls:"b-gray"};
+
+  const hasResults = sessions.some(s => s.groupId === group.id && s.status === "submitted");
+  const resultsExpired = group.finishedAt && (Date.now() - group.finishedAt) > 24*60*60*1000;
+
+  let countdownEl = null;
+  if (group.status === "active" && group.endsAt) {
+    const ms = group.endsAt - Date.now();
+    const urgent = ms < 5 * 60 * 1000;
+    countdownEl = <span className={`countdown${urgent?" urgent":""}`}>{fmtTime(ms)}</span>;
+  }
+
+  return (
+    <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:12,padding:"14px 18px"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,flex:1,minWidth:0}}>
+          <span className={`badge ${typeInfo.cls}`}>{typeInfo.l}</span>
+          <div style={{minWidth:0}}>
+            <div style={{fontWeight:700,color:"#1F3864",fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+              {exam?.title || group.examId || "—"}
+            </div>
+            <div style={{fontSize:11,color:"#888"}}>
+              {pCount} participanți · {group.duration} min · creat {fmtHM(group.createdAt)}
+            </div>
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          {countdownEl}
+          {group.status === "pending"   && <span className="status-pending">Programată</span>}
+          {group.status === "active"    && <span className="status-active">● Activă</span>}
+          {group.status === "finished"  && <span className="status-finished">Finalizată</span>}
+          {group.status === "pending" && <>
+            <button className="btn btn-success btn-sm" onClick={onStart}>▶ Start</button>
+            <button className="btn btn-outline btn-sm" onClick={onEdit}>✏ Edit</button>
+          </>}
+          {group.status === "active" && <>
+            <button className="btn btn-danger btn-sm" onClick={onStop}>■ Stop</button>
+          </>}
+          {(hasResults && !resultsExpired) && (
+            <button className="btn btn-mid btn-sm" onClick={onResults}>📊 Rezultate</button>
+          )}
+          <button className="btn btn-danger btn-sm" onClick={onDelete}>✕</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SessionsPage ──────────────────────────────────────────────────────────────
 function SessionsPage() {
-  if(!ADMIN.isAuthed()) { window.location.replace("index.html"); return null; }
+  if (!ADMIN.isAuthed()) { window.location.replace("index.html"); return null; }
   CPEEN.seedInitialData();
 
-  const [cfg,      setCfg]      = useState(()=>CPEEN.getConfig());
-  const [sessions, setSessions] = useState(()=>CPEEN.getSessions());
-  const participants             = CPEEN.getParticipants();
-  const exams                   = CPEEN.getExams();
+  const [groups,   setGroups]   = useState(() => CPEEN.getGroupSessions());
+  const [tick,     setTick]     = useState(0);
+  const [showWiz,  setShowWiz]  = useState(false);
+  const [editGrp,  setEditGrp]  = useState(null);
+  const [resGrp,   setResGrp]   = useState(null);
+  const [toDelete, setToDelete] = useState(null);
 
-  // Allocation wizard state (step 1: category, step 2: students, step 3: subject)
-  const [allocStep,  setAllocStep]  = useState(1);
-  const [allocLvl,   setAllocLvl]   = useState("B1");
-  const [allocStage, setAllocStage] = useState("calificare");
-  const [allocExamId,setAllocExamId]= useState("");
-  const [allocVar,   setAllocVar]   = useState("random");
-  const [selected,   setSelected]   = useState(new Set());
-  const [allocMsg,   setAllocMsg]   = useState({type:"",text:""});
+  const exams        = CPEEN.getExams();
+  const participants = CPEEN.getParticipants();
+  const sessions     = CPEEN.getSessions();
 
-  // Table filters
-  const [fLvl,    setFLvl]    = useState("all");
-  const [fStage,  setFStage]  = useState("all");
-  const [fStatus, setFStatus] = useState("all");
+  const reload = () => setGroups(CPEEN.getGroupSessions());
 
-  const reload = () => setSessions(CPEEN.getSessions());
+  // 1-second tick for countdowns + auto-finish
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTick(t => t + 1);
+      // auto-finish expired active sessions
+      const gs = CPEEN.getGroupSessions();
+      gs.forEach(g => {
+        if (g.status === "active" && g.endsAt && Date.now() > g.endsAt) {
+          CPEEN.finishGroupSession(g.id);
+        }
+      });
+      setGroups(CPEEN.getGroupSessions());
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
-  // ── Activation ────────────────────────────────────────────────────────────
-  const isActive = (lvl,stg) => !!(cfg.activeExams?.[lvl]?.[stg]);
-
-  const toggleActive = (lvl,stg) => {
-    const ae = JSON.parse(JSON.stringify(cfg.activeExams||{}));
-    if(!ae[lvl]) ae[lvl]={};
-    ae[lvl][stg] = !ae[lvl][stg];
-    const next = {...cfg, activeExams:ae};
-    CPEEN.saveConfig(next);
-    setCfg(next);
-  };
-
-  // ── Allocation ────────────────────────────────────────────────────────────
-  // sessMapByStage[pid][stage] = session
-  const sessMapByStage = useMemo(()=>{
-    const m={};
-    sessions.forEach(s=>{
-      if(!m[s.participantId]) m[s.participantId]={};
-      m[s.participantId][s.stage] = s;
-    });
-    return m;
-  }, [sessions]);
-  const allocExams = exams.filter(e=>e.level===allocLvl&&e.stage===allocStage&&e.variants?.length);
-  const selExam    = allocExams.find(e=>e.id===allocExamId)||null;
-  const candidates = participants.filter(p=>{
-    if(p.level !== allocLvl) return false;
-    if(sessMapByStage[p.id]?.[allocStage]) return false;       // already has a session for this stage
-    if(allocStage === 'finala' && !CPEEN.isQualified(p)) return false; // finala = only qualified
-    return true;
-  });
-
-  const toggle = id => setSelected(prev=>{ const s=new Set(prev); s.has(id)?s.delete(id):s.add(id); return s; });
-
-  const doAllocate = () => {
-    setAllocMsg({type:"",text:""});
-    if(!selExam)      { setAllocMsg({type:"err",text:"Selectați un subiect."}); return; }
-    if(!selected.size){ setAllocMsg({type:"err",text:"Selectați cel puțin un participant."}); return; }
-    let n=0;
-    selected.forEach(pid=>{
-      const varId = allocVar==="random"
-        ? selExam.variants[Math.floor(Math.random()*selExam.variants.length)].id
-        : (selExam.variants.find(v=>v.id===allocVar)?.id||selExam.variants[0].id);
-      CPEEN.createSession(pid, selExam, varId);
-      n++;
-    });
-    setSelected(new Set());
-    setAllocMsg({type:"ok",text:`${n} sesiuni alocate.`});
+  const doDelete = (id) => {
+    CPEEN.deleteGroupSession(id);
+    setToDelete(null);
     reload();
   };
 
-  // ── Table ─────────────────────────────────────────────────────────────────
-  const ptcpMap  = useMemo(()=>{ const m={}; participants.forEach(p=>{m[p.id]=p;}); return m; },[participants]);
-  const examsMap = useMemo(()=>{ const m={}; exams.forEach(e=>{m[e.id]=e;}); return m; },[exams]);
+  const pending  = groups.filter(g => g.status === "pending");
+  const active   = groups.filter(g => g.status === "active");
+  const finished = groups.filter(g => g.status === "finished");
 
-  const filtered = useMemo(()=>sessions.filter(s=>
-    (fLvl==="all"||s.level===fLvl)&&
-    (fStage==="all"||s.stage===fStage)&&
-    (fStatus==="all"||s.status===fStatus)
-  ),[sessions,fLvl,fStage,fStatus]);
-
-  const delSession = id => {
-    if(!confirm("Ștergi sesiunea?")) return;
-    CPEEN.saveSessions(CPEEN.getSessions().filter(s=>s.id!==id));
-    reload();
-  };
+  const cardFor = (g) => (
+    <SessionCard key={g.id} group={g} exams={exams} participants={participants}
+      sessions={sessions} tick={tick}
+      onStart={() => { CPEEN.startGroupSession(g.id); reload(); }}
+      onStop={() => { CPEEN.finishGroupSession(g.id); reload(); }}
+      onDelete={() => setToDelete(g.id)}
+      onEdit={() => setEditGrp(g)}
+      onResults={() => setResGrp(g)}
+    />
+  );
 
   return (
     <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
       <ADMIN.Nav active="sessions"/>
       <div className="page"><div className="container">
 
-        {/* ── Activation ── */}
-        <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:20,overflow:"hidden"}}>
-          <div style={{background:C.dark,padding:"12px 20px"}}>
-            <div style={{color:"#fff",fontWeight:700,fontSize:15}}>Activare examene</div>
-            <div style={{color:"rgba(255,255,255,.65)",fontSize:12,marginTop:2}}>Pornește/oprește accesul elevilor pe categorii. Elevii văd ecran de așteptare până la activare.</div>
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
+          <div>
+            <h2 style={{color:"#1F3864",fontSize:18}}>Sesiuni de examen</h2>
+            <div style={{fontSize:12,color:"#888"}}>{groups.length} sesiuni în total</div>
           </div>
-          <div style={{padding:20}}>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
-              {LVL.flatMap(lvl=>["calificare","finala"].map(stg=>{
-                const active = isActive(lvl,stg);
-                return (
-                  <div key={lvl+stg} style={{border:`2px solid ${active?"#27AE60":"#ddd"}`,borderRadius:10,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center",background:active?"#f0faf2":"#fafafa"}}>
-                    <div>
-                      <span className={`badge b-${lvl}`} style={{marginRight:6}}>{lvl}</span>
-                      <span style={{fontSize:13,fontWeight:600,color:C.dark}}>{stg==="finala"?"Finală":"Calificare"}</span>
-                      <div style={{fontSize:11,color:active?"#27AE60":"#999",marginTop:3,fontWeight:600}}>{active?"● Activ":"○ Inactiv"}</div>
-                    </div>
-                    <button onClick={()=>toggleActive(lvl,stg)}
-                      style={{background:active?"#27AE60":"#ccc",color:"#fff",border:"none",borderRadius:20,padding:"6px 16px",cursor:"pointer",fontWeight:700,fontSize:12}}>
-                      {active?"Oprește":"Pornește"}
-                    </button>
-                  </div>
-                );
-              }))}
-            </div>
+          <div style={{display:"flex",gap:8}}>
+            <button className="btn btn-mid btn-sm" onClick={reload}>↻ Actualizează</button>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowWiz(true)}>+ Sesiune nouă</button>
           </div>
         </div>
 
-        {/* ── Allocate (wizard) ── */}
-        <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:20,overflow:"hidden"}}>
-          <div style={{background:C.mid,padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div style={{color:"#fff",fontWeight:700,fontSize:15}}>Alocare sesiuni</div>
-            <div style={{display:"flex",gap:6}}>
-              {[1,2,3].map(n=>(
-                <div key={n} style={{width:26,height:26,borderRadius:13,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,
-                  background:allocStep===n?"#fff":allocStep>n?"rgba(255,255,255,.5)":"rgba(255,255,255,.2)",
-                  color:allocStep===n?C.mid:allocStep>n?"#fff":"rgba(255,255,255,.6)"}}>
-                  {allocStep>n?"✓":n}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{padding:20}}>
-
-            {/* Step 1: pick category */}
-            {allocStep===1 && (<>
-              <div style={{fontSize:13,color:"#555",marginBottom:14,fontWeight:600}}>Pasul 1: Alege categoria</div>
-              <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:20}}>
-                <div style={{flex:1,minWidth:140}}>
-                  <label style={{fontSize:12,color:"#666",display:"block",marginBottom:4}}>Nivel</label>
-                  <select className="inp" value={allocLvl}
-                    onChange={e=>{setAllocLvl(e.target.value);setSelected(new Set());setAllocMsg({type:"",text:""});}}>
-                    {LVL.map(l=><option key={l} value={l}>{l}</option>)}
-                  </select>
-                </div>
-                <div style={{flex:1,minWidth:160}}>
-                  <label style={{fontSize:12,color:"#666",display:"block",marginBottom:4}}>Etapă</label>
-                  <select className="inp" value={allocStage}
-                    onChange={e=>{setAllocStage(e.target.value);setSelected(new Set());setAllocMsg({type:"",text:""});}}>
-                    <option value="calificare">Calificare</option>
-                    <option value="finala">Finală</option>
-                  </select>
-                </div>
-              </div>
-              {(()=>{
-                const active = sessions.filter(s=>s.level===allocLvl&&s.stage===allocStage&&(s.status==="pending"||s.status==="in_progress"));
-                if(active.length>0) return (
-                  <div className="alert alert-warn" style={{marginBottom:14}}>
-                    ⚠ Există {active.length} sesiune(i) active/pending pentru {allocLvl} – {allocStage==="finala"?"Finală":"Calificare"}.
-                    Asigurați-vă că nu alocați mai multe serii simultan.
-                  </div>
-                );
-              })()}
-              <button className="btn btn-primary" onClick={()=>setAllocStep(2)}>
-                Continuă: alege elevii →
-              </button>
-            </>)}
-
-            {/* Step 2: pick students */}
-            {allocStep===2 && (<>
-              <div style={{fontSize:13,color:"#555",marginBottom:14,fontWeight:600}}>
-                Pasul 2: Alege elevii — <span className={`badge b-${allocLvl}`}>{allocLvl}</span>&nbsp;
-                <span style={{fontWeight:400,color:"#888"}}>{allocStage==="finala"?"Finală":"Calificare"}</span>
-              </div>
-              {candidates.length===0
-                ? <div style={{color:"#aaa",fontSize:13,padding:"12px 0",marginBottom:14}}>
-                    {allocStage==="finala"
-                      ? `Niciun participant calificat ${allocLvl} fără sesiune de finală.`
-                      : `Toți participanții ${allocLvl} au deja sesiune de calificare sau nu există participanți.`}
-                  </div>
-                : (<>
-                  <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
-                    <span style={{fontSize:13,color:"#666"}}>{candidates.length} disponibili</span>
-                    <button onClick={()=>setSelected(new Set(candidates.map(p=>p.id)))} className="btn btn-ghost btn-sm">Toți</button>
-                    <button onClick={()=>setSelected(new Set())} className="btn btn-ghost btn-sm">Niciunul</button>
-                    <span style={{fontSize:12,color:C.mid,fontWeight:600}}>{selected.size} selectați</span>
-                  </div>
-                  <div style={{maxHeight:240,overflowY:"auto",border:"1px solid #eee",borderRadius:8,marginBottom:14}}>
-                    {candidates.map(p=>(
-                      <label key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderBottom:"1px solid #f5f5f5",cursor:"pointer",background:selected.has(p.id)?"#f0f7ff":"transparent"}}>
-                        <input type="checkbox" checked={selected.has(p.id)} onChange={()=>toggle(p.id)}/>
-                        <div>
-                          <div style={{fontWeight:700,color:C.dark,fontSize:13}}>{p.name}</div>
-                          <div style={{fontSize:11,color:"#888"}}>{p.school} · {p.county}</div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </>)
-              }
+        {/* Confirm delete */}
+        {toDelete && (()=>{
+          const g = groups.find(x => x.id === toDelete);
+          return (
+            <div className="alert alert-err" style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:12}}>
+              <span>Sigur ștergi sesiunea <strong>{g?.sessionType}</strong>? Se vor șterge și sesiunile individuale alocate.</span>
               <div style={{display:"flex",gap:8}}>
-                <button className="btn btn-ghost" onClick={()=>setAllocStep(1)}>← Înapoi</button>
-                <button className="btn btn-primary" onClick={()=>setAllocStep(3)} disabled={!selected.size}>
-                  Continuă: alege subiectul →
-                </button>
+                <button className="btn btn-danger btn-sm" onClick={() => doDelete(toDelete)}>Șterge</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setToDelete(null)}>Anulează</button>
               </div>
-            </>)}
+            </div>
+          );
+        })()}
 
-            {/* Step 3: pick subject + allocate */}
-            {allocStep===3 && (<>
-              <div style={{fontSize:13,color:"#555",marginBottom:14,fontWeight:600}}>
-                Pasul 3: Alege subiectul — {selected.size} elev(i) selectați
-              </div>
-              {allocExams.length===0
-                ? <div className="alert alert-warn" style={{marginBottom:14}}>
-                    Niciun subiect pentru {allocLvl} – {allocStage==="finala"?"Finală":"Calificare"}.
-                    <a href="exam-builder.html" style={{marginLeft:8}}>Creați unul →</a>
-                  </div>
-                : (<>
-                  <div style={{marginBottom:12}}>
-                    <label style={{fontSize:12,color:"#666",display:"block",marginBottom:4}}>Subiect</label>
-                    <select className="inp" value={allocExamId} onChange={e=>setAllocExamId(e.target.value)}>
-                      <option value="">— Selectează subiectul —</option>
-                      {allocExams.map(e=><option key={e.id} value={e.id}>{e.title||e.id} ({e.variants?.length||0} variante)</option>)}
-                    </select>
-                  </div>
-                  {selExam && selExam.variants?.length>1 && (
-                    <div style={{marginBottom:12}}>
-                      <label style={{fontSize:12,color:"#666",display:"block",marginBottom:4}}>Variantă</label>
-                      <select className="inp" style={{width:200}} value={allocVar} onChange={e=>setAllocVar(e.target.value)}>
-                        <option value="random">Variantă aleatorie</option>
-                        {selExam.variants.map(v=><option key={v.id} value={v.id}>{v.id}</option>)}
-                      </select>
-                    </div>
-                  )}
-                </>)
-              }
-              {allocMsg.text && <div className={`alert alert-${allocMsg.type==="ok"?"ok":"err"}`} style={{marginBottom:10}}>{allocMsg.text}</div>}
-              <div style={{display:"flex",gap:8}}>
-                <button className="btn btn-ghost" onClick={()=>setAllocStep(2)}>← Înapoi</button>
-                <button className="btn btn-primary" onClick={doAllocate} disabled={!selected.size||!selExam}>
-                  Alocă sesiuni ({selected.size})
-                </button>
-                {allocMsg.type==="ok" && (
-                  <button className="btn btn-ghost" onClick={()=>{setAllocStep(1);setAllocMsg({type:"",text:""});setSelected(new Set());}}>
-                    Alocare nouă
-                  </button>
-                )}
-              </div>
-            </>)}
+        {/* Active sessions */}
+        {active.length > 0 && (
+          <div style={{marginBottom:8}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#2E75B6",marginBottom:8,letterSpacing:.5}}>● SESIUNI ACTIVE</div>
+            {active.map(cardFor)}
+          </div>
+        )}
 
+        {/* Pending sessions */}
+        {pending.length > 0 && (
+          <div style={{marginBottom:8}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#888",marginBottom:8,letterSpacing:.5}}>PROGRAMATE</div>
+            {pending.map(cardFor)}
           </div>
-        </div>
+        )}
 
-        {/* ── Sessions table ── */}
-        <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,.06)",overflow:"hidden"}}>
-          <div style={{background:C.dark,padding:"12px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div style={{color:"#fff",fontWeight:700,fontSize:15}}>Sesiuni ({sessions.length})</div>
-            <button onClick={reload} style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"4px 12px",cursor:"pointer",fontSize:12}}>↻</button>
+        {/* Finished sessions */}
+        {finished.length > 0 && (
+          <div style={{marginBottom:8}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#27AE60",marginBottom:8,letterSpacing:.5}}>FINALIZATE</div>
+            {finished.map(cardFor)}
           </div>
-          <div style={{padding:"10px 16px",display:"flex",gap:8,borderBottom:"1px solid #eee",flexWrap:"wrap"}}>
-            <select className="inp inp-sm" style={{width:130}} value={fLvl} onChange={e=>setFLvl(e.target.value)}>
-              <option value="all">Toate nivelurile</option>
-              {LVL.map(l=><option key={l} value={l}>{l}</option>)}
-            </select>
-            <select className="inp inp-sm" style={{width:130}} value={fStage} onChange={e=>setFStage(e.target.value)}>
-              <option value="all">Ambele etape</option>
-              <option value="calificare">Calificare</option>
-              <option value="finala">Finală</option>
-            </select>
-            <select className="inp inp-sm" style={{width:150}} value={fStatus} onChange={e=>setFStatus(e.target.value)}>
-              <option value="all">Toate statusurile</option>
-              <option value="pending">Alocată</option>
-              <option value="in_progress">În desfășurare</option>
-              <option value="submitted">Trimisă</option>
-            </select>
+        )}
+
+        {groups.length === 0 && (
+          <div style={{background:"#fff",borderRadius:10,padding:48,textAlign:"center",color:"#aaa",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+            <div style={{fontSize:32,marginBottom:10}}>📋</div>
+            <div style={{marginBottom:16}}>Nicio sesiune creată.</div>
+            <button className="btn btn-primary" onClick={() => setShowWiz(true)}>+ Creează prima sesiune</button>
           </div>
-          {filtered.length===0
-            ? <div style={{padding:40,textAlign:"center",color:"#aaa"}}>Nicio sesiune.</div>
-            : (
-              <div className="tbl-wrap">
-                <table className="tbl">
-                  <thead>
-                    <tr>
-                      <th>#</th><th>Participant</th><th>Nivel</th><th>Etapă</th>
-                      <th>Subiect</th><th>Var.</th><th>Status</th><th>Pornit</th><th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((s,i)=>{
-                      const p=ptcpMap[s.participantId]||{};
-                      const ex=examsMap[s.examId];
-                      return (
-                        <tr key={s.id}>
-                          <td style={{color:"#aaa",fontSize:11}}>{i+1}</td>
-                          <td>
-                            <div style={{fontWeight:700,color:C.dark,fontSize:13}}>{p.name||"—"}</div>
-                            <div style={{fontSize:11,color:"#999"}}>{p.school||""}</div>
-                          </td>
-                          <td><span className={`badge b-${s.level}`}>{s.level}</span></td>
-                          <td style={{fontSize:12}}>{ADMIN.stageLabel[s.stage]||s.stage}</td>
-                          <td style={{fontSize:12,maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ex?.title||s.examId||"—"}</td>
-                          <td style={{fontFamily:"monospace",fontSize:12}}>{s.variantId}</td>
-                          <td>
-                            {s.status==="submitted"?<span className="badge b-ok">Trimisă</span>
-                             :s.status==="in_progress"?<span className="badge b-mid">Activ</span>
-                             :<span className="badge b-gray">Alocată</span>}
-                          </td>
-                          <td style={{fontSize:11,color:"#999",whiteSpace:"nowrap"}}>{s.startedAt?new Date(s.startedAt).toLocaleString("ro-RO"):"-"}</td>
-                          <td>
-                            {s.status!=="submitted" && (
-                              <button className="btn btn-sm btn-danger" style={{padding:"2px 8px",fontSize:11}} onClick={()=>delSession(s.id)}>✕</button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )
-          }
-        </div>
+        )}
+
         <div style={{textAlign:"center",color:"#aaa",fontSize:11,paddingBottom:24,paddingTop:16}}>ECHO · englishgrammarchallenge.ro</div>
       </div></div>
+
+      {showWiz && (
+        <Wizard exams={exams} participants={participants}
+          onClose={() => setShowWiz(false)}
+          onCreated={reload}/>
+      )}
+
+      {editGrp && (
+        <EditModal group={editGrp} exams={exams} participants={participants}
+          onClose={() => setEditGrp(null)}
+          onSaved={() => { reload(); setEditGrp(null); }}/>
+      )}
+
+      {resGrp && (
+        <ResultsModal group={resGrp} exams={exams} participants={participants}
+          sessions={sessions}
+          onClose={() => setResGrp(null)}/>
+      )}
     </div>
   );
 }
 
 document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Georgia,serif;color:#2E75B6;font-size:15px;">Se încarcă…</div>';
-CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<SessionsPage/>));
+CPEEN.init().then(() => ReactDOM.createRoot(document.getElementById("root")).render(<SessionsPage/>));
 </script>
 </body>
 </html>
