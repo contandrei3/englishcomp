@@ -37,7 +37,7 @@ function initPart(id, defPts) {
   const pts = String(defPts);
   if (id==='p1') return { title:'', text:'', pts, items:[] };
   if (id==='p2') return { title:'', text:'', pts, answers:[] };
-  if (id==='p3') return { pts, items:[] };
+  if (id==='p3') return { text:'', pts, items:[] };
   if (id==='p4') return { pts, items:[] };
   if (id==='p5') return { title:'', text:'', pts, items:[] };
   if (id==='p6') return { pts, texts:['A','B','C','D'].map(l=>({label:l,title:'',content:''})), items:[] };
@@ -66,7 +66,7 @@ function toDBVariant(meta, enabled, partData) {
           (d.answers[i]||'').split(';').map(x=>x.trim()).filter(Boolean))
       });
     } else if (id==='p3') {
-      parts.push({ type:'p3', pts,
+      parts.push({ type:'p3', pts, text:d.text||'',
         items: d.items.map(it => ({
           before:it.before||'', kw:it.kw||'', after:it.after||'',
           key:(it.answers||'').split(';').map(x=>x.trim()).filter(Boolean)
@@ -137,6 +137,7 @@ function fromDB(exam) {
       };
     } else if (id==='p3') {
       partData.p3 = {
+        text: part.text||'',
         pts: String(part.pts||1),
         items: (part.items||[]).map(it => ({
           before:it.before||'', kw:it.kw||'', after:it.after||'',
@@ -340,14 +341,23 @@ function P2Edit({data,onChange}) {
 
 // ── Part 3 — Word Formation ───────────────────────────────────────────────
 function P3Edit({data,onChange}) {
+  const upd   = (k,v) => onChange({...data,[k]:v});
   const updIt = (i,f,v) => onChange({...data, items:data.items.map((it,j)=>j===i?{...it,[f]:f==='kw'?v.toUpperCase():v}:it)});
   const addIt = () => onChange({...data, items:[...data.items, {before:'',kw:'',after:'',answers:''}]});
   const delIt = i => onChange({...data, items:data.items.filter((_,j)=>j!==i)});
   return (
     <>
       <div style={{fontSize:12,color:"#888",marginBottom:12}}>
-        Completați contextul și cuvântul cheie. Elevul trebuie să transforme cuvântul cheie pentru a completa golul.
+        Fiecare item are: text înainte · gol · text după · cuvânt cheie.
+        Opțional, adaugă un text/pasaj introductiv care apare deasupra itemilor.
       </div>
+
+      {/* Text de pasaj opțional */}
+      <Fld label="Text / pasaj introductiv" hint="opțional — apare deasupra itemilor">
+        <Ta value={data.text||''} onChange={e=>upd('text',e.target.value)} rows={4}
+          placeholder="For questions 25–34, read the text below. Use the word given in CAPITALS at the end of some of the lines to form a word that fits in the gap in the same line…"/>
+      </Fld>
+
       {data.items.map((it,i)=>(
         <ItemCard key={i} num={i+1} onDelete={()=>delIt(i)}>
           <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:8,alignItems:"end",marginBottom:8}}>

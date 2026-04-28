@@ -119,15 +119,22 @@ function PartSection({part, pi, ans, setAns}) {
       </>}
 
       {/* P3 — Word Formation */}
-      {part.type==='p3' && (part.items||[]).map((item,i)=>(
-        <div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:9,flexWrap:"wrap"}}>
-          <span style={{fontWeight:700,color:C.dark,minWidth:22,fontSize:12}}>{i+1}.</span>
-          {item.before && <span style={{fontSize:13}}>{item.before}</span>}
-          {ansInp(i,ans[i],"...",160)}
-          {item.after && <span style={{fontSize:13}}>{item.after}</span>}
-          <span style={{background:"#D6E4F0",color:C.dark,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:4,letterSpacing:1}}>{item.kw}</span>
-        </div>
-      ))}
+      {part.type==='p3' && <>
+        {part.text && (
+          <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:14,marginBottom:16,fontSize:13,lineHeight:1.9,whiteSpace:"pre-wrap"}}>
+            {part.text}
+          </div>
+        )}
+        {(part.items||[]).map((item,i)=>(
+          <div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:9,flexWrap:"wrap"}}>
+            <span style={{fontWeight:700,color:C.dark,minWidth:22,fontSize:12}}>{i+1}.</span>
+            {item.before && <span style={{fontSize:13}}>{item.before}</span>}
+            {ansInp(i,ans[i],"...",160)}
+            {item.after && <span style={{fontSize:13}}>{item.after}</span>}
+            <span style={{background:"#D6E4F0",color:C.dark,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:4,letterSpacing:1}}>{item.kw}</span>
+          </div>
+        ))}
+      </>}
 
       {/* P4 — KWT */}
       {part.type==='p4' && (part.items||[]).map((item,i)=>(
