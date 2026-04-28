@@ -3,11 +3,24 @@ var CPEEN = (function () {
   'use strict';
 
   var KEYS = {
-    CONFIG:       'cpeen_config',
-    PARTICIPANTS: 'cpeen_participants',
-    EXAMS:        'cpeen_exams',
-    SESSIONS:     'cpeen_sessions'
+    CONFIG:         'cpeen_config',
+    PARTICIPANTS:   'cpeen_participants',
+    EXAMS:          'cpeen_exams',
+    SESSIONS:       'cpeen_sessions',
+    GROUP_SESSIONS: 'cpeen_group_sessions'
   };
+
+  // Derives level/stage strings from a sessionType like 'B1-calificare', 'FCE', 'CAE'
+  function splitType(sessionType) {
+    if (!sessionType) return { level: '', stage: '' };
+    if (sessionType === 'FCE') return { level: 'FCE', stage: 'exam' };
+    if (sessionType === 'CAE') return { level: 'CAE', stage: 'exam' };
+    var parts = sessionType.split('-');
+    return { level: parts[0] || '', stage: parts[1] || '' };
+  }
+
+  // Fixed durations for FCE/CAE
+  var TYPE_DURATION = { FCE: 75, CAE: 90 };
 
   var DB = null;
 
@@ -46,9 +59,10 @@ var CPEEN = (function () {
             // Citim items_json (noul format) cu fallback la items (format vechi)
             var remote = d.items_json ? JSON.parse(d.items_json) : (d.items || []);
             var keyMap = {
-              participants: KEYS.PARTICIPANTS,
-              sessions:     KEYS.SESSIONS,
-              exams:        KEYS.EXAMS
+              participants:   KEYS.PARTICIPANTS,
+              sessions:       KEYS.SESSIONS,
+              exams:          KEYS.EXAMS,
+              group_sessions: KEYS.GROUP_SESSIONS
             };
             var key = keyMap[doc.id];
             if (!key) return;
@@ -164,7 +178,7 @@ var CPEEN = (function () {
     return (part.items || []).length;
   }
 
-  function createSession(pid, exam, variantId) {
+  function createSession(pid, exam, variantId, groupId, levelOverride, stageOverride) {
     var v = exam.variants.find(function (v) { return v.id === variantId; });
     if (!v) return null;
     var answers;
@@ -186,7 +200,9 @@ var CPEEN = (function () {
     }
     var session = {
       id: genId('s'), participantId: pid, examId: exam.id,
-      level: exam.level, stage: exam.stage, variantId: variantId,
+      level: levelOverride || exam.level || '', stage: stageOverride || exam.stage || '',
+      variantId: variantId,
+      groupId: groupId || null,
       answers: answers,
       startedAt: null, submittedAt: null, result: null,
       status: 'pending', locked: false,
@@ -205,6 +221,97 @@ var CPEEN = (function () {
     arr[idx] = Object.assign({}, arr[idx], updates);
     saveSessions(arr);
     return arr[idx];
+  }
+
+  // ── Group Sessions ────────────────────────────────────────────────────────
+  function getGroupSessions() { return sg(KEYS.GROUP_SESSIONS, []); }
+  function saveGroupSessions(gs) { ss(KEYS.GROUP_SESSIONS, gs); syncToFirebase('group_sessions', gs); }
+
+  function addGroupSession(sessionType, examId, duration, variantStrategy) {
+    var gs = getGroupSessions();
+    var group = {
+      id: genId('gs'),
+      sessionType: sessionType,
+      examId: examId,
+      duration: duration,
+      variantStrategy: variantStrategy || 'random',
+      participantIds: [],
+      status: 'pending',
+      createdAt: Date.now(),
+      startedAt: null,
+      endsAt: null,
+      finishedAt: null
+    };
+    gs.push(group);
+    saveGroupSessions(gs);
+    return group;
+  }
+
+  function updateGroupSession(id, updates) {
+    var gs = getGroupSessions();
+    var idx = gs.findIndex(function(g) { return g.id === id; });
+    if (idx === -1) return null;
+    gs[idx] = Object.assign({}, gs[idx], updates);
+    saveGroupSessions(gs);
+    return gs[idx];
+  }
+
+  function deleteGroupSession(id) {
+    saveGroupSessions(getGroupSessions().filter(function(g) { return g.id !== id; }));
+    // also remove linked individual sessions
+    saveSessions(getSessions().filter(function(s) { return s.groupId !== id; }));
+  }
+
+  // Add participants to a group and create their individual sessions.
+  function addParticipantsToGroup(groupId, participantIds, examObj) {
+    var gs = getGroupSessions();
+    var gIdx = gs.findIndex(function(g) { return g.id === groupId; });
+    if (gIdx === -1) return;
+    var group = gs[gIdx];
+    var existing = group.participantIds || [];
+    var toAdd = participantIds.filter(function(pid) { return existing.indexOf(pid) === -1; });
+    gs[gIdx] = Object.assign({}, group, { participantIds: existing.concat(toAdd) });
+    saveGroupSessions(gs);
+
+    // Create individual sessions for new participants
+    var lt = splitType(group.sessionType);
+    toAdd.forEach(function(pid) {
+      var vId;
+      if (group.variantStrategy === 'random') {
+        vId = examObj.variants[Math.floor(Math.random() * examObj.variants.length)].id;
+      } else {
+        var found = examObj.variants.find(function(v) { return v.id === group.variantStrategy; });
+        vId = found ? found.id : examObj.variants[0].id;
+      }
+      createSession(pid, examObj, vId, groupId, lt.level, lt.stage);
+    });
+  }
+
+  // Remove a participant from a group and delete their individual session.
+  function removeParticipantFromGroup(groupId, participantId) {
+    var gs = getGroupSessions();
+    var gIdx = gs.findIndex(function(g) { return g.id === groupId; });
+    if (gIdx === -1) return;
+    gs[gIdx] = Object.assign({}, gs[gIdx], {
+      participantIds: gs[gIdx].participantIds.filter(function(pid) { return pid !== participantId; })
+    });
+    saveGroupSessions(gs);
+    saveSessions(getSessions().filter(function(s) { return !(s.groupId === groupId && s.participantId === participantId); }));
+  }
+
+  // Start a group session: set startedAt / endsAt / status.
+  function startGroupSession(groupId) {
+    var now = Date.now();
+    var gs = getGroupSessions();
+    var g = gs.find(function(x) { return x.id === groupId; });
+    if (!g) return null;
+    var endsAt = now + g.duration * 60 * 1000;
+    return updateGroupSession(groupId, { status: 'active', startedAt: now, endsAt: endsAt });
+  }
+
+  // Mark a group session finished (called when time expires or admin stops it).
+  function finishGroupSession(groupId) {
+    return updateGroupSession(groupId, { status: 'finished', finishedAt: Date.now() });
   }
 
   // ── Exams ─────────────────────────────────────────────────────────────────
@@ -400,6 +507,9 @@ var CPEEN = (function () {
     getConfig, saveConfig,
     getParticipants, saveParticipants, addParticipant, findParticipantByCode, updateParticipant, deleteParticipant, isQualified,
     getSessions, saveSessions, getSessionByParticipant, getSessionsByParticipant, createSession, updateSession,
+    getGroupSessions, saveGroupSessions, addGroupSession, updateGroupSession, deleteGroupSession,
+    addParticipantsToGroup, removeParticipantFromGroup, startGroupSession, finishGroupSession,
+    splitType, TYPE_DURATION,
     getExams, saveExams, getExamForParticipant, addExam, updateExam, deleteExam,
     gradeSession, seedInitialData,
     loadProctorFlags, getProctorFlag, disqualifyParticipant, clearDisqualification
