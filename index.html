@@ -3,28 +3,118 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CPEEN 2026 – Platformă de evaluare</title>
+<title>CPEEN 2026 – Concursul de Performanță în Limba Engleză</title>
 <link rel="stylesheet" href="css/style.css"/>
 <style>
-.hero{background:var(--dark);color:#fff;padding:56px 16px;text-align:center;}
-.hero-domain{color:var(--light);font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;}
-.hero-title{font-size:28px;font-weight:700;line-height:1.4;margin-bottom:8px;}
-.hero-sub{color:var(--light);font-size:14px;margin-bottom:28px;}
-.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
-.cta{display:inline-block;padding:13px 28px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;transition:opacity .15s;}
-.cta:hover{opacity:.87;}
-.cta-primary{background:#fff;color:var(--dark);}
-.cta-outline{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.6);}
-.features{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;padding:40px 16px;max-width:1100px;margin:0 auto;}
-.feat{background:#fff;border-radius:12px;padding:24px;box-shadow:0 4px 16px rgba(0,0,0,.07);}
-.feat-icon{font-size:28px;margin-bottom:12px;}
-.feat h3{color:var(--dark);font-size:15px;margin-bottom:8px;}
-.feat p{font-size:13px;color:#666;line-height:1.65;margin-bottom:14px;}
-.feat a{font-size:13px;color:var(--mid);font-weight:600;text-decoration:none;}
-.feat a:hover{text-decoration:underline;}
-.levels{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
-.footer{text-align:center;padding:24px 16px;color:#999;font-size:12px;}
-@media(max-width:640px){.hero-title{font-size:22px;}}
+/* ── Landing page overrides ───────────────────────────────────────────── */
+body{background:#fff;}
+
+/* Hero */
+.lp-hero{
+  background:var(--dark);
+  background-image:
+    linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
+  background-size:40px 40px;
+  color:#fff;
+  padding:80px 24px 72px;
+  text-align:center;
+  position:relative;
+}
+.lp-eyebrow{
+  display:inline-block;
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--light);border:1px solid rgba(255,255,255,.2);
+  border-radius:20px;padding:4px 16px;margin-bottom:22px;
+}
+.lp-title{
+  font-size:clamp(26px,5vw,48px);
+  font-weight:700;line-height:1.2;
+  max-width:720px;margin:0 auto 16px;
+}
+.lp-sub{
+  color:var(--light);font-size:clamp(14px,2vw,17px);
+  max-width:560px;margin:0 auto 36px;line-height:1.7;
+}
+.lp-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:40px;}
+.lp-cta-primary{
+  display:inline-block;padding:14px 32px;border-radius:10px;
+  background:#fff;color:var(--dark);font-weight:700;font-size:15px;
+  text-decoration:none;transition:opacity .15s;
+}
+.lp-cta-outline{
+  display:inline-block;padding:14px 32px;border-radius:10px;
+  background:transparent;color:#fff;font-weight:700;font-size:15px;
+  border:2px solid rgba(255,255,255,.5);text-decoration:none;transition:opacity .15s;
+}
+.lp-cta-primary:hover,.lp-cta-outline:hover{opacity:.85;}
+.lp-levels{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.lp-badge{
+  display:inline-block;padding:5px 16px;border-radius:20px;
+  font-size:12px;font-weight:700;
+}
+
+/* About */
+.lp-about{padding:72px 24px;background:#fff;max-width:1060px;margin:0 auto;}
+.lp-about-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start;}
+.lp-about h2{font-size:clamp(20px,3vw,30px);color:var(--dark);margin-bottom:14px;line-height:1.3;}
+.lp-about p{font-size:14px;color:#555;line-height:1.8;margin-bottom:14px;}
+.about-list{list-style:none;padding:0;}
+.about-list li{
+  font-size:14px;color:#444;padding:10px 0 10px 32px;
+  border-bottom:1px solid #f0f0f0;position:relative;line-height:1.5;
+}
+.about-list li::before{
+  content:"✓";position:absolute;left:0;top:10px;
+  color:var(--mid);font-weight:700;font-size:15px;
+}
+.about-list li:last-child{border-bottom:none;}
+
+/* How it works */
+.lp-steps-wrap{background:#f7f9fc;padding:72px 24px;}
+.lp-steps{max-width:1060px;margin:0 auto;}
+.lp-steps h2{font-size:clamp(20px,3vw,30px);color:var(--dark);text-align:center;margin-bottom:8px;}
+.lp-steps-sub{text-align:center;color:#777;font-size:14px;margin-bottom:44px;}
+.steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;}
+.step{background:#fff;border-radius:14px;padding:28px 24px;box-shadow:0 4px 20px rgba(0,0,0,.06);}
+.step-num{font-size:36px;font-weight:700;color:var(--light);line-height:1;margin-bottom:12px;}
+.step h3{font-size:15px;font-weight:700;color:var(--dark);margin-bottom:8px;}
+.step p{font-size:13px;color:#666;line-height:1.7;}
+
+/* Levels */
+.lp-levels-wrap{background:var(--dark);padding:72px 24px;}
+.lp-levels-inner{max-width:1060px;margin:0 auto;}
+.lp-levels-inner h2{font-size:clamp(20px,3vw,30px);color:#fff;text-align:center;margin-bottom:8px;}
+.lp-levels-sub{text-align:center;color:var(--light);font-size:14px;margin-bottom:44px;}
+.levels-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;}
+.level-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:24px 20px;}
+.level-badge{display:inline-block;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700;margin-bottom:12px;}
+.level-card h3{font-size:16px;font-weight:700;color:#fff;margin-bottom:8px;}
+.level-card p{font-size:13px;color:var(--light);line-height:1.7;}
+
+/* CTA banner */
+.lp-cta-wrap{background:linear-gradient(135deg,#1a56db,#2E75B6);padding:64px 24px;text-align:center;}
+.lp-cta-wrap h2{font-size:clamp(20px,3vw,28px);color:#fff;margin-bottom:10px;}
+.lp-cta-wrap p{color:rgba(255,255,255,.8);font-size:14px;margin-bottom:28px;max-width:480px;margin-left:auto;margin-right:auto;}
+
+/* Footer */
+.lp-footer{background:#151f30;padding:36px 24px;text-align:center;}
+.lp-footer-brand{color:#fff;font-weight:700;font-size:15px;margin-bottom:4px;}
+.lp-footer-domain{color:#7b91ad;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;}
+.lp-footer-links{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;}
+.lp-footer-links a{color:#7b91ad;font-size:12px;text-decoration:none;transition:color .15s;}
+.lp-footer-links a:hover{color:#fff;}
+.lp-footer-copy{color:#4a5a70;font-size:11px;}
+
+/* Responsive */
+@media(max-width:860px){
+  .lp-about-grid{grid-template-columns:1fr;}
+  .steps-grid{grid-template-columns:1fr;}
+  .levels-grid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:640px){
+  .levels-grid{grid-template-columns:1fr;}
+}
 </style>
 </head>
 <body>
@@ -36,66 +126,165 @@
   </a>
   <div class="nav-links">
     <a href="register.html" class="nav-link">Înregistrare</a>
-    <a href="dashboard.html" class="nav-link">Dashboard Elev</a>
-    <a href="admin/index.html" class="nav-link">Admin</a>
+    <a href="exam.html" class="nav-link">Acces Examen</a>
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
   </div>
 </nav>
 
-<div class="hero">
-  <div class="hero-domain">englishgrammarchallenge.ro</div>
-  <div class="hero-title">CONCURSUL DE PERFORMANȚĂ<br/>ÎN LIMBA ENGLEZĂ</div>
-  <div class="hero-sub">CPEEN 2026 · Platformă oficială de evaluare online</div>
-  <div class="hero-btns">
-    <a href="register.html" class="cta cta-primary">Înregistrează-te →</a>
-    <a href="dashboard.html" class="cta cta-outline">Am un cod de acces</a>
+<!-- Hero -->
+<div class="lp-hero">
+  <div class="lp-eyebrow">CPEEN 2026 · Platformă Oficială</div>
+  <h1 class="lp-title">Performanță în limba engleză,<br/>dovedită online.</h1>
+  <p class="lp-sub">
+    Concursul de Performanță în Limba Engleză testează competențe reale de gramatică
+    și vocabular, pe patru niveluri Cambridge, într-un format digital complet.
+  </p>
+  <div class="lp-btns">
+    <a href="register.html" class="lp-cta-primary">Înregistrează-te →</a>
+    <a href="exam.html" class="lp-cta-outline">Am un cod de acces</a>
+  </div>
+  <div class="lp-levels">
+    <span class="lp-badge b-A2">A2 Elementar</span>
+    <span class="lp-badge b-B1">B1 Intermediar</span>
+    <span class="lp-badge b-B2">B2 Avansat</span>
+    <span class="lp-badge b-C1">C1 Performanță</span>
   </div>
 </div>
 
-<div class="features">
-  <div class="feat">
-    <div class="feat-icon">📝</div>
-    <h3>Înregistrare participanți</h3>
-    <p>Completează formularul cu datele tale și ale școlii. Primești instant un cod unic de acces la examen.</p>
-    <a href="register.html">Înregistrare →</a>
-  </div>
-  <div class="feat">
-    <div class="feat-icon">🖥</div>
-    <h3>Dashboard elev</h3>
-    <p>Intră cu codul tău și vezi într-un singur loc: profilul, statusul de calificare și sesiunile alocate. Pornește examenul direct de aici.</p>
-    <a href="dashboard.html">Dashboard elev →</a>
-  </div>
-  <div class="feat">
-    <div class="feat-icon">📊</div>
-    <h3>Niveluri de concurs</h3>
-    <p>Competiția este organizată pe patru niveluri de competență linguistică:</p>
-    <div class="levels">
-      <span class="badge b-A2">A2 Elementar</span>
-      <span class="badge b-B1">B1 Intermediar</span>
-      <span class="badge b-B2">B2 Avansat</span>
-      <span class="badge b-C1">C1 Performanță</span>
+<!-- About -->
+<section class="lp-about">
+  <div class="lp-about-grid">
+    <div>
+      <h2>Un concurs serios,<br/>accesibil oricând și oriunde.</h2>
+      <p>
+        CPEEN este un concurs de gramatică și vocabular engleză, organizat în format
+        online și supervizat. Subiectele sunt construite după modelul certificărilor
+        Cambridge — cu secțiuni de completare, transformare, cloze și formare de cuvinte.
+      </p>
+      <p>
+        Fiecare participant primește un cod unic de acces, care îi permite să susțină
+        examenul în mod securizat. Corectarea este automată și imediată.
+      </p>
+      <p>
+        Concursul se desfășoară în două etape: o etapă de calificare online și o
+        finală supervizată, deschisă celor mai buni participanți din fiecare nivel.
+      </p>
+    </div>
+    <div>
+      <ul class="about-list">
+        <li>Format digital complet — fără tipărit, fără scanat</li>
+        <li>Subiecte pe model Cambridge, adaptate pentru fiecare nivel</li>
+        <li>Corectare automată cu normalizare inteligentă a răspunsurilor</li>
+        <li>Cod de acces unic per participant, valabil pe toată perioada concursului</li>
+        <li>Calificare și finală — două etape cu subiecte diferite</li>
+        <li>Rezultate și clasamente disponibile imediat după finalizare</li>
+        <li>Administrare completă din panoul de profesor</li>
+      </ul>
     </div>
   </div>
-  <div class="feat">
-    <div class="feat-icon">🔒</div>
-    <h3>Panou administrator</h3>
-    <p>Gestionare participanți, distribuire subiecte, vizualizare rezultate în timp real și export date.</p>
-    <a href="admin/index.html">Admin panel →</a>
-  </div>
-  <div class="feat">
-    <div class="feat-icon">⚡</div>
-    <h3>Corecție automată</h3>
-    <p>Răspunsurile sunt evaluate automat cu normalizare (lowercase, trim, punctuație). Variante multiple acceptate per item.</p>
-  </div>
-  <div class="feat">
-    <div class="feat-icon">📄</div>
-    <h3>Export rezultate</h3>
-    <p>Export CSV cu toate rezultatele. Clasament per nivel, per școală, per județ. Generare diplomă participare.</p>
-  </div>
-</div>
+</section>
 
-<div class="footer">
-  CPEEN 2026 · englishgrammarchallenge.ro · Platformă de evaluare
-</div>
+<!-- How it works -->
+<section class="lp-steps-wrap">
+  <div class="lp-steps">
+    <h2>Cum funcționează?</h2>
+    <p class="lp-steps-sub">Trei pași simpli, de la înregistrare până la rezultat.</p>
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>Înregistrare</h3>
+        <p>
+          Profesorul coordonator sau elevul completează formularul de înregistrare cu
+          datele școlii și ale participantului, selectând nivelul de competență.
+          Imediat după, primești un <strong>cod unic de acces</strong>.
+        </p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>Susținerea examenului</h3>
+        <p>
+          La data stabilită, elevul intră pe platformă cu codul de acces și susține
+          examenul alocat de profesor. Fiecare examen are un timp limitat și se
+          trimite automat la final.
+        </p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>Rezultate</h3>
+        <p>
+          Corectarea este instantanee. Profesorul vede rezultatele în timp real
+          din panoul de administrare, poate exporta datele și identifică participanții
+          calificați pentru etapa următoare.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Levels -->
+<section class="lp-levels-wrap">
+  <div class="lp-levels-inner">
+    <h2>Patru niveluri de competență</h2>
+    <p class="lp-levels-sub">Fiecare nivel are subiecte dedicate, calibrate după descriptori Cambridge.</p>
+    <div class="levels-grid">
+      <div class="level-card">
+        <span class="level-badge b-A2">A2</span>
+        <h3>Elementar</h3>
+        <p>
+          Gramatică de bază, vocabular frecvent, structuri simple. Ideal pentru elevi
+          la început de drum cu limba engleză formală.
+        </p>
+      </div>
+      <div class="level-card">
+        <span class="level-badge b-B1">B1</span>
+        <h3>Intermediar</h3>
+        <p>
+          Timp și aspect verbal, condiționale, vocabular tematic. Subiecte construite
+          pentru elevi cu o pregătire solidă de bază.
+        </p>
+      </div>
+      <div class="level-card">
+        <span class="level-badge b-B2">B2</span>
+        <h3>Avansat</h3>
+        <p>
+          Structuri complexe, formare de cuvinte, transformări de fraze. Nivelul la
+          care competiția devine cu adevărat interesantă.
+        </p>
+      </div>
+      <div class="level-card">
+        <span class="level-badge b-C1">C1</span>
+        <h3>Performanță</h3>
+        <p>
+          Colocații, idiomuri, structuri avansate de exprimare. Nivelul rezervat
+          elevilor cu pregătire de nivel superior sau olimpici.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="lp-cta-wrap">
+  <h2>Ești pregătit să concurezi?</h2>
+  <p>Înregistrarea este rapidă. Primești codul de acces imediat.</p>
+  <div class="lp-btns">
+    <a href="register.html" class="lp-cta-primary">Înregistrează-te acum →</a>
+    <a href="exam.html" class="lp-cta-outline">Intră cu codul meu</a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="lp-footer">
+  <div class="lp-footer-brand">CPEEN 2026</div>
+  <div class="lp-footer-domain">englishgrammarchallenge.ro</div>
+  <div class="lp-footer-links">
+    <a href="register.html">Înregistrare</a>
+    <a href="exam.html">Acces Examen</a>
+    <a href="dashboard.html">Dashboard Elev</a>
+    <a href="admin/index.html">Administrare</a>
+  </div>
+  <div class="lp-footer-copy">© 2026 CPEEN · Concursul de Performanță în Limba Engleză</div>
+</footer>
 
 </body>
 </html>
