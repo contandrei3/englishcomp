@@ -53,6 +53,10 @@ const PART_INSTRS = {
   p8:"Read the text. For each question choose from the sections (A–F). The sections may be chosen more than once."
 };
 
+function gapNums(text) {
+  return ((text||'').match(/\[(\d+)\]/g)||[]).map(m=>parseInt(m.slice(1,-1)));
+}
+
 function GapText({text}) {
   return <span>{text.split(/(\[\d+\])/).map((p,i)=>{
     const m=p.match(/^\[(\d+)\]$/);
@@ -105,18 +109,21 @@ function PartSection({part, pi, ans, setAns}) {
       </>}
 
       {/* P2 — Open Cloze */}
-      {part.type==='p2' && <>
-        {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
-        {part.text && <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:14,marginBottom:14,fontSize:13,lineHeight:1.9}}><GapText text={part.text}/></div>}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-          {(part.key||[]).map((_,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({i+1})</span>
-              {ansInp(i,ans[i],"one word",undefined)}
-            </div>
-          ))}
-        </div>
-      </>}
+      {part.type==='p2' && (()=>{
+        const nums = gapNums(part.text);
+        return <>
+          {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
+          {part.text && <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:14,marginBottom:14,fontSize:13,lineHeight:1.9}}><GapText text={part.text}/></div>}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+            {(part.key||[]).map((_,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({nums[i]??i+1})</span>
+                {ansInp(i,ans[i],"one word",undefined)}
+              </div>
+            ))}
+          </div>
+        </>;
+      })()}
 
       {/* P3 — Word Formation */}
       {part.type==='p3' && <>
@@ -212,18 +219,23 @@ function PartSection({part, pi, ans, setAns}) {
             ))}
           </div>
         </div>
-        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-          {(part.key||[]).map((_,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
-              <span style={{fontWeight:700,color:C.dark,fontSize:12}}>({i+1})</span>
-              <select value={ans[i]||''} onChange={e=>setAns(pi,i,e.target.value)}
-                style={{border:"1px solid #ccd",borderRadius:4,padding:"4px 6px",fontSize:13,minWidth:65}}>
-                <option value="">—</option>
-                {(part.paragraphs||[]).map(p=><option key={p.label} value={p.label}>{p.label}</option>)}
-              </select>
+        {(()=>{
+          const nums = gapNums(part.text);
+          return (
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              {(part.key||[]).map((_,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+                  <span style={{fontWeight:700,color:C.dark,fontSize:12}}>({nums[i]??i+1})</span>
+                  <select value={ans[i]||''} onChange={e=>setAns(pi,i,e.target.value)}
+                    style={{border:"1px solid #ccd",borderRadius:4,padding:"4px 6px",fontSize:13,minWidth:65}}>
+                    <option value="">—</option>
+                    {(part.paragraphs||[]).map(p=><option key={p.label} value={p.label}>{p.label}</option>)}
+                  </select>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          );
+        })()}
       </>}
 
       {/* P8 — Multiple Matching */}
