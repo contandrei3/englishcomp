@@ -45,7 +45,7 @@ function ExamsPage() {
     const blob = JSON.stringify(exam, null, 2);
     const a = document.createElement("a");
     a.href = "data:application/json;charset=utf-8," + encodeURIComponent(blob);
-    a.download = `cpeen_${exam.level}_${exam.stage}_${exam.id}.json`;
+    a.download = `echo_exam_${exam.id}.json`;
     a.click();
   };
 
@@ -64,8 +64,8 @@ function ExamsPage() {
       try {
         const data = JSON.parse(ev.target.result);
         // Validate minimal structure
-        if(!data.level || !data.stage || !Array.isArray(data.variants)) {
-          setImportErr("JSON invalid: trebuie să conțină level, stage și variants[].");
+        if(!Array.isArray(data.variants)) {
+          setImportErr("JSON invalid: trebuie să conțină variants[].");
           return;
         }
         if(!data.variants.length) {
@@ -75,7 +75,7 @@ function ExamsPage() {
         // Remove id so a new one is generated
         delete data.id;
         CPEEN.addExam(data);
-        setImportOk(`Examenul "${data.title||data.level+" "+data.stage}" a fost importat.`);
+        setImportOk(`Examenul "${data.title||data.id||'importat'}" a fost importat.`);
         reload();
       } catch(err) {
         setImportErr("Eroare de parsare JSON: " + err.message);
@@ -87,9 +87,8 @@ function ExamsPage() {
 
   const addStub = () => {
     CPEEN.addExam({
-      level: "B1", stage: "calificare",
-      title: "Examen nou (editați prin JSON)",
-      duration: 45, variants: []
+      title: "Subiect nou (editați în editor)",
+      variants: []
     });
     reload();
   };
@@ -117,8 +116,8 @@ function ExamsPage() {
         {importOk  && <div className="alert alert-ok">{importOk}</div>}
 
         <div className="alert alert-info" style={{marginBottom:16}}>
-          <strong>Format JSON:</strong> Fiecare examen trebuie să aibă <code>level</code>, <code>stage</code>, <code>duration</code> (minute) și <code>variants[]</code>.
-          Descărcați un examen existent ca referință de format.
+          <strong>Format JSON:</strong> Fiecare subiect trebuie să aibă <code>title</code> și <code>variants[]</code>.
+          Nivelul și durata se setează pe sesiune, nu pe subiect. Descărcați un subiect existent ca referință.
         </div>
 
         {/* Confirm delete */}
@@ -147,12 +146,10 @@ function ExamsPage() {
               <div key={exam.id} style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:12,overflow:"hidden"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",gap:8,flexWrap:"wrap"}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,flex:1,minWidth:0}}>
-                    <span className={`badge b-${exam.level}`}>{exam.level}</span>
-                    <span className="badge b-dark">{ADMIN.stageLabel[exam.stage]||exam.stage}</span>
                     <div style={{minWidth:0}}>
                       <div style={{fontWeight:700,color:C.dark,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{exam.title||exam.id}</div>
                       <div style={{fontSize:11,color:"#888"}}>
-                        {exam.variants?.length||0} variant(e) · {exam.duration} min · {sessCount} sesiuni
+                        {exam.variants?.length||0} variant(e) · {sessCount} sesiuni alocate
                       </div>
                     </div>
                   </div>
