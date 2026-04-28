@@ -337,9 +337,12 @@ function ExamApp() {
 
     // Pending or in_progress → check activation, then start
     if(s.status === "pending") {
-      const cfg = CPEEN.getConfig();
-      if(!cfg.activeExams?.[s.level]?.[s.stage]) {
-        setPtcp(p); setView("noExam"); return;
+      if (s.groupId) {
+        const grp = CPEEN.getGroupSessions().find(g => g.id === s.groupId);
+        if (!grp || grp.status !== "active") { setPtcp(p); setView("noExam"); return; }
+      } else {
+        const cfg = CPEEN.getConfig();
+        if(!cfg.activeExams?.[s.level]?.[s.stage]) { setPtcp(p); setView("noExam"); return; }
       }
     }
 
@@ -352,7 +355,10 @@ function ExamApp() {
     }
 
     const v = ex.variants.find(v => v.id === s.variantId);
-    const remaining = Math.max(0, ex.duration * 60 - Math.floor((Date.now() - s.startedAt) / 1000));
+    const grp = s.groupId ? CPEEN.getGroupSessions().find(g => g.id === s.groupId) : null;
+    const remaining = grp?.endsAt
+      ? Math.max(0, Math.floor((grp.endsAt - Date.now()) / 1000))
+      : Math.max(0, ex.duration * 60 - Math.floor((Date.now() - s.startedAt) / 1000));
 
     if(remaining === 0) {
       doSubmit(s.answers, s, ex, v);
