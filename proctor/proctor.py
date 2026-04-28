@@ -1,18 +1,18 @@
 """
 CPEEN 2026 – Proctor Agent
-Agent de monitorizare examen. Se distribuie elevilor ca proctor.exe.
-Monitorizează ferestrele active și raportează la Firestore.
+Rulează pe calculatorul elevului în timpul examenului.
+Verifică la fiecare 5 secunde dacă sunt deschise aplicații nepermise.
+Prima abatere → descalificare imediată și ireversibilă în Firestore.
 """
 
+import json
 import os
 import sys
 import time
-import json
 import threading
 import tkinter as tk
 from tkinter import messagebox
 from datetime import datetime
-from collections import deque
 
 import requests
 import psutil
@@ -23,34 +23,130 @@ try:
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
-    print("[WARN] pywin32 not installed – window detection disabled.")
 
-# ── Firebase config (sync cu js/config.js) ───────────────────────────────────
+# ── Firebase ──────────────────────────────────────────────────────────────────
+
 FIREBASE_PROJECT = "cpeen2026"
 FIREBASE_API_KEY = "AIzaSyDXO5QS3N4Mb2uG_BQLSyk6a6_8dlY4Evo"
-FS_BASE = f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT}/databases/(default)/documents"
+FS_BASE = (
+    f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT}"
+    f"/databases/(default)/documents"
+)
 
-HEARTBEAT_SEC  = 10   # trimite date la server la fiecare N secunde
-MONITOR_SEC    = 1    # verifică fereastra activă la fiecare N secunde
-SUSP_THRESHOLD = 5    # comutări suspecte până la descalificare automată
+CHECK_INTERVAL = 5  # secunde între verificări
 
-# Cuvinte cheie care indică fereastră suspectă (traduse/AI/social)
-SUSPICIOUS_KW = [
-    "google translate", "deepl", "chat gpt", "chatgpt", "openai", "bard", "gemini",
-    "grammarly", "quizlet", "chegg", "brainly", "socratic",
-    "facebook", "instagram", "telegram", "whatsapp", "discord",
-    "tiktok", "youtube", "netflix", "twitch",
-    "notepad", "word", "notepad++", "sublime", "vscode",
-]
+# ── Clasificare ferestre ──────────────────────────────────────────────────────
 
-# Cuvinte cheie care indică fereastra examenului (nu se sancționează)
-EXAM_KW = ["cpeen", "englishgrammarchallenge", "examen", "exam", "localhost", "127.0.0.1"]
+# Procesele browser-elor cunoscute
+BROWSERS = {
+    "chrome", "msedge", "firefox", "opera", "brave", "vivaldi",
+    "iexplore", "chromium", "edge", "waterfox", "pale moon", "basilisk",
+}
+
+# Procese sistem Windows – ferestrele lor sunt mereu permise
+SYSTEM_PROCS = {
+    "dwm", "svchost", "csrss", "wininit", "winlogon", "lsass", "services",
+    "spoolsv", "taskhostw", "sihost", "fontdrvhost", "runtimebroker",
+    "applicationframehost", "shellhost", "ctfmon", "conhost", "textinputhost",
+    "searchapp", "searchui", "lockapp", "lockscreenhost", "systemsettings",
+    "settingssynchostexe", "securityhealthservice", "audiodg", "wudfhost",
+    "wlanext", "msmpeng", "trustedinstaller", "ntoskrnl",
+}
+
+# Cuvinte cheie care confirmă că browser-ul afișează site-ul examenului
+EXAM_TITLE_KW = ["cpeen 2026", "cpeen2026", "cpeen", "localhost", "127.0.0.1"]
+
+# PID-ul propriului proces – ferestrele noastre sunt mereu permise
+OWN_PID = os.getpid()
 
 
-# ── Firestore REST helpers ────────────────────────────────────────────────────
+def classify(hwnd):
+    """
+    Returnează (allowed: bool, reason: str) pentru un HWND vizibil.
+    """
+    try:
+        title = win32gui.GetWindowText(hwnd)
+    except Exception:
+        return True, "no_title"
+
+    if not title or len(title.strip()) < 3:
+        return True, "empty_title"
+
+    t = title.lower().strip()
+
+    try:
+        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+    except Exception:
+        return True, "pid_err"
+
+    # Fereastră a propriului nostru proces → mereu permisă
+    if pid == OWN_PID:
+        return True, "own_window"
+
+    try:
+        proc_raw = psutil.Process(pid).name()
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return True, "proc_gone"
+
+    p = proc_raw.lower().replace(".exe", "").strip()
+
+    # Windows Explorer: permis doar ca shell (bara de activități, desktop)
+    # O fereastră Explorer cu titlu real = File Explorer deschis = interzis
+    if p == "explorer":
+        if not t or len(t) < 3 or t in ("program manager", "desktop"):
+            return True, "shell"
+        return False, f"file_explorer:{title[:70]}"
+
+    # Procese sistem → permise
+    if p in SYSTEM_PROCS:
+        return True, f"system:{p}"
+
+    # Proces browser: permis DOAR dacă afișează site-ul examenului
+    if p in BROWSERS:
+        if any(kw in t for kw in EXAM_TITLE_KW):
+            return True, "exam_browser"
+        return False, f"browser_forbidden:{title[:80]}"
+
+    # Orice altceva → interzis
+    return False, f"forbidden:{p}:{title[:70]}"
+
+
+def scan_violations():
+    """
+    Returnează lista de (title, proc, reason) pentru ferestrele vizibile interzise.
+    """
+    if not HAS_WIN32:
+        return []
+
+    found = []
+
+    def _cb(hwnd, _):
+        if not win32gui.IsWindowVisible(hwnd):
+            return
+        allowed, reason = classify(hwnd)
+        if not allowed:
+            try:
+                title = win32gui.GetWindowText(hwnd)
+                _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                try:
+                    proc = psutil.Process(pid).name()
+                except Exception:
+                    proc = "?"
+                found.append((title, proc, reason))
+            except Exception:
+                pass
+
+    try:
+        win32gui.EnumWindows(_cb, None)
+    except Exception:
+        pass
+
+    return found
+
+
+# ── Firestore helpers ─────────────────────────────────────────────────────────
 
 def _fs_val(v):
-    """Convertește o valoare Python în format Firestore."""
     if isinstance(v, bool):
         return {"booleanValue": v}
     if isinstance(v, int):
@@ -59,208 +155,126 @@ def _fs_val(v):
         return {"doubleValue": v}
     if isinstance(v, str):
         return {"stringValue": v}
-    if isinstance(v, list):
-        return {"arrayValue": {"values": [_fs_val(x) for x in v]}}
     if isinstance(v, dict):
         return {"mapValue": {"fields": {k: _fs_val(vv) for k, vv in v.items()}}}
     return {"nullValue": None}
 
 
-def fs_write(collection, doc_id, data: dict, merge=False):
-    """Scrie un document în Firestore (create sau update)."""
+def fs_write(collection, doc_id, data):
     url = f"{FS_BASE}/{collection}/{doc_id}"
-    params = {"key": FIREBASE_API_KEY}
-    if merge:
-        # updateMask permite scriere parțială
-        fields_str = ",".join(data.keys())
-        params["updateMask.fieldPaths"] = list(data.keys())
-
     body = {"fields": {k: _fs_val(v) for k, v in data.items()}}
     try:
-        r = requests.patch(url, json=body, params=params, timeout=6)
+        r = requests.patch(
+            url, json=body,
+            params={"key": FIREBASE_API_KEY},
+            timeout=8,
+        )
         return r.status_code in (200, 201)
-    except requests.RequestException:
+    except Exception:
         return False
 
 
-def fs_read(collection, doc_id):
-    """Citește un document din Firestore. Returnează dict sau None."""
-    url = f"{FS_BASE}/{collection}/{doc_id}"
+def fs_verify_code(code):
+    """
+    Verifică dacă codul există în colecția de participanți.
+    Returnează True dacă valid; True și dacă Firestore e inaccesibil (offline).
+    """
+    url = f"{FS_BASE}/cpeen/participants"
     try:
-        r = requests.get(url, params={"key": FIREBASE_API_KEY}, timeout=6)
+        r = requests.get(url, params={"key": FIREBASE_API_KEY}, timeout=8)
         if r.status_code != 200:
-            return None
-        doc = r.json()
-        fields = doc.get("fields", {})
-        # Dezasamblare simplă (nur stringValue / integerValue / booleanValue)
-        result = {}
-        for k, v in fields.items():
-            if "stringValue" in v:
-                result[k] = v["stringValue"]
-            elif "integerValue" in v:
-                result[k] = int(v["integerValue"])
-            elif "booleanValue" in v:
-                result[k] = v["booleanValue"]
-        return result
-    except requests.RequestException:
-        return None
-
-
-def verify_participant(code):
-    """Verifică dacă codul există în participants (cpeen/participants).
-    Returnează True/False – simplu check (nu descarcăm toată lista)."""
-    doc = fs_read("cpeen", "participants")
-    if not doc:
-        return True  # offline → permitem continuarea
-    # participants e stocat ca stringValue cu JSON
-    raw = doc.get("data", "") or doc.get("participants", "")
-    if not raw:
-        return True
-    try:
-        participants = json.loads(raw)
-        return any(p.get("accessCode", "").upper() == code.upper() for p in participants)
+            return True
+        fields = r.json().get("fields", {})
+        items_json = fields.get("items_json", {}).get("stringValue", "")
+        if not items_json:
+            return True
+        participants = json.loads(items_json)
+        return any(
+            p.get("accessCode", "").upper() == code.upper()
+            for p in participants
+        )
     except Exception:
         return True
 
 
-# ── Window monitor ────────────────────────────────────────────────────────────
+# ── Monitor core ──────────────────────────────────────────────────────────────
 
-def get_active_window():
-    """Returnează (titlu, proces) ale ferestrei active."""
-    if not HAS_WIN32:
-        return "unknown", "unknown"
-    try:
-        hwnd = win32gui.GetForegroundWindow()
-        title = win32gui.GetWindowText(hwnd) or ""
-        _, pid = win32process.GetWindowThreadProcessId(hwnd)
-        try:
-            proc_name = psutil.Process(pid).name()
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            proc_name = ""
-        return title, proc_name
-    except Exception:
-        return "", ""
+class ProctorMonitor:
+    """Rulează într-un thread de fundal, verifică la fiecare CHECK_INTERVAL secunde."""
 
+    def __init__(self, code: str):
+        self.code = code.upper().strip()
+        self.running = False
+        self.disqualified = False
+        self.check_count = 0
 
-def is_suspicious(title: str, proc: str) -> bool:
-    t = title.lower()
-    p = proc.lower()
-    return any(kw in t or kw in p for kw in SUSPICIOUS_KW)
+        self._on_ok = None    # callback()
+        self._on_disq = None  # callback(reason: str)
 
+    def on_ok(self, cb):
+        self._on_ok = cb
 
-def is_exam_window(title: str) -> bool:
-    t = title.lower()
-    return any(kw in t for kw in EXAM_KW)
+    def on_disq(self, cb):
+        self._on_disq = cb
 
-
-# ── Proctor Agent core ────────────────────────────────────────────────────────
-
-class ProctorAgent:
-    def __init__(self, participant_code: str, session_id: str):
-        self.code       = participant_code.upper().strip()
-        self.session_id = session_id
-        self.running    = False
-
-        self.events: deque = deque(maxlen=500)
-        self.last_window   = ""
-        self.last_heartbeat = time.time()
-        self.switch_count   = 0
-        self.suspicious_count = 0
-        self.disqualified   = False
-
-        self._warn_cb   = None   # callback(title, proc, is_susp)
-        self._disq_cb   = None   # callback()
-
-    # ── callbacks ──────────────────────────────────────────────────────────
-
-    def on_warn(self, cb):   self._warn_cb = cb
-    def on_disq(self, cb):   self._disq_cb = cb
-
-    # ── heartbeat ──────────────────────────────────────────────────────────
-
-    def _send_heartbeat(self, current_window, current_proc):
-        events_snapshot = list(self.events)
-        self.events.clear()
-
-        payload = {
-            "participantCode": self.code,
-            "sessionId":       self.session_id,
-            "ts":              int(time.time() * 1000),
-            "tsStr":           datetime.now().isoformat(),
-            "switchCount":     self.switch_count,
-            "suspiciousCount": self.suspicious_count,
-            "currentWindow":   current_window[:200],
-            "currentProcess":  current_proc[:100],
-            "events":          json.dumps(events_snapshot[-50:]),  # ultimele 50
-            "disqualified":    self.disqualified,
-        }
-        doc_id = f"{self.session_id}_hb_{int(time.time())}"
-        ok = fs_write("proctorLogs", doc_id, payload)
-        if not ok:
-            # Repune evenimentele în coadă dacă trimiterea a eșuat
-            self.events.extendleft(reversed(events_snapshot))
-
-    def _flag_disqualified(self):
-        self.disqualified = True
+    def _write_heartbeat(self, status: str, info: str):
         data = {
-            "participantCode":  self.code,
-            "sessionId":        self.session_id,
-            "ts":               int(time.time() * 1000),
-            "tsStr":            datetime.now().isoformat(),
-            "reason":           "Comutări suspecte excesive",
-            "switchCount":      self.switch_count,
-            "suspiciousCount":  self.suspicious_count,
-            "disqualified":     True,
+            "participantCode": self.code,
+            "ts": int(time.time() * 1000),
+            "tsStr": datetime.now().isoformat(),
+            "checkCount": self.check_count,
+            "status": status,
+            "info": info[:200],
+            "disqualified": self.disqualified,
         }
-        # Scriem în proctorFlags/{code} – admin-ul citește de acolo
-        fs_write("proctorFlags", self.code, data)
+        # Un singur document per participant, suprascris la fiecare heartbeat
+        threading.Thread(
+            target=fs_write,
+            args=("proctorLogs", self.code, data),
+            daemon=True,
+        ).start()
 
-    # ── monitor loop (rulat pe thread separat) ────────────────────────────
+    def _write_disqualified(self, reason: str):
+        """Scrie în proctorFlags/{code} — admin-ul citește de acolo."""
+        data = {
+            "participantCode": self.code,
+            "ts": int(time.time() * 1000),
+            "tsStr": datetime.now().isoformat(),
+            "reason": reason[:300],
+            "disqualified": True,
+        }
+        # Scriere sincronă cu reîncercări — trebuie să reușească
+        for _ in range(4):
+            if fs_write("proctorFlags", self.code, data):
+                return
+            time.sleep(2)
 
     def _loop(self):
         self.running = True
-        while self.running:
-            title, proc = get_active_window()
-            now = time.time()
+        while self.running and not self.disqualified:
+            time.sleep(CHECK_INTERVAL)
+            if not self.running:
+                break
 
-            # Detectăm comutare fereastră
-            if title and title != self.last_window:
-                if self.last_window:
-                    susp = is_suspicious(title, proc)
-                    etype = "SUSPICIOUS_SWITCH" if susp else "APP_SWITCH"
-                    if susp:
-                        self.suspicious_count += 1
-                    self.switch_count += 1
-                    self.events.append({
-                        "type":    etype,
-                        "ts":      int(now * 1000),
-                        "window":  title[:200],
-                        "process": proc[:100],
-                    })
-                    if self._warn_cb:
-                        self._warn_cb(title, proc, susp)
-                self.last_window = title
+            self.check_count += 1
+            violations = scan_violations()
 
-            # Heartbeat
-            if now - self.last_heartbeat >= HEARTBEAT_SEC:
-                threading.Thread(
-                    target=self._send_heartbeat,
-                    args=(title, proc),
-                    daemon=True
-                ).start()
-                self.last_heartbeat = now
-
-                # Descalificare automată
-                if not self.disqualified and self.suspicious_count >= SUSP_THRESHOLD:
-                    threading.Thread(target=self._flag_disqualified, daemon=True).start()
-                    if self._disq_cb:
-                        self._disq_cb()
-
-            time.sleep(MONITOR_SEC)
+            if violations:
+                title, proc, reason = violations[0]
+                self.disqualified = True
+                self._write_heartbeat("disqualified", reason)
+                self._write_disqualified(reason)
+                self.running = False
+                if self._on_disq:
+                    self._on_disq(f"{proc}: {title[:60]}")
+                break
+            else:
+                self._write_heartbeat("ok", "all_clear")
+                if self._on_ok:
+                    self._on_ok()
 
     def start(self):
-        t = threading.Thread(target=self._loop, daemon=True)
-        t.start()
+        threading.Thread(target=self._loop, daemon=True).start()
 
     def stop(self):
         self.running = False
@@ -268,7 +282,15 @@ class ProctorAgent:
 
 # ── GUI ───────────────────────────────────────────────────────────────────────
 
-class ProctorUI:
+C_DARK  = "#1F3864"
+C_MID   = "#2E75B6"
+C_GREEN = "#1D6027"
+C_RED   = "#C0392B"
+C_BG    = "#f0f4f8"
+C_WHITE = "#ffffff"
+
+
+class ProctorApp:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("CPEEN 2026 – Proctor")
@@ -276,173 +298,323 @@ class ProctorUI:
         self.root.attributes("-topmost", True)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
-        self.agent: ProctorAgent = None
-        self._build_login()
+        self.monitor: ProctorMonitor = None
+        self.monitoring_active = False
 
-    # ── Login screen ──────────────────────────────────────────────────────
+        self._show_login()
 
-    def _build_login(self):
+    # ── helpers ────────────────────────────────────────────────────────────
+
+    def _clear(self):
+        for w in self.root.winfo_children():
+            w.destroy()
+
+    # ── Screen 1: Login ────────────────────────────────────────────────────
+
+    def _show_login(self):
         self._clear()
-        self.root.geometry("380x280")
+        self.monitoring_active = False
+        self.root.configure(bg=C_BG)
+        self.root.geometry("400x340")
 
-        tk.Label(self.root, text="CPEEN 2026", font=("Georgia", 16, "bold"),
-                 fg="#1F3864").pack(pady=(24, 4))
-        tk.Label(self.root, text="Agent de monitorizare examen",
-                 font=("Arial", 10), fg="#555").pack()
+        tk.Label(
+            self.root, text="CPEEN 2026",
+            font=("Georgia", 20, "bold"), fg=C_DARK, bg=C_BG,
+        ).pack(pady=(28, 4))
+        tk.Label(
+            self.root, text="Agent de monitorizare examen",
+            font=("Arial", 10), fg="#666", bg=C_BG,
+        ).pack()
 
-        frm = tk.Frame(self.root)
-        frm.pack(pady=20, padx=30, fill="x")
+        frm = tk.Frame(self.root, bg=C_BG)
+        frm.pack(pady=20, padx=40, fill="x")
 
-        tk.Label(frm, text="Cod de acces:", anchor="w").pack(fill="x")
+        tk.Label(
+            frm, text="Cod de acces:", font=("Arial", 10, "bold"),
+            fg=C_DARK, bg=C_BG, anchor="w",
+        ).pack(fill="x")
+
         self._code_var = tk.StringVar()
-        self._code_entry = tk.Entry(frm, textvariable=self._code_var,
-                                    font=("Courier", 16), justify="center",
-                                    width=12, bg="#f0f4f8")
-        self._code_entry.pack(fill="x", ipady=6, pady=4)
-        self._code_entry.bind("<Return>", lambda _: self._do_login())
+        entry = tk.Entry(
+            frm, textvariable=self._code_var,
+            font=("Courier New", 22), justify="center",
+            bg=C_WHITE, relief="solid", bd=1,
+        )
+        entry.pack(fill="x", ipady=8, pady=(4, 14))
+        entry.bind("<Return>", lambda _: self._do_login())
+        entry.focus_set()
 
-        tk.Label(frm, text="ID sesiune (din email/admin):", anchor="w").pack(fill="x", pady=(8, 0))
-        self._sid_var = tk.StringVar()
-        tk.Entry(frm, textvariable=self._sid_var, width=24).pack(fill="x", ipady=4, pady=4)
+        def _fmt(*_):
+            v = self._code_var.get().upper().replace(" ", "")
+            if len(v) > 8:
+                v = v[:8]
+            self._code_var.set(v)
+        self._code_var.trace_add("write", _fmt)
 
-        self._err_lbl = tk.Label(frm, text="", fg="red", font=("Arial", 9))
-        self._err_lbl.pack()
+        self._err_lbl = tk.Label(frm, text="", fg=C_RED, font=("Arial", 9), bg=C_BG)
+        self._err_lbl.pack(pady=(0, 6))
 
-        btn = tk.Button(frm, text="Pornește monitorizarea →",
-                        command=self._do_login,
-                        bg="#2E75B6", fg="white",
-                        font=("Arial", 11, "bold"), relief="flat",
-                        padx=10, pady=8)
-        btn.pack(fill="x", pady=(4, 0))
+        tk.Button(
+            frm, text="Pornește monitorizarea →",
+            command=self._do_login,
+            bg=C_MID, fg=C_WHITE, activebackground=C_DARK, activeforeground=C_WHITE,
+            font=("Arial", 12, "bold"), relief="flat",
+            padx=10, pady=10, cursor="hand2",
+        ).pack(fill="x")
 
-        tk.Label(self.root,
-                 text="Această aplicație monitorizează activitatea în timpul examenului.\n"
-                      "Prin apăsarea butonului, confirmi că ești de acord.",
-                 font=("Arial", 8), fg="#999", wraplength=340, justify="center").pack(pady=8)
+        tk.Label(
+            self.root,
+            text="Prin apăsarea butonului confirmi acordul de monitorizare\n"
+                 "în conformitate cu regulamentul CPEEN 2026.",
+            font=("Arial", 8), fg="#aaa", bg=C_BG,
+            wraplength=360, justify="center",
+        ).pack(pady=10)
 
     def _do_login(self):
-        code = self._code_var.get().strip().upper()
-        sid  = self._sid_var.get().strip()
-        if len(code) < 4:
-            self._err_lbl.config(text="Cod de acces prea scurt.")
+        code = self._code_var.get().strip()
+        if len(code) != 8:
+            self._err_lbl.config(text="Codul de acces trebuie să aibă exact 8 caractere.")
             return
-        if not sid:
-            self._err_lbl.config(text="Introduceți ID-ul sesiunii.")
-            return
-
-        self._err_lbl.config(text="Se verifică…")
+        self._err_lbl.config(text="Se verifică codul…")
         self.root.update()
+        threading.Thread(
+            target=self._verify_and_precheck, args=(code,), daemon=True
+        ).start()
 
-        self.agent = ProctorAgent(code, sid)
-        self.agent.on_warn(self._on_warn)
-        self.agent.on_disq(self._on_disqualified)
-        self.agent.start()
-        self._build_monitor(code, sid)
+    def _verify_and_precheck(self, code):
+        valid = fs_verify_code(code)
+        if not valid:
+            self.root.after(0, lambda: self._err_lbl.config(
+                text="Cod invalid. Verificați codul și contactați administratorul."
+            ))
+            return
+        violations = scan_violations()
+        self.root.after(0, lambda: self._show_precheck(code, violations))
 
-    # ── Monitor screen ────────────────────────────────────────────────────
+    # ── Screen 2: Pre-check ────────────────────────────────────────────────
 
-    def _build_monitor(self, code, sid):
+    def _show_precheck(self, code, violations):
         self._clear()
-        self.root.geometry("340x220")
+        self.root.configure(bg=C_BG)
 
-        tk.Label(self.root, text="● MONITORIZARE ACTIVĂ",
-                 font=("Arial", 11, "bold"), fg="#1D6027").pack(pady=(16, 4))
+        if violations:
+            self.root.geometry("460x400")
+            tk.Label(
+                self.root, text="⚠  Închide aplicațiile nepermise",
+                font=("Arial", 13, "bold"), fg="#7a4f00", bg="#fff3cd",
+                padx=12, pady=10,
+            ).pack(fill="x")
+            tk.Label(
+                self.root,
+                text="Sunt deschise ferestre nepermise. Închide-le înainte de a începe:",
+                font=("Arial", 10), fg="#555", bg=C_BG, wraplength=420,
+            ).pack(pady=(12, 4), padx=16, anchor="w")
 
-        info = tk.Frame(self.root, bg="#f0f4f8", padx=10, pady=8)
-        info.pack(fill="x", padx=20)
-        tk.Label(info, text=f"Participant: {code}", bg="#f0f4f8",
-                 font=("Courier", 11, "bold")).pack(anchor="w")
-        tk.Label(info, text=f"Sesiune: {sid}", bg="#f0f4f8",
-                 font=("Arial", 9), fg="#555").pack(anchor="w")
+            box = tk.Frame(self.root, bg=C_WHITE, relief="solid", bd=1)
+            box.pack(fill="x", padx=16, pady=4)
+            for title, proc, _ in violations[:8]:
+                row = f"  •  {proc}  —  {title[:55]}"
+                tk.Label(
+                    box, text=row,
+                    font=("Courier New", 9), fg=C_RED, bg=C_WHITE,
+                    anchor="w", pady=3,
+                ).pack(fill="x")
 
-        stats = tk.Frame(self.root)
-        stats.pack(pady=10)
-        self._switch_var   = tk.StringVar(value="Comutări: 0")
-        self._susp_var     = tk.StringVar(value="Suspecte: 0")
-        self._status_var   = tk.StringVar(value="OK")
-        tk.Label(stats, textvariable=self._switch_var, font=("Arial", 10)).grid(row=0, column=0, padx=16)
-        tk.Label(stats, textvariable=self._susp_var,  font=("Arial", 10)).grid(row=0, column=1, padx=16)
-        self._status_lbl = tk.Label(stats, textvariable=self._status_var,
-                                    font=("Arial", 10, "bold"), fg="#1D6027")
-        self._status_lbl.grid(row=0, column=2, padx=16)
+            tk.Label(
+                self.root,
+                text="Închide toate aplicațiile de mai sus, apoi apasă 'Reverificați'.",
+                font=("Arial", 9), fg="#666", bg=C_BG, wraplength=420,
+            ).pack(pady=(8, 4), padx=16)
 
-        self._hb_var = tk.StringVar(value="Heartbeat: —")
-        tk.Label(self.root, textvariable=self._hb_var, font=("Arial", 8), fg="#aaa").pack()
+            btn_row = tk.Frame(self.root, bg=C_BG)
+            btn_row.pack(pady=8)
+            tk.Button(
+                btn_row, text="↻  Reverificați",
+                command=lambda: self._reverify(code),
+                bg=C_MID, fg=C_WHITE, font=("Arial", 10, "bold"),
+                relief="flat", padx=12, pady=6, cursor="hand2",
+            ).pack(side="left", padx=6)
+            tk.Button(
+                btn_row, text="← Înapoi",
+                command=self._show_login,
+                bg="#ddd", fg="#555", font=("Arial", 10),
+                relief="flat", padx=12, pady=6, cursor="hand2",
+            ).pack(side="left", padx=6)
 
-        tk.Label(self.root,
-                 text="Nu închide această fereastră în timpul examenului.",
-                 font=("Arial", 8), fg="#888").pack(pady=4)
+        else:
+            self.root.geometry("400x280")
+            tk.Label(
+                self.root, text="✓  Pregătit pentru monitorizare",
+                font=("Arial", 13, "bold"), fg=C_GREEN, bg="#e8f5e9",
+                padx=12, pady=10,
+            ).pack(fill="x")
+            tk.Label(
+                self.root,
+                text=f"Participant: {code}",
+                font=("Courier New", 14, "bold"), fg=C_DARK, bg=C_BG,
+            ).pack(pady=(20, 4))
+            tk.Label(
+                self.root,
+                text=f"Nu sunt detectate aplicații interzise.\n"
+                     f"Verificare la fiecare {CHECK_INTERVAL} secunde.\n"
+                     f"Prima abatere → descalificare automată.",
+                font=("Arial", 10), fg="#555", bg=C_BG,
+                justify="center",
+            ).pack(pady=8)
+            tk.Button(
+                self.root, text="Începe examenul →",
+                command=lambda: self._start_monitoring(code),
+                bg=C_GREEN, fg=C_WHITE, activebackground="#155220",
+                font=("Arial", 13, "bold"), relief="flat",
+                padx=16, pady=10, cursor="hand2",
+            ).pack(pady=14)
 
-        tk.Button(self.root, text="Finalizează sesiunea",
-                  command=self._confirm_stop,
-                  bg="#C0392B", fg="white", relief="flat",
-                  font=("Arial", 9), padx=8, pady=4).pack(pady=4)
+    def _reverify(self, code):
+        self._show_precheck(code, scan_violations())
 
-        self._poll_stats()
+    # ── Screen 3: Monitoring ────────────────────────────────────────────────
 
-    def _poll_stats(self):
-        if self.agent:
-            self._switch_var.set(f"Comutări: {self.agent.switch_count}")
-            self._susp_var.set(f"Suspecte: {self.agent.suspicious_count}")
-            self._hb_var.set(f"Ultimul heartbeat: {datetime.now().strftime('%H:%M:%S')}")
-            if self.agent.disqualified:
-                self._status_var.set("DESCALIFICAT")
-                self._status_lbl.config(fg="#C0392B")
-        self.root.after(2000, self._poll_stats)
+    def _start_monitoring(self, code):
+        self.monitor = ProctorMonitor(code)
+        self.monitor.on_ok(self._on_ok)
+        self.monitor.on_disq(self._on_disq)
+        self.monitor.start()
+        self.monitoring_active = True
+        self._show_monitor(code)
 
-    # ── Warning popup ─────────────────────────────────────────────────────
+    def _show_monitor(self, code):
+        self._clear()
+        self.root.configure(bg=C_BG)
+        self.root.geometry("360x260")
 
-    def _on_warn(self, title, proc, is_susp):
-        if not is_susp:
-            return  # comutare normală, nu avertizăm
-        # Rulăm pe thread principal (tkinter nu e thread-safe)
-        self.root.after(0, lambda: self._show_warning(title))
+        hdr = tk.Frame(self.root, bg=C_GREEN)
+        hdr.pack(fill="x")
+        tk.Label(
+            hdr, text="●  MONITORIZARE ACTIVĂ",
+            font=("Arial", 11, "bold"), fg=C_WHITE, bg=C_GREEN, pady=10,
+        ).pack()
 
-    def _show_warning(self, title):
-        messagebox.showwarning(
-            "Avertisment – CPEEN Proctor",
-            f"Activitate suspectă detectată!\n\nFereastră: {title[:80]}\n\n"
-            f"Această activitate a fost înregistrată și raportată.\n"
-            f"Continuați să comutați la alte aplicații riscați descalificarea.",
-            parent=self.root
+        card = tk.Frame(self.root, bg=C_WHITE, padx=16, pady=10)
+        card.pack(fill="x", padx=16, pady=12)
+        tk.Label(
+            card, text=f"Participant: {code}",
+            font=("Courier New", 13, "bold"), fg=C_DARK, bg=C_WHITE,
+        ).pack(anchor="w")
+        tk.Label(
+            card, text=f"Verificare la fiecare {CHECK_INTERVAL} secunde",
+            font=("Arial", 9), fg="#888", bg=C_WHITE,
+        ).pack(anchor="w")
+
+        self._status_var = tk.StringVar(value="Se inițializează…")
+        self._status_lbl = tk.Label(
+            self.root, textvariable=self._status_var,
+            font=("Arial", 10, "bold"), fg=C_MID, bg=C_BG,
         )
+        self._status_lbl.pack(pady=(0, 2))
 
-    def _on_disqualified(self):
-        self.root.after(0, self._show_disqualified)
+        self._info_var = tk.StringVar(value="Verificări: 0  |  Ora: —")
+        tk.Label(
+            self.root, textvariable=self._info_var,
+            font=("Arial", 9), fg="#aaa", bg=C_BG,
+        ).pack()
 
-    def _show_disqualified(self):
-        messagebox.showerror(
-            "DESCALIFICAT – CPEEN Proctor",
-            "Ai fost marcat(ă) ca DESCALIFICAT(Ă) din cauza activităților suspecte repetate.\n\n"
-            "Administratorul a fost notificat automat.",
-            parent=self.root
-        )
+        tk.Label(
+            self.root, text="Nu închide această fereastră în timpul examenului.",
+            font=("Arial", 8), fg="#ccc", bg=C_BG,
+        ).pack(pady=(10, 2))
 
-    # ── Close / stop ──────────────────────────────────────────────────────
+        tk.Button(
+            self.root, text="Finalizează sesiunea",
+            command=self._confirm_stop,
+            bg="#e0e4e8", fg="#555", relief="flat",
+            font=("Arial", 9), padx=8, pady=4, cursor="hand2",
+        ).pack()
+
+        self._tick()
+
+    def _tick(self):
+        if self.monitor and not self.monitor.disqualified:
+            self._info_var.set(
+                f"Verificări: {self.monitor.check_count}  |  "
+                f"Ora: {datetime.now().strftime('%H:%M:%S')}"
+            )
+        self.root.after(1000, self._tick)
+
+    def _on_ok(self):
+        self.root.after(0, lambda: (
+            self._status_var.set("✓  Status: OK — nicio abatere detectată"),
+            self._status_lbl.config(fg=C_GREEN),
+        ))
+
+    def _on_disq(self, reason):
+        self.monitoring_active = False
+        self.root.after(0, lambda: self._show_disqualified(reason))
+
+    # ── Screen 4: Disqualified ─────────────────────────────────────────────
+
+    def _show_disqualified(self, reason):
+        self._clear()
+        self.root.configure(bg=C_RED)
+        self.root.geometry("440x320")
+
+        tk.Label(
+            self.root, text="DESCALIFICAT",
+            font=("Arial", 32, "bold"), fg=C_WHITE, bg=C_RED,
+        ).pack(pady=(36, 6))
+
+        tk.Label(
+            self.root, text="Activitate nepermisă detectată și raportată automat.",
+            font=("Arial", 10), fg=C_WHITE, bg=C_RED, wraplength=400,
+        ).pack()
+
+        cause = reason.split(":")[-1].strip()[:70] if ":" in reason else reason[:70]
+        tk.Label(
+            self.root, text=f"Motiv: {cause}",
+            font=("Arial", 9), fg="#ffaaaa", bg=C_RED,
+            wraplength=400, justify="center",
+        ).pack(pady=6)
+
+        tk.Label(
+            self.root,
+            text="Administratorul a fost notificat automat.\n"
+                 "Această decizie este înregistrată și IREVERSIBILĂ.",
+            font=("Arial", 10, "bold"), fg=C_WHITE, bg=C_RED,
+            wraplength=400, justify="center",
+        ).pack(pady=12)
+
+        tk.Button(
+            self.root, text="Închide",
+            command=self.root.destroy,
+            bg="#8B2020", fg=C_WHITE, activebackground="#6a1515",
+            relief="flat", font=("Arial", 10), padx=16, pady=6, cursor="hand2",
+        ).pack(pady=4)
+
+    # ── Window management ──────────────────────────────────────────────────
 
     def _confirm_stop(self):
-        if messagebox.askyesno("Finalizare", "Ești sigur(ă) că vrei să oprești monitorizarea?"):
+        if messagebox.askyesno(
+            "Finalizare sesiune",
+            "Ești sigur că vrei să oprești monitorizarea?\n"
+            "Sesiunea ta va fi marcată ca terminată.",
+            parent=self.root,
+        ):
             self._do_stop()
 
     def _on_close(self):
-        if self.agent and self.agent.running:
+        if self.monitoring_active:
             messagebox.showwarning(
-                "Nu poți închide",
-                "Aplicația Proctor nu poate fi închisă în timpul examenului.\n"
-                "Utilizează butonul 'Finalizează sesiunea'.",
-                parent=self.root
+                "Monitorizare activă",
+                "Nu poți închide aplicația în timpul examenului.\n"
+                "Folosește butonul 'Finalizează sesiunea'.",
+                parent=self.root,
             )
         else:
             self._do_stop()
 
     def _do_stop(self):
-        if self.agent:
-            self.agent.stop()
+        if self.monitor:
+            self.monitor.stop()
         self.root.destroy()
-
-    def _clear(self):
-        for w in self.root.winfo_children():
-            w.destroy()
 
     def run(self):
         self.root.mainloop()
@@ -451,5 +623,5 @@ class ProctorUI:
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    ui = ProctorUI()
-    ui.run()
+    app = ProctorApp()
+    app.run()
