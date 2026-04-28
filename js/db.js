@@ -175,6 +175,7 @@ var CPEEN = (function () {
   function partAnswerCount(part) {
     if (part.type === 'p2') return (part.key || []).length;
     if (part.type === 'p7') return (part.key || []).length;
+    if (part.type === 'ec') return (part.lines || []).length;
     return (part.items || []).length;
   }
 
@@ -382,6 +383,21 @@ var CPEEN = (function () {
       } else if (part.type === 'p7') {
         (part.key || []).forEach(function(expected, i) {
           var ok = norm(ans[i]) === norm(expected);
+          det.push(ok); if (ok) total += part.pts;
+        });
+      } else if (part.type === 'ec') {
+        (part.lines || []).forEach(function(line, i) {
+          var expected = norm((part.key || [])[i] || '');
+          var given = norm(ans[i] || '');
+          var lineCorrect = expected === '✓' || expected === '' || expected === 'correct';
+          var ok = lineCorrect
+            ? (given === '✓' || given === '' || given === 'correct')
+            : (given === expected);
+          det.push(ok); if (ok) total += part.pts;
+        });
+      } else if (part.type === 'mc') {
+        (part.items || []).forEach(function(item, i) {
+          var ok = parseInt(ans[i]) === item.answer;
           det.push(ok); if (ok) total += part.pts;
         });
       }

@@ -41,7 +41,7 @@ function Navbar({participant}) {
 // ── New parts rendering ───────────────────────────────────────────────────
 const PART_LABELS = {p1:"Multiple Choice Cloze",p2:"Open Cloze",p3:"Word Formation",
   p4:"Key Word Transformations",p5:"Multiple Choice",p6:"Cross-text Multiple Matching",
-  p7:"Gapped Text",p8:"Multiple Matching"};
+  p7:"Gapped Text",p8:"Multiple Matching",ec:"Error Correction",mc:"Multiple Choice"};
 const PART_INSTRS = {
   p1:"Read the text and decide which answer (A, B, C or D) best fits each gap.",
   p2:"Read the text and think of ONE word which best fits each gap.",
@@ -50,11 +50,19 @@ const PART_INSTRS = {
   p5:"Read the text and choose the answer (A, B, C or D) which you think fits best.",
   p6:"Read the four texts. For each question, choose from the texts (A–D).",
   p7:"Read the text. Six paragraphs have been removed. Choose from paragraphs A–G the one which fits each gap.",
-  p8:"Read the text. For each question choose from the sections (A–F). The sections may be chosen more than once."
+  p8:"Read the text. For each question choose from the sections (A–F). The sections may be chosen more than once.",
+  ec:"Some of the lines contain ONE extra word which does not belong. Write the extra word. Write ✓ if the line is correct.",
+  mc:"Choose the answer which best fits each question."
 };
 
 function gapNums(text) {
   return ((text||'').match(/\[(\d+)\]/g)||[]).map(m=>parseInt(m.slice(1,-1)));
+}
+
+function getPartCount(part) {
+  if (part.type === 'p2' || part.type === 'p7') return (part.key||[]).length;
+  if (part.type === 'ec') return (part.lines||[]).length;
+  return (part.items||[]).length;
 }
 
 function GapText({text}) {
@@ -66,15 +74,16 @@ function GapText({text}) {
   })}</span>;
 }
 
-function PartSection({part, pi, ans, setAns}) {
+function PartSection({part, pi, ans, setAns, startNum=0}) {
   const secStyle = {background:"#fff",borderRadius:12,padding:22,marginBottom:22,boxShadow:"0 2px 12px rgba(0,0,0,.07)"};
   const ansInp = (i,val,ph,w) => (
     <input className="ans-inp" value={val||""} onChange={e=>setAns(pi,i,e.target.value)}
       placeholder={ph} style={{width:w||160}}/>
   );
-  const totalPts = part.type==='p2'||part.type==='p7'
-    ? (part.key||[]).length * part.pts
-    : (part.items||[]).length * part.pts;
+  const totalPts =
+    (part.type==='p2'||part.type==='p7') ? (part.key||[]).length * part.pts :
+    part.type==='ec' ? (part.lines||[]).length * part.pts :
+    (part.items||[]).length * part.pts;
 
   return (
     <div id={`part${pi}`} style={secStyle}>
@@ -90,7 +99,7 @@ function PartSection({part, pi, ans, setAns}) {
         {part.text && <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:14,marginBottom:16,fontSize:13,lineHeight:1.9}}><GapText text={part.text}/></div>}
         {(part.items||[]).map((item,i)=>(
           <div key={i} style={{marginBottom:14}}>
-            <div style={{fontWeight:700,color:C.dark,marginBottom:6,fontSize:13}}>{i+1}.</div>
+            <div style={{fontWeight:700,color:C.dark,marginBottom:6,fontSize:13}}>{startNum+i+1}.</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               {(item.options||[]).map((opt,oi)=>{
                 const sel = parseInt(ans[i])===oi;
@@ -117,7 +126,7 @@ function PartSection({part, pi, ans, setAns}) {
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
             {(part.key||[]).map((_,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({nums[i]??i+1})</span>
+                <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({nums[i]??startNum+i+1})</span>
                 {ansInp(i,ans[i],"one word",undefined)}
               </div>
             ))}
@@ -134,7 +143,7 @@ function PartSection({part, pi, ans, setAns}) {
         )}
         {(part.items||[]).map((item,i)=>(
           <div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:9,flexWrap:"wrap"}}>
-            <span style={{fontWeight:700,color:C.dark,minWidth:22,fontSize:12}}>{i+1}.</span>
+            <span style={{fontWeight:700,color:C.dark,minWidth:22,fontSize:12}}>{startNum+i+1}.</span>
             {item.before && <span style={{fontSize:13}}>{item.before}</span>}
             {ansInp(i,ans[i],"...",160)}
             {item.after && <span style={{fontSize:13}}>{item.after}</span>}
@@ -143,10 +152,10 @@ function PartSection({part, pi, ans, setAns}) {
         ))}
       </>}
 
-      {/* P4 — KWT */}
-      {part.type==='p4' && (part.items||[]).map((item,i)=>(
+      {/* P4 — KWT (sentence mode, default) */}
+      {part.type==='p4' && part.mode !== 'text' && (part.items||[]).map((item,i)=>(
         <div key={i} style={{borderBottom:"1px solid #eee",paddingBottom:14,marginBottom:14}}>
-          <div style={{fontSize:13,color:"#333",marginBottom:5}}><strong style={{color:C.dark,marginRight:5}}>{i+1}.</strong>{item.s1}</div>
+          <div style={{fontSize:13,color:"#333",marginBottom:5}}><strong style={{color:C.dark,marginRight:5}}>{startNum+i+1}.</strong>{item.s1}</div>
           <div style={{display:"inline-block",background:C.dark,color:"#fff",fontWeight:700,fontSize:10,letterSpacing:2,padding:"2px 9px",borderRadius:4,marginBottom:7}}>{item.kw}</div>
           <div style={{fontSize:13,display:"flex",alignItems:"center",flexWrap:"wrap",gap:4}}>
             {item.before && <span>{item.before}</span>}
@@ -156,13 +165,46 @@ function PartSection({part, pi, ans, setAns}) {
         </div>
       ))}
 
+      {/* P4 — KWT (text mode): gapped sentence + keyword right-aligned */}
+      {part.type==='p4' && part.mode === 'text' && <>
+        <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:14,marginBottom:14}}>
+          {(part.items||[]).map((item,i)=>(
+            <div key={i} style={{
+              display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:12,
+              marginBottom:i<(part.items.length-1)?10:0,
+              paddingBottom:i<(part.items.length-1)?10:0,
+              borderBottom:i<(part.items.length-1)?"1px solid #eee":"none"
+            }}>
+              <div style={{fontSize:13,flex:1}}>
+                <strong style={{color:C.dark,marginRight:6}}>{startNum+i+1}.</strong>
+                {item.before && <span>{item.before} </span>}
+                <span style={{display:"inline-block",background:"#e8f4fd",border:"1px dashed #2E75B6",
+                  borderRadius:3,padding:"1px 20px",margin:"0 2px",minWidth:80,textAlign:"center",
+                  fontSize:12,color:"#aaa"}}>___________</span>
+                {item.after && <span> {item.after}</span>}
+              </div>
+              <span style={{background:C.dark,color:"#fff",fontWeight:700,fontSize:10,letterSpacing:2,
+                padding:"2px 9px",borderRadius:4,whiteSpace:"nowrap",flexShrink:0}}>{item.kw}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+          {(part.items||[]).map((_,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({startNum+i+1})</span>
+              {ansInp(i,ans[i],"3–6 words...",undefined)}
+            </div>
+          ))}
+        </div>
+      </>}
+
       {/* P5 — Multiple Choice Reading */}
       {part.type==='p5' && <>
         {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
         {part.text && <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:14,marginBottom:16,fontSize:13,lineHeight:1.9,whiteSpace:"pre-wrap"}}>{part.text}</div>}
         {(part.items||[]).map((item,i)=>(
           <div key={i} style={{marginBottom:16}}>
-            <div style={{fontWeight:600,color:C.dark,fontSize:13,marginBottom:8}}>{i+1}. {item.question}</div>
+            <div style={{fontWeight:600,color:C.dark,fontSize:13,marginBottom:8}}>{startNum+i+1}. {item.question}</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               {(item.options||[]).map((opt,oi)=>{
                 const sel=parseInt(ans[i])===oi;
@@ -193,7 +235,7 @@ function PartSection({part, pi, ans, setAns}) {
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
           {(part.items||[]).map((item,i)=>(
             <div key={i} style={{display:"flex",gap:8,alignItems:"center",fontSize:13}}>
-              <span style={{fontWeight:700,color:C.dark,minWidth:22}}>{i+1}.</span>
+              <span style={{fontWeight:700,color:C.dark,minWidth:22}}>{startNum+i+1}.</span>
               <span style={{flex:1}}>{item.question}</span>
               <select value={ans[i]||''} onChange={e=>setAns(pi,i,e.target.value)}
                 style={{border:"1px solid #ccd",borderRadius:4,padding:"4px 6px",fontSize:13,minWidth:60}}>
@@ -225,7 +267,7 @@ function PartSection({part, pi, ans, setAns}) {
             <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
               {(part.key||[]).map((_,i)=>(
                 <div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
-                  <span style={{fontWeight:700,color:C.dark,fontSize:12}}>({nums[i]??i+1})</span>
+                  <span style={{fontWeight:700,color:C.dark,fontSize:12}}>({nums[i]??startNum+i+1})</span>
                   <select value={ans[i]||''} onChange={e=>setAns(pi,i,e.target.value)}
                     style={{border:"1px solid #ccd",borderRadius:4,padding:"4px 6px",fontSize:13,minWidth:65}}>
                     <option value="">—</option>
@@ -251,7 +293,7 @@ function PartSection({part, pi, ans, setAns}) {
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
           {(part.items||[]).map((item,i)=>(
             <div key={i} style={{display:"flex",gap:8,alignItems:"center",fontSize:13}}>
-              <span style={{fontWeight:700,color:C.dark,minWidth:22}}>{i+1}.</span>
+              <span style={{fontWeight:700,color:C.dark,minWidth:22}}>{startNum+i+1}.</span>
               <span style={{flex:1}}>{item.question}</span>
               <select value={ans[i]||''} onChange={e=>setAns(pi,i,e.target.value)}
                 style={{border:"1px solid #ccd",borderRadius:4,padding:"4px 6px",fontSize:13,minWidth:60}}>
@@ -261,6 +303,52 @@ function PartSection({part, pi, ans, setAns}) {
             </div>
           ))}
         </div>
+      </>}
+
+      {/* EC — Error Correction */}
+      {part.type==='ec' && <>
+        {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
+        {part.intro && <div style={{fontSize:12,color:"#666",marginBottom:10,fontStyle:"italic"}}>{part.intro}</div>}
+        <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:12,marginBottom:14,fontFamily:"'Courier New',monospace",fontSize:13,lineHeight:2}}>
+          {(part.lines||[]).map((line,i)=>(
+            <div key={i} style={{display:"flex",gap:8,alignItems:"baseline"}}>
+              <span style={{color:C.dark,fontWeight:700,minWidth:28}}>{startNum+i+1}.</span>
+              <span>{line}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+          {(part.lines||[]).map((_,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({startNum+i+1})</span>
+              {ansInp(i,ans[i],"extra word / ✓",undefined)}
+            </div>
+          ))}
+        </div>
+      </>}
+
+      {/* MC — Simple Multiple Choice */}
+      {part.type==='mc' && <>
+        {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
+        {part.text && <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:14,marginBottom:16,fontSize:13,lineHeight:1.9,whiteSpace:"pre-wrap"}}>{part.text}</div>}
+        {(part.items||[]).map((item,i)=>(
+          <div key={i} style={{marginBottom:16}}>
+            <div style={{fontWeight:600,color:C.dark,fontSize:13,marginBottom:8}}>{startNum+i+1}. {item.question}</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {(item.options||[]).map((opt,oi)=>{
+                const sel=parseInt(ans[i])===oi;
+                return (
+                  <label key={oi} onClick={()=>setAns(pi,i,String(oi))} style={{
+                    display:"flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:8,cursor:"pointer",
+                    border:`2px solid ${sel?C.mid:"#dde"}`,background:sel?"#e8f4fd":"#fff",fontSize:13,userSelect:"none"
+                  }}>
+                    <span style={{fontWeight:700,color:C.mid}}>{['A','B','C','D','E','F'][oi]}.</span> {opt}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </>}
     </div>
   );
@@ -569,7 +657,7 @@ function ExamApp() {
     const isNew = !!(variant.parts && variant.parts.length);
     const secs = isNew
       ? variant.parts.map((part,pi) => {
-          const count = part.type==='p2'||part.type==='p7' ? (part.key||[]).length : (part.items||[]).length;
+          const count = getPartCount(part);
           const correct = (result.details?.[pi]||[]).filter(Boolean).length;
           return { lbl:`Part ${pi+1} — ${PART_LABELS[part.type]||part.type}`, score:correct*part.pts, max:count*part.pts };
         })
@@ -666,11 +754,15 @@ function ExamApp() {
         <div style={{maxWidth:750,margin:"0 auto",padding:"22px 16px 80px"}}>
 
           {/* New parts[] format */}
-          {isNewFormat && (variant.parts||[]).map((part,pi)=>(
-            <PartSection key={pi} part={part} pi={pi}
-              ans={(answers.parts||[])[pi]||[]}
-              setAns={setAns}/>
-          ))}
+          {isNewFormat && (variant.parts||[]).map((part,pi)=>{
+            const startNum = variant.parts.slice(0,pi).reduce((acc,p)=>acc+getPartCount(p),0);
+            return (
+              <PartSection key={pi} part={part} pi={pi}
+                ans={(answers.parts||[])[pi]||[]}
+                setAns={setAns}
+                startNum={startNum}/>
+            );
+          })}
 
           {/* Legacy S1–S4 format */}
           {!isNewFormat && <>
