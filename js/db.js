@@ -1,4 +1,4 @@
-/* CPEEN Platform — shared data layer (pure ES5/ES6, no framework) */
+/* ECHO Platform — shared data layer (pure ES5/ES6, no framework) */
 var CPEEN = (function () {
   'use strict';
 
@@ -63,7 +63,7 @@ var CPEEN = (function () {
       });
   }
 
-  var DEFAULT_ADMIN_HASH = '214d1f1c62239db83286301ef9ce31e93144e98570370de2f035560e13b2a7d9'; // cpeen2026
+  var DEFAULT_ADMIN_HASH = '214d1f1c62239db83286301ef9ce31e93144e98570370de2f035560e13b2a7d9'; // echo2026 (legacy)
 
   // ── Storage ───────────────────────────────────────────────────────────────
   function sg(key, fb) {

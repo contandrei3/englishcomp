@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Examen – CPEEN 2026</title>
+<title>Examen – ECHO</title>
 <link rel="stylesheet" href="css/style.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -27,7 +27,7 @@ function Navbar({participant}) {
     <nav className="nav">
       <a href="index.html" className="nav-brand">
         <span className="nav-domain">englishgrammarchallenge.ro</span>
-        <span className="nav-title">CPEEN 2026</span>
+        <span className="nav-title">ECHO</span>
       </a>
       <div className="nav-links">
         <a href="register.html" className="nav-link">Înregistrare</a>
@@ -472,7 +472,7 @@ function ExamApp() {
           <div className="card">
             <div className="card-head" style={{textAlign:"center"}}>
               <h2>Acces Examen</h2>
-              <p>CPEEN 2026 · Introduceți codul de acces</p>
+              <p>ECHO · Introduceți codul de acces</p>
             </div>
             <div className="card-body">
               <div className="fg">
@@ -492,7 +492,7 @@ function ExamApp() {
               </div>
             </div>
           </div>
-          <div className="text-center text-muted" style={{marginTop:14}}>CPEEN 2026 · englishgrammarchallenge.ro</div>
+          <div className="text-center text-muted" style={{marginTop:14}}>ECHO · englishgrammarchallenge.ro</div>
         </div>
       </div>
     </>
@@ -569,7 +569,7 @@ function ExamApp() {
             <div className="card">
               <div className="card-head" style={{textAlign:"center",padding:"28px"}}>
                 <div style={{color:"#D6E4F0",fontSize:11,letterSpacing:2,marginBottom:6}}>
-                  CPEEN 2026 · {ptcp?.level} · {ptcp?.stage==="finala"?"Finală":"Calificare"} · {variant.id}
+                  ECHO · {ptcp?.level} · {ptcp?.stage==="finala"?"Finală":"Calificare"} · {variant.id}
                 </div>
                 <div style={{color:"#fff",fontSize:46,fontWeight:700}}>{result.total}</div>
                 <div style={{color:"#D6E4F0",fontSize:13}}>puncte din 100 · Nota: <strong style={{fontSize:18}}>{(result.total/10).toFixed(2)}</strong></div>
@@ -602,7 +602,7 @@ function ExamApp() {
                 )}
                 <div style={{textAlign:"center",marginTop:14,color:"#888",fontSize:11}}>
                   Răspunsurile au fost salvate.<br/>
-                  <span style={{color:C.mid}}>englishgrammarchallenge.ro · CPEEN 2026</span>
+                  <span style={{color:C.mid}}>englishgrammarchallenge.ro · ECHO</span>
                 </div>
                 <a href="dashboard.html" className="btn btn-primary btn-block mt16" style={{display:"flex"}}>← Înapoi la dashboard</a>
               </div>

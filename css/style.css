@@ -1,4 +1,4 @@
-/* CPEEN 2026 — Shared Styles */
+/* ECHO — Shared Styles */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
   --dark:#1F3864;--mid:#2E75B6;--light:#D6E4F0;--accent:#E8F4FD;

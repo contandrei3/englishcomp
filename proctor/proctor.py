@@ -1,5 +1,5 @@
 """
-CPEEN 2026 – Proctor Agent
+ECHO – Proctor Agent
 Rulează pe calculatorul elevului în timpul examenului.
 Verifică la fiecare 5 secunde dacă sunt deschise aplicații nepermise.
 Prima abatere → descalificare imediată și ireversibilă în Firestore.
@@ -54,7 +54,7 @@ SYSTEM_PROCS = {
 }
 
 # Cuvinte cheie care confirmă că browser-ul afișează site-ul examenului
-EXAM_TITLE_KW = ["cpeen 2026", "cpeen2026", "cpeen", "localhost", "127.0.0.1"]
+EXAM_TITLE_KW = ["echo", "cpeen", "cpeen2026", "localhost", "127.0.0.1"]
 
 # PID-ul propriului proces – ferestrele noastre sunt mereu permise
 OWN_PID = os.getpid()
@@ -293,7 +293,7 @@ C_WHITE = "#ffffff"
 class ProctorApp:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("CPEEN 2026 – Proctor")
+        self.root.title("ECHO – Proctor")
         self.root.resizable(False, False)
         self.root.attributes("-topmost", True)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -318,7 +318,7 @@ class ProctorApp:
         self.root.geometry("400x340")
 
         tk.Label(
-            self.root, text="CPEEN 2026",
+            self.root, text="ECHO",
             font=("Georgia", 20, "bold"), fg=C_DARK, bg=C_BG,
         ).pack(pady=(28, 4))
         tk.Label(
@@ -365,7 +365,7 @@ class ProctorApp:
         tk.Label(
             self.root,
             text="Prin apăsarea butonului confirmi acordul de monitorizare\n"
-                 "în conformitate cu regulamentul CPEEN 2026.",
+                 "în conformitate cu regulamentul ECHO.",
             font=("Arial", 8), fg="#aaa", bg=C_BG,
             wraplength=360, justify="center",
         ).pack(pady=10)

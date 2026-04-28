@@ -55,7 +55,7 @@ var ADMIN = (function () {
     return R.createElement('nav', { className: 'nav' },
       R.createElement('div', { style: { display: 'flex', flexDirection: 'column' } },
         R.createElement('span', { className: 'nav-domain' }, 'englishgrammarchallenge.ro'),
-        R.createElement('a', { href: '../index.html', className: 'nav-title', style: { color: '#fff', textDecoration: 'none' } }, 'CPEEN 2026')
+        R.createElement('a', { href: '../index.html', className: 'nav-title', style: { color: '#fff', textDecoration: 'none' } }, 'ECHO')
       ),
       R.createElement('div', { className: 'nav-links' },
         LINKS.map(function (l) {
