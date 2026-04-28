@@ -72,9 +72,44 @@ a{color:var(--mid);}
 .badge{display:inline-block;border-radius:12px;padding:2px 10px;font-size:12px;font-weight:700;}
 .b-A2{background:#27AE60;color:#fff;}.b-B1{background:var(--orange);color:#fff;}
 .b-B2{background:var(--purple);color:#fff;}.b-C1{background:var(--mid);color:#fff;}
+.b-FCE{background:#8B5E3C;color:#fff;}.b-CAE{background:#2C4A7C;color:#fff;}
 .b-dark{background:var(--dark);color:#fff;}.b-ok{background:var(--green);color:#fff;}
 .b-red{background:var(--red);color:#fff;}.b-mid{background:var(--mid);color:#fff;}
 .b-gray{background:#eee;color:#555;}
+
+/* ── Admin panels ─────────────────────────────────────────────────────────── */
+.panel{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:20px;overflow:hidden;}
+.panel-head{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;}
+.panel-head-dark{background:var(--dark);}
+.panel-head-mid{background:var(--mid);}
+.panel-head h3{color:#fff;font-size:15px;font-weight:700;margin:0;}
+.panel-head p{color:rgba(255,255,255,.65);font-size:12px;margin:4px 0 0;}
+.panel-body{padding:20px;}
+
+/* ── Session status chips ─────────────────────────────────────────────────── */
+.status-active{background:var(--mid);color:#fff;border-radius:20px;padding:4px 14px;font-weight:700;font-size:12px;display:inline-block;}
+.status-finished{background:#27AE60;color:#fff;border-radius:20px;padding:4px 14px;font-weight:700;font-size:12px;display:inline-block;}
+.status-pending{background:#eee;color:#555;border-radius:20px;padding:4px 14px;font-weight:700;font-size:12px;display:inline-block;}
+.countdown{font-family:monospace;font-weight:700;font-size:16px;color:var(--dark);}
+.countdown.urgent{color:var(--red);}
+
+/* ── Checklist ────────────────────────────────────────────────────────────── */
+.checklist{max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;}
+.checklist-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #f5f5f5;cursor:pointer;}
+.checklist-row:last-child{border-bottom:none;}
+.checklist-row.selected{background:#f0f7ff;}
+
+/* ── Modal overlay ────────────────────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;}
+.modal-box{background:#fff;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.18);width:100%;max-width:780px;}
+.modal-box-sm{max-width:560px;}
+.modal-head{border-radius:14px 14px 0 0;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;}
+.modal-head-dark{background:var(--dark);}
+.modal-head-mid{background:var(--mid);}
+.modal-head h3{color:#fff;font-size:16px;font-weight:700;margin:0;}
+.modal-head p{color:rgba(255,255,255,.7);font-size:12px;margin:4px 0 0;}
+.modal-close{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:700;}
+.modal-body{padding:22px;overflow-y:auto;max-height:70vh;}
 
 /* ── Tabs ────────────────────────────────────────────────────────────────── */
 .tabs{display:flex;border-bottom:2px solid var(--light);margin-bottom:20px;gap:2px;overflow-x:auto;}
