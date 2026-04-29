@@ -273,45 +273,83 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
         </div>
       ))}
 
-      {/* P4 — KWT (text mode): gapped sentence + keyword right-aligned, click gap → popup */}
-      {part.type==='p4' && part.mode === 'text' && (
-        <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:14}}>
-          {(part.items||[]).map((item,i)=>{
-            const filled = ans[i] !== undefined && String(ans[i]).length > 0;
-            return (
-              <div key={i} style={{
-                display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:12,
-                marginBottom:i<(part.items.length-1)?10:0,
-                paddingBottom:i<(part.items.length-1)?10:0,
-                borderBottom:i<(part.items.length-1)?"1px solid #eee":"none"
-              }}>
-                <div style={{fontSize:13,flex:1}}>
-                  <strong style={{color:C.dark,marginRight:6}}>{startNum+i+1}.</strong>
-                  {item.before && <span>{item.before} </span>}
-                  <button type="button"
-                    className={`gap-btn${filled?' filled':''}`}
-                    style={{margin:"0 2px",minWidth:100}}
-                    onClick={()=>requestPopup({
-                      pi, i, number:startNum+i+1, partLabel,
-                      prompt: item.s1 || "Complete the sentence using the key word.",
-                      keyword: item.kw,
-                      variant:"input"
-                    })}>
-                    <span className="gap-num">({startNum+i+1})</span>
-                    {filled
-                      ? <span className="gap-val">{ans[i]}</span>
-                      : <span className="gap-empty">______</span>}
-                  </button>
-                  {item.after && <span> {item.after}</span>}
-                </div>
-                <span style={{background:C.dark,color:"#fff",fontWeight:700,fontSize:10,letterSpacing:2,
-                  padding:"2px 9px",borderRadius:4,whiteSpace:"nowrap",flexShrink:0}}>{item.kw}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* P4 — KWT (text mode): Stil tip paragraf fluid */}
+{part.type === 'p4' && part.mode === 'text' && (
+  <div style={{ background: "#fff", borderRadius: 12, padding: "10px" }}>
+    {(part.items || []).map((item, i) => {
+      const filled = ans[i] !== undefined && String(ans[i]).length > 0;
+      const itemNum = startNum + i + 1;
 
+      return (
+        <div key={i} style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto", // Textul ocupă tot spațiul, indiciul doar cât are nevoie
+          gap: "20px",
+          alignItems: "baseline",
+          padding: "12px 0",
+          borderBottom: i < (part.items.length - 1) ? "1px solid #f0f0f0" : "none"
+        }}>
+          
+          {/* Stânga: Propoziția care curge ca un paragraf */}
+          <div style={{ fontSize: "15px", lineHeight: "1.7", color: "#334155" }}>
+            <strong style={{ color: "#64748b", marginRight: "8px" }}>{itemNum}.</strong>
+            
+            {/* Propoziția originală (opțional, dacă vrei să apară deasupra) */}
+            {item.s1 && <div style={{ fontSize: "13px", color: "#94a3b8", marginBottom: "4px", fontStyle: "italic" }}>{item.s1}</div>}
+            
+            <span style={{ display: "inline" }}>
+              {item.before && <span>{item.before} </span>}
+              
+              <button type="button"
+                className={`gap-btn ${filled ? 'filled' : ''}`}
+                style={{
+                  all: "unset", // Resetăm stilurile de buton care pot strica flow-ul
+                  display: "inline-block",
+                  cursor: "pointer",
+                  borderBottom: "1px dashed #cbd5e1",
+                  minWidth: "100px",
+                  padding: "0 4px",
+                  textAlign: "center",
+                  color: filled ? "#2563eb" : "#94a3b8",
+                  fontWeight: filled ? "600" : "400"
+                }}
+                onClick={() => requestPopup({
+                  pi, i, number: itemNum, partLabel,
+                  prompt: item.s1 || "Transform the sentence:",
+                  keyword: item.kw,
+                  variant: "input"
+                })}>
+                <span style={{ fontSize: "11px", opacity: 0.6, marginRight: "4px" }}>({itemNum})</span>
+                {filled ? ans[i] : "...................."}
+              </button>
+
+              {item.after && <span> {item.after}</span>}
+            </span>
+          </div>
+
+          {/* Dreapta: Indiciul (Keyword) aliniat perfect */}
+          <div style={{ flexShrink: 0 }}>
+            <span style={{
+              background: "#f1f5f9",
+              color: "#475569",
+              fontWeight: "700",
+              fontSize: "12px",
+              letterSpacing: "1.5px",
+              padding: "4px 10px",
+              borderRadius: "6px",
+              textTransform: "uppercase",
+              display: "inline-block",
+              minWidth: "80px",
+              textAlign: "center"
+            }}>
+              {item.kw}
+            </span>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+)}
       {/* P5 — Multiple Choice Reading */}
       {part.type==='p5' && <>
         {part.title && <strong className="title" style={{display:"block",marginBottom:10,color:C.dark,fontSize:15}}>{part.title}</strong>}
