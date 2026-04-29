@@ -381,44 +381,65 @@ function P3Edit({data,onChange}) {
 }
 
 // ── Part 4 — Key Word Transformations ────────────────────────────────────
-function P4Edit({data,onChange}) {
-  const updIt = (i,f,v) => onChange({...data, items:data.items.map((it,j)=>j===i?{...it,[f]:f==='kw'?v.toUpperCase():v}:it)});
-  const addIt = () => onChange({...data, items:[...data.items, {s1:'',kw:'',before:'',after:'',answers:''}]});
-  const delIt = i => onChange({...data, items:data.items.filter((_,j)=>j!==i)});
+function P4Edit({data, onChange}) {
+  // Adăugăm un item nou (Keyword + Răspuns)
+  const addIt = () => onChange({
+    ...data, 
+    items: [...(data.items || []), { kw: '', answers: '' }] 
+  });
+  
+  const updIt = (i, f, v) => {
+    const newItems = [...(data.items || [])];
+    newItems[i] = { ...newItems[i], [f]: f === 'kw' ? v.toUpperCase() : v };
+    onChange({ ...data, items: newItems });
+  };
+
+  const delIt = (i) => onChange({
+    ...data, 
+    items: data.items.filter((_, j) => j !== i)
+  });
+
   return (
     <>
-      <div style={{fontSize:12,color:"#888",marginBottom:12}}>
-        Elevul rescrie propoziția folosind cuvântul cheie fără să îl modifice (3–6 cuvinte inclusiv cuvântul cheie).
-      </div>
-      {data.items.map((it,i)=>(
-        <ItemCard key={i} num={i+1} onDelete={()=>delIt(i)}>
-          <Fld label="Propoziție originală">
-            <Ta value={it.s1} onChange={e=>updIt(i,'s1',e.target.value)} rows={2}
-              placeholder="She had no idea how costly the renovation would turn out to be."/>
-          </Fld>
-          <div style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr",gap:8,alignItems:"end"}}>
-            <Fld label="CUVÂNT CHEIE">
-              <input value={it.kw} onChange={e=>updIt(i,'kw',e.target.value)} placeholder="DAWNED"
-                style={{...IS,width:120,textAlign:"center",fontWeight:700,textTransform:"uppercase"}}/>
-            </Fld>
-            <Fld label="Context înainte (fix)">
-              <Inp value={it.before} onChange={e=>updIt(i,'before',e.target.value)} placeholder="It only"/>
-            </Fld>
-            <Fld label="Context după (fix)">
-              <Inp value={it.after} onChange={e=>updIt(i,'after',e.target.value)} placeholder="costly the renovation would be."/>
-            </Fld>
+      <Fld label="Textul Exercițiului (Folosește [1], [2] etc. pentru spații)">
+        <Ta 
+          value={data.text || ''} 
+          onChange={e => onChange({...data, text: e.target.value})} 
+          rows={6}
+          placeholder="Ex: It was a mistake to go there. [1] It only [2] dawned on her later."
+        />
+      </Fld>
+
+      <div style={{ marginTop: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 2fr 40px", gap: 10, marginBottom: 8, fontSize: 11, fontWeight: 700, color: "#666" }}>
+          <div>ID</div>
+          <div>CUVÂNT CHEIE</div>
+          <div>RĂSPUNSURI (separate prin ;)</div>
+          <div></div>
+        </div>
+        
+        {(data.items || []).map((it, i) => (
+          <div key={i} style={{ display: "grid", gridTemplateColumns: "40px 1fr 2fr 40px", gap: 10, alignItems: "center", marginBottom: 8 }}>
+            <div style={{ fontWeight: 700 }}>[{i + 1}]</div>
+            <Inp 
+              value={it.kw} 
+              onChange={e => updIt(i, 'kw', e.target.value)} 
+              placeholder="DAWNED"
+              style={{ textTransform: "uppercase", fontWeight: 700 }}
+            />
+            <Inp 
+              value={it.answers} 
+              onChange={e => updIt(i, 'answers', e.target.value)} 
+              placeholder="dawned on her how; only dawned..."
+            />
+            <button onClick={() => delIt(i)} style={{ border: "none", background: "none", cursor: "pointer", color: "red" }}>✕</button>
           </div>
-          <Fld label="Răspunsuri acceptate (partea de completat)" hint="separate prin ;">
-            <Inp value={it.answers} onChange={e=>updIt(i,'answers',e.target.value)}
-              placeholder="dawned on her how; only dawned on her how"/>
-          </Fld>
-        </ItemCard>
-      ))}
-      <AddBtn onClick={addIt} label="Adaugă item"/>
+        ))}
+        <AddBtn onClick={addIt} label="Adaugă Răspuns / Keyword" />
+      </div>
     </>
   );
 }
-
 // ── Part 5 — Multiple Choice Reading ─────────────────────────────────────
 function P5Edit({data,onChange}) {
   const upd   = (k,v) => onChange({...data,[k]:v});
