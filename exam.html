@@ -65,17 +65,131 @@ function getPartCount(part) {
   return (part.items||[]).length;
 }
 
-function GapText({text}) {
+// Inline clickable gap. `display` is what's shown when filled (string), `num` is gap number.
+function Gap({num, display, onClick, kind}) {
+  const filled = display !== undefined && display !== null && String(display).length > 0;
+  const showVal = kind === 'mc' && filled
+    ? ['A','B','C','D','E','F'][parseInt(display)] || display
+    : display;
+  return (
+    <button type="button" className={`gap-btn${filled?' filled':''}`} onClick={onClick}>
+      <span className="gap-num">({num})</span>
+      {filled
+        ? <span className="gap-val">{showVal}</span>
+        : <span className="gap-empty">______</span>}
+    </button>
+  );
+}
+
+// Renders text with [N] gap markers replaced by clickable <Gap> buttons.
+// `gapToItem` maps gap N (1-based as it appears in the text) to the item index in `ans`.
+function GapText({text, ans, onGapClick, kind}) {
+  const order = gapNums(text);
+  const indexOfN = {};
+  order.forEach((n, idx) => { indexOfN[n] = idx; });
   return <span>{text.split(/(\[\d+\])/).map((p,i)=>{
-    const m=p.match(/^\[(\d+)\]$/);
-    return m
-      ? <span key={i} style={{background:C.dark,color:"#fff",borderRadius:4,fontSize:11,fontWeight:700,padding:"1px 6px",margin:"0 2px"}}>({m[1]})</span>
-      : <span key={i}>{p}</span>;
+    const m = p.match(/^\[(\d+)\]$/);
+    if (!m) return <span key={i}>{p}</span>;
+    const n = parseInt(m[1]);
+    const itemIdx = indexOfN[n];
+    if (!onGapClick) {
+      return <span key={i} style={{background:C.dark,color:"#fff",borderRadius:4,fontSize:11,fontWeight:700,padding:"1px 6px",margin:"0 2px"}}>({n})</span>;
+    }
+    return <Gap key={i} num={n} display={ans?.[itemIdx]} kind={kind} onClick={()=>onGapClick(itemIdx, n)}/>;
   })}</span>;
 }
 
-function PartSection({part, pi, ans, setAns, startNum=0}) {
+// ── Click-to-answer popup ──────────────────────────────────────────────────
+function GapPopup({open, number, prompt, partLabel, variant, options, keyword, current, onSubmit, onClose}) {
+  const [val, setVal] = useState(current || '');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setVal(current || '');
+    const t = setTimeout(() => inputRef.current?.focus(), 30);
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => { clearTimeout(t); window.removeEventListener('keydown', onKey); };
+  }, [open, current]);
+
+  if (!open) return null;
+
+  const submit = (v) => { onSubmit(v); onClose(); };
+  const onKeyDown = (e) => { if (e.key === 'Enter') submit(val); };
+
+  return (
+    <div className="modal-overlay" onClick={onClose} style={{alignItems:"center"}}>
+      <div className="modal-box modal-box-xs" onClick={e=>e.stopPropagation()}>
+        <div style={{padding:"18px 22px 8px",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+          <div>
+            <div style={{fontSize:11,color:"#94a3b8",letterSpacing:1.5,textTransform:"uppercase",fontWeight:700}}>
+              {partLabel} · Întrebarea {number}
+            </div>
+            {prompt && <div style={{fontSize:13,color:C.dark,marginTop:4,fontWeight:600}}>{prompt}</div>}
+          </div>
+          <button type="button" onClick={onClose} aria-label="Închide" style={{background:"none",border:"none",color:"#94a3b8",cursor:"pointer",fontSize:20,lineHeight:1,padding:"2px 6px"}}>×</button>
+        </div>
+        <div style={{padding:"10px 22px 20px"}}>
+          {keyword && (
+            <div style={{marginBottom:12}}>
+              <span className="chip" style={{fontSize:11,letterSpacing:1.5}}>{keyword}</span>
+            </div>
+          )}
+
+          {variant === 'input' && (
+            <div style={{display:"flex",gap:8}}>
+              <input ref={inputRef} className="inp" value={val}
+                onChange={e=>setVal(e.target.value)} onKeyDown={onKeyDown}
+                placeholder="Scrie răspunsul…" style={{flex:1}}/>
+              <button className="btn btn-primary" onClick={()=>submit(val)}>OK</button>
+            </div>
+          )}
+
+          {variant === 'mc' && (
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {(options||[]).map((opt, oi) => {
+                const isSel = String(current) === String(opt.value);
+                return (
+                  <button key={oi} type="button"
+                    className={`mc-pill${isSel?' selected':''}`}
+                    onClick={()=>submit(String(opt.value))}>
+                    <span className="ltr">{opt.letter || String.fromCharCode(65+oi)}</span>
+                    <span style={{flex:1}}>{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {variant === 'paragraphs' && (
+            <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:340,overflowY:"auto"}}>
+              {(options||[]).map((opt, oi) => {
+                const isSel = String(current) === String(opt.value);
+                return (
+                  <button key={oi} type="button"
+                    className={`para-chip${isSel?' selected':''}`}
+                    onClick={()=>submit(String(opt.value))}>
+                    <span className="p-label">{opt.value}</span>
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {variant === 'input' && (
+            <div style={{fontSize:11,color:"#94a3b8",marginTop:8}}>Apasă <strong>Enter</strong> pentru a confirma · <strong>Esc</strong> pentru a închide.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
   const secStyle = {background:"#fff",borderRadius:12,padding:22,marginBottom:22,border:"1px solid #e2e8f0"};
+  const partLabel = `Part ${pi+1}`;
   const ansInp = (i,val,ph,w) => (
     <input className="ans-inp" value={val||""} onChange={e=>setAns(pi,i,e.target.value)}
       placeholder={ph} style={{width:w||160}}/>
@@ -381,6 +495,7 @@ function ExamApp() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [result,  setResult]  = useState(null);
   const [bootErr, setBootErr] = useState("");
+  const [popup,   setPopup]   = useState(null); // null or {pi,i,number,variant,prompt,partLabel,options,keyword}
   const timerRef   = useRef(null);
   const subRef     = useRef(false);
   const sessIdRef  = useRef(null);
@@ -760,7 +875,8 @@ function ExamApp() {
               <PartSection key={pi} part={part} pi={pi}
                 ans={(answers.parts||[])[pi]||[]}
                 setAns={setAns}
-                startNum={startNum}/>
+                startNum={startNum}
+                requestPopup={cfg=>setPopup(cfg)}/>
             );
           })}
 
@@ -887,6 +1003,21 @@ function ExamApp() {
             </button>
           </div>
         </div>
+
+        {popup && (
+          <GapPopup
+            open
+            number={popup.number}
+            partLabel={popup.partLabel}
+            prompt={popup.prompt}
+            variant={popup.variant}
+            options={popup.options}
+            keyword={popup.keyword}
+            current={(answers.parts||[])[popup.pi]?.[popup.i] ?? ''}
+            onSubmit={v => setAns(popup.pi, popup.i, v)}
+            onClose={() => setPopup(null)}
+          />
+        )}
       </div>
     );
   }
