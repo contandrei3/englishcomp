@@ -273,38 +273,44 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
         </div>
       ))}
 
-      {/* P4 — KWT (text mode): gapped sentence + keyword right-aligned */}
-      {part.type==='p4' && part.mode === 'text' && <>
-        <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:14,marginBottom:14}}>
-          {(part.items||[]).map((item,i)=>(
-            <div key={i} style={{
-              display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:12,
-              marginBottom:i<(part.items.length-1)?10:0,
-              paddingBottom:i<(part.items.length-1)?10:0,
-              borderBottom:i<(part.items.length-1)?"1px solid #eee":"none"
-            }}>
-              <div style={{fontSize:13,flex:1}}>
-                <strong style={{color:C.dark,marginRight:6}}>{startNum+i+1}.</strong>
-                {item.before && <span>{item.before} </span>}
-                <span style={{display:"inline-block",background:"#eff6ff",border:"1px dashed #93c5fd",
-                  borderRadius:3,padding:"1px 20px",margin:"0 2px",minWidth:80,textAlign:"center",
-                  fontSize:12,color:"#aaa"}}>___________</span>
-                {item.after && <span> {item.after}</span>}
+      {/* P4 — KWT (text mode): gapped sentence + keyword right-aligned, click gap → popup */}
+      {part.type==='p4' && part.mode === 'text' && (
+        <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:14}}>
+          {(part.items||[]).map((item,i)=>{
+            const filled = ans[i] !== undefined && String(ans[i]).length > 0;
+            return (
+              <div key={i} style={{
+                display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:12,
+                marginBottom:i<(part.items.length-1)?10:0,
+                paddingBottom:i<(part.items.length-1)?10:0,
+                borderBottom:i<(part.items.length-1)?"1px solid #eee":"none"
+              }}>
+                <div style={{fontSize:13,flex:1}}>
+                  <strong style={{color:C.dark,marginRight:6}}>{startNum+i+1}.</strong>
+                  {item.before && <span>{item.before} </span>}
+                  <button type="button"
+                    className={`gap-btn${filled?' filled':''}`}
+                    style={{margin:"0 2px",minWidth:100}}
+                    onClick={()=>requestPopup({
+                      pi, i, number:startNum+i+1, partLabel,
+                      prompt: item.s1 || "Complete the sentence using the key word.",
+                      keyword: item.kw,
+                      variant:"input"
+                    })}>
+                    <span className="gap-num">({startNum+i+1})</span>
+                    {filled
+                      ? <span className="gap-val">{ans[i]}</span>
+                      : <span className="gap-empty">______</span>}
+                  </button>
+                  {item.after && <span> {item.after}</span>}
+                </div>
+                <span style={{background:C.dark,color:"#fff",fontWeight:700,fontSize:10,letterSpacing:2,
+                  padding:"2px 9px",borderRadius:4,whiteSpace:"nowrap",flexShrink:0}}>{item.kw}</span>
               </div>
-              <span style={{background:C.dark,color:"#fff",fontWeight:700,fontSize:10,letterSpacing:2,
-                padding:"2px 9px",borderRadius:4,whiteSpace:"nowrap",flexShrink:0}}>{item.kw}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-          {(part.items||[]).map((_,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({startNum+i+1})</span>
-              {ansInp(i,ans[i],"3–6 words...",undefined)}
-            </div>
-          ))}
-        </div>
-      </>}
+      )}
 
       {/* P5 — Multiple Choice Reading */}
       {part.type==='p5' && <>
@@ -426,21 +432,26 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
       {part.type==='ec' && <>
         {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
         {part.intro && <div style={{fontSize:12,color:"#666",marginBottom:10,fontStyle:"italic"}}>{part.intro}</div>}
-        <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:12,marginBottom:14,fontFamily:"'Courier New',monospace",fontSize:13,lineHeight:2}}>
-          {(part.lines||[]).map((line,i)=>(
-            <div key={i} style={{display:"flex",gap:8,alignItems:"baseline"}}>
-              <span style={{color:C.dark,fontWeight:700,minWidth:28}}>{startNum+i+1}.</span>
-              <span>{line}</span>
-            </div>
-          ))}
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-          {(part.lines||[]).map((_,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({startNum+i+1})</span>
-              {ansInp(i,ans[i],"extra word / ✓",undefined)}
-            </div>
-          ))}
+        <div className="line-list">
+          {(part.lines||[]).map((line,i)=>{
+            const filled = ans[i] !== undefined && String(ans[i]).length > 0;
+            return (
+              <div key={i} className={`line-row${filled?' answered':''}`}
+                onClick={()=>requestPopup({
+                  pi, i, number:startNum+i+1, partLabel,
+                  prompt:"Scrie cuvântul în plus, sau ✓ dacă linia este corectă.",
+                  variant:"input"
+                })}>
+                <span className="ln-num">{startNum+i+1}.</span>
+                <span className="ln-text" style={{fontFamily:"'Courier New',monospace",fontSize:13}}>{line}</span>
+                <span className="ln-ans">
+                  {filled
+                    ? <span style={{fontWeight:700,color:C.mid,fontFamily:"monospace"}}>{ans[i]}</span>
+                    : <span style={{color:"#cbd5e1"}}>—</span>}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </>}
 
