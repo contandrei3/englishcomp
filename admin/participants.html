@@ -35,7 +35,8 @@ function ParticipantsPage() {
   const [toDequal, setToDequal] = useState(null);
   const [proctorFlags, setPFlags] = useState({});
 
-  const sessions  = CPEEN.getSessions();
+  const sessions      = CPEEN.getSessions();
+  const groupSessions = CPEEN.getGroupSessions();
   const counties  = useMemo(()=>[...new Set(all.map(p=>p.county).filter(Boolean))].sort(),[all]);
 
   // Încarcă flagurile de proctoring de la Firestore la pornire
@@ -112,18 +113,48 @@ function ParticipantsPage() {
     ADMIN.csv(header, rows, "cpeen_participanti.csv");
   };
 
-  const sessMap = useMemo(()=>{
+  const groupMap = useMemo(()=>{
     const m = {};
-    sessions.forEach(s=>{ m[s.participantId]=s; });
+    groupSessions.forEach(g=>{ m[g.id]=g; });
     return m;
-  },[sessions]);
+  },[groupSessions]);
+
+  const sessMap = useMemo(()=>{
+    // Priority: in_progress(4) > pending-in-active-group(3) > submitted(2) > pending(1)
+    const pri = (s) => {
+      if (s.status === 'in_progress') return 4;
+      if (s.status === 'pending') {
+        if (s.groupId && groupMap[s.groupId]?.status === 'active') return 3;
+        return 1;
+      }
+      if (s.status === 'submitted') return 2;
+      return 0;
+    };
+    const m = {};
+    sessions.forEach(s => {
+      const prev = m[s.participantId];
+      if (!prev) { m[s.participantId] = s; return; }
+      const pNew = pri(s), pPrev = pri(prev);
+      if (pNew > pPrev) { m[s.participantId] = s; return; }
+      // tie-break submitted: pick most recent
+      if (pNew === pPrev && s.status === 'submitted' && (s.submittedAt||0) > (prev.submittedAt||0)) {
+        m[s.participantId] = s;
+      }
+    });
+    return m;
+  },[sessions, groupMap]);
 
   const statusBadge = (p) => {
     const s = sessMap[p.id];
-    if(!s) return <span className="badge b-gray">Fără test</span>;
-    if(s.status==="submitted") return <span className="badge b-ok">Trimis</span>;
-    if(s.status==="in_progress") return <span className="badge b-mid">În desfășurare</span>;
-    return <span className="badge b-gray">Alocat</span>;
+    if (!s) return <span className="badge b-gray">Fără test</span>;
+    if (s.status === "submitted") return <span className="badge b-ok">Trimis</span>;
+    if (s.status === "in_progress") return <span className="badge b-mid">Activ</span>;
+    if (s.status === "pending") {
+      const grp = s.groupId ? groupMap[s.groupId] : null;
+      if (grp?.status === "active") return <span className="badge b-mid" style={{background:"#27AE60"}}>Alocat ●</span>;
+      return <span className="badge b-gray">Alocat</span>;
+    }
+    return <span className="badge b-gray">—</span>;
   };
 
   return (

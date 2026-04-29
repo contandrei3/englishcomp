@@ -626,15 +626,35 @@ function ExamApp() {
     const p = CPEEN.findParticipantByCode(code);
     if(!p) { setCodeErr("Cod de acces invalid. Verificați și reîncercați."); return; }
 
-    // Prefer in_progress, then pending, then latest submitted
     const allSess = CPEEN.getSessionsByParticipant(p.id);
-    let s = allSess.find(x=>x.status==="in_progress") ||
-            allSess.find(x=>x.status==="pending") ||
-            allSess[allSess.length-1] || null;
+    const groups  = CPEEN.getGroupSessions();
+
+    // 1. Already started — always resume
+    let s = allSess.find(x => x.status === "in_progress");
+
+    // 2. Pending session whose group is active right now
+    if (!s) {
+      s = allSess.find(x => {
+        if (x.status !== "pending") return false;
+        if (x.groupId) {
+          const grp = groups.find(g => g.id === x.groupId);
+          return grp?.status === "active";
+        }
+        const cfg = CPEEN.getConfig();
+        return !!(cfg.activeExams?.[x.level]?.[x.stage]);
+      });
+    }
+
+    // 3. Latest submitted — show result
+    if (!s) {
+      const submitted = allSess.filter(x => x.status === "submitted")
+        .sort((a,b) => (b.submittedAt||0) - (a.submittedAt||0));
+      s = submitted[0] || null;
+    }
 
     if(s) { loadSession(p, s); return; }
 
-    // No session yet — fallback: calificare stage (participants no longer carry p.stage)
+    // 4. No active session — legacy no-group fallback
     const stage = CPEEN.isQualified(p) ? "finala" : "calificare";
     const cfg = CPEEN.getConfig();
     if(!cfg.activeExams?.[p.level]?.[stage]) {
