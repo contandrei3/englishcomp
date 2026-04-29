@@ -270,7 +270,11 @@ a{color:var(--mid);}
   border:1px solid var(--border);border-radius:4px;padding:1px 8px;min-width:60px;text-align:center;}
 .line-row .ln-ans.empty{color:#cbd5e1;border-style:dashed;}
 
-/* Paragraph chips (p7 reference list) */
+/* 2-col grid for p6 paragraphs / p8 texts — collapses to 1 col on mobile */
+.para-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+@media(max-width:640px){.para-grid{grid-template-columns:1fr;}}
+
+/* Paragraph chips (p6 reference list) */
 .para-chip{background:#fff;border:1px solid var(--border);border-radius:7px;padding:10px 12px;
   font-size:12px;line-height:1.6;color:var(--text);cursor:pointer;
   transition:border-color .12s,background .12s;text-align:left;width:100%;font-family:inherit;}
