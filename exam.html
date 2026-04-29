@@ -209,44 +209,38 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
 
       {/* P1 — Multiple Choice Cloze */}
       {part.type==='p1' && <>
-        {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
-        {part.text && <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:14,marginBottom:16,fontSize:13,lineHeight:1.9}}><GapText text={part.text}/></div>}
-        {(part.items||[]).map((item,i)=>(
-          <div key={i} style={{marginBottom:14}}>
-            <div style={{fontWeight:700,color:C.dark,marginBottom:6,fontSize:13}}>{startNum+i+1}.</div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {(item.options||[]).map((opt,oi)=>{
-                const sel = parseInt(ans[i])===oi;
-                return (
-                  <label key={oi} onClick={()=>setAns(pi,i,String(oi))} style={{
-                    display:"flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:8,cursor:"pointer",
-                    border:`2px solid ${sel?C.mid:"#dde"}`,background:sel?"#eff6ff":"#fff",fontSize:13,userSelect:"none"
-                  }}>
-                    <span style={{fontWeight:700,color:C.mid}}>{['A','B','C','D'][oi]}.</span> {opt}
-                  </label>
-                );
-              })}
-            </div>
+        {part.title && <strong className="title" style={{display:"block",marginBottom:10,color:C.dark,fontSize:15}}>{part.title}</strong>}
+        {part.text && (
+          <div className="passage" style={{marginBottom:8}}>
+            <GapText text={part.text} ans={ans} kind="mc"
+              onGapClick={(itemIdx, n) => requestPopup({
+                pi, i:itemIdx, number:n, partLabel,
+                prompt:"Alege varianta corectă pentru acest gol.",
+                variant:"mc",
+                options:(part.items[itemIdx]?.options||[]).map((opt, oi) => ({
+                  value: String(oi),
+                  letter: ['A','B','C','D'][oi],
+                  label: opt
+                }))
+              })}/>
           </div>
-        ))}
+        )}
       </>}
 
       {/* P2 — Open Cloze */}
-      {part.type==='p2' && (()=>{
-        const nums = gapNums(part.text);
-        return <>
-          {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
-          {part.text && <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:14,marginBottom:14,fontSize:13,lineHeight:1.9}}><GapText text={part.text}/></div>}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-            {(part.key||[]).map((_,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontWeight:700,color:C.dark,minWidth:28,fontSize:12}}>({nums[i]??startNum+i+1})</span>
-                {ansInp(i,ans[i],"one word",undefined)}
-              </div>
-            ))}
+      {part.type==='p2' && <>
+        {part.title && <strong className="title" style={{display:"block",marginBottom:10,color:C.dark,fontSize:15}}>{part.title}</strong>}
+        {part.text && (
+          <div className="passage">
+            <GapText text={part.text} ans={ans} kind="input"
+              onGapClick={(itemIdx, n) => requestPopup({
+                pi, i:itemIdx, number:n, partLabel,
+                prompt:"Scrie cuvântul (UN singur cuvânt) care completează cel mai bine acest gol.",
+                variant:"input"
+              })}/>
           </div>
-        </>;
-      })()}
+        )}
+      </>}
 
       {/* P3 — Word Formation */}
       {part.type==='p3' && <>
