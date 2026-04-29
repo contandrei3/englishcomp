@@ -242,74 +242,149 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
         )}
       </>}
 
-      {/* P3 — Word Formation */}
-      {part.type==='p3' && <>
-        {part.text && (
-          <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:14,marginBottom:16,fontSize:13,lineHeight:1.9,whiteSpace:"pre-wrap"}}>
-            {part.text}
-          </div>
-        )}
-        {(part.items||[]).map((item,i)=>(
-          <div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:9,flexWrap:"wrap"}}>
-            <span style={{fontWeight:700,color:C.dark,minWidth:22,fontSize:12}}>{startNum+i+1}.</span>
-            {item.before && <span style={{fontSize:13}}>{item.before}</span>}
-            {ansInp(i,ans[i],"...",160)}
-            {item.after && <span style={{fontSize:13}}>{item.after}</span>}
-            <span style={{background:"#e2e8f0",color:C.dark,fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:4,letterSpacing:1}}>{item.kw}</span>
-          </div>
-        ))}
-      </>}
-
-      {/* P4 — KWT (text mode) cu markeri [n] */}
-{part.type === 'p4' && part.mode === 'text' && (
-  <div style={{ background: "#fff", padding: "15px", borderRadius: 8, lineHeight: "2" }}>
+      {/* P3 — Word Formation (text mode) */}
+{part.type === 'p3' && part.mode === 'text' && (
+  <div style={{ 
+    background: "#fff", 
+    padding: "20px", 
+    borderRadius: 12, 
+    lineHeight: "2.2", /* Spațiu generos între rânduri pentru lizibilitate */
+    fontSize: "16px",
+    color: "#1e293b",
+    textAlign: "justify"
+  }}>
     {(() => {
+      // Împărțim textul după markerii [1], [2], etc.
       const parts = (data.text || "").split(/(\[\d+\])/g);
+      
       return parts.map((chunk, index) => {
         const match = chunk.match(/\[(\d+)\]/);
+        
         if (match) {
-          const gapIdx = parseInt(match[1]) - 1; // Indexul din array (0-based)
+          const gapIdx = parseInt(match[1]) - 1;
           const item = (part.items || [])[gapIdx];
           const itemNum = startNum + gapIdx + 1;
           const filled = ans[gapIdx] !== undefined && String(ans[gapIdx]).length > 0;
 
           return (
-            <span key={index} style={{ display: "inline-flex", alignItems: "baseline", gap: "10px" }}>
-              {/* Butonul pentru Gap */}
+            <span key={index} style={{ display: "inline-flex", alignItems: "baseline", whiteSpace: "nowrap" }}>
               <button type="button"
                 className={`gap-btn ${filled ? 'filled' : ''}`}
                 style={{
                   all: "unset",
                   cursor: "pointer",
-                  borderBottom: "1px solid #000",
-                  minWidth: "120px",
+                  borderBottom: "1px solid #334155",
+                  minWidth: "100px",
                   textAlign: "center",
-                  padding: "0 5px",
+                  padding: "0 8px",
+                  margin: "0 5px",
                   color: filled ? "#2563eb" : "#94a3b8",
-                  margin: "0 5px"
+                  fontWeight: filled ? "600" : "400",
+                  transition: "all 0.2s"
                 }}
                 onClick={() => requestPopup({
                   pi, i: gapIdx, number: itemNum, partLabel,
-                  prompt: "Transform the sentence using the keyword:",
-                  keyword: item?.kw,
+                  prompt: `Form a word from: ${item?.base || '...'}`,
                   variant: "input"
                 })}>
-                <span style={{ fontSize: "10px", color: "#999" }}>({itemNum})</span>
-                {filled ? ans[gapIdx] : "...................."}
+                <span style={{ fontSize: "11px", opacity: 0.5, marginRight: "4px" }}>({itemNum})</span>
+                {filled ? ans[gapIdx] : "................"}
               </button>
 
-              {/* Keyword-ul afișat în paranteze lângă gap */}
-              {item?.kw && (
-                <span style={{ fontWeight: "700", textTransform: "uppercase", fontSize: "13px", color: "#444" }}>
-                  ({item.kw})
+              {/* Cuvântul de bază în dreapta gap-ului */}
+              {item?.base && (
+                <span style={{ 
+                  fontWeight: "700", 
+                  fontSize: "14px", 
+                  color: "#475569",
+                  marginRight: "5px"
+                }}>
+                  ({item.base})
                 </span>
               )}
             </span>
           );
         }
+        
+        // Returnăm bucata de text normal
         return <span key={index}>{chunk}</span>;
       });
     })()}
+  </div>
+)}
+
+      {/* P4 — KWT (text mode): Format original cu design fluid */}
+{part.type === 'p4' && part.mode === 'text' && (
+  <div style={{ background: "#fff", borderRadius: 8, padding: "10px" }}>
+    {(part.items || []).map((item, i) => {
+      const filled = ans[i] !== undefined && String(ans[i]).length > 0;
+      const itemNum = startNum + i + 1;
+
+      return (
+        <div key={i} style={{
+          marginBottom: 25,
+          paddingBottom: 15,
+          borderBottom: i < (part.items.length - 1) ? "1px solid #f1f5f9" : "none"
+        }}>
+          {/* Propoziția originală */}
+          <div style={{ fontSize: "15px", color: "#475569", marginBottom: "8px", lineHeight: "1.5" }}>
+            {item.s1}
+          </div>
+
+          {/* Rândul de transformare */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr auto",
+            gap: "20px",
+            alignItems: "baseline"
+          }}>
+            <div style={{ fontSize: "16px", color: "#000", lineHeight: "1.6" }}>
+              <strong style={{ marginRight: "8px", color: "#64748b" }}>{itemNum}.</strong>
+              
+              {item.before && <span>{item.before} </span>}
+              
+              <button type="button"
+                className={`gap-btn ${filled ? 'filled' : ''}`}
+                style={{
+                  all: "unset",
+                  cursor: "pointer",
+                  display: "inline-block",
+                  minWidth: "120px",
+                  borderBottom: "1px solid #000",
+                  textAlign: "center",
+                  padding: "0 5px",
+                  margin: "0 5px",
+                  color: filled ? "#2563eb" : "#94a3b8"
+                }}
+                onClick={() => requestPopup({
+                  pi, i, number: itemNum, partLabel,
+                  prompt: item.s1,
+                  keyword: item.kw,
+                  variant: "input"
+                })}>
+                <span style={{ fontSize: "10px", opacity: 0.6, marginRight: "4px" }}>({itemNum})</span>
+                {filled ? ans[i] : "........................."}
+              </button>
+
+              {item.after && <span> {item.after}</span>}
+            </div>
+
+            {/* Cuvântul cheie în dreapta */}
+            <div style={{
+              fontWeight: "700",
+              textTransform: "uppercase",
+              fontSize: "14px",
+              letterSpacing: "1px",
+              minWidth: "100px",
+              textAlign: "right",
+              color: "#1e293b"
+            }}>
+              {item.kw}
+            </div>
+          </div>
+        </div>
+      );
+    })}
   </div>
 )}
       {/* P5 — Multiple Choice Reading */}
