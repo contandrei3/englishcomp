@@ -18,7 +18,7 @@
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useMemo, useEffect } = React;
-const C = {dark:"#1F3864",mid:"#2E75B6",red:"#C0392B",green:"#1D6027"};
+const C = {dark:"#0f172a",mid:"#2563eb",red:"#dc2626",green:"#15803d"};
 const LVL = ["A2","B1","B2","C1"];
 
 function ParticipantsPage() {
@@ -127,7 +127,7 @@ function ParticipantsPage() {
   };
 
   return (
-    <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
+    <div style={{minHeight:"100vh",background:"#f8fafc"}}>
       <ADMIN.Nav active="participants"/>
       <div className="page">
         <div className="container">
@@ -143,7 +143,7 @@ function ParticipantsPage() {
           </div>
 
           {/* Filters */}
-          <div style={{background:"#fff",borderRadius:10,padding:"12px 16px",marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+          <div style={{background:"#fff",borderRadius:10,padding:"12px 16px",marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",border:"1px solid #e2e8f0"}}>
             <input className="inp inp-sm" style={{flex:1,minWidth:180}} placeholder="Caută după nume, școală, email…"
               value={search} onChange={e=>setSearch(e.target.value)}/>
             <select className="inp inp-sm" style={{width:120}} value={fLvl} onChange={e=>setFLvl(e.target.value)}>
@@ -190,7 +190,7 @@ function ParticipantsPage() {
           })()}
 
           {/* Table */}
-          <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+          <div style={{background:"#fff",borderRadius:10,border:"1px solid #e2e8f0"}}>
             {filtered.length === 0
               ? <div style={{padding:40,textAlign:"center",color:"#aaa"}}>Niciun participant găsit.</div>
               : (
@@ -233,13 +233,13 @@ function ParticipantsPage() {
                             {(()=>{
                               const flag = proctorFlags[(p.accessCode||"").toUpperCase()];
                               if(!flag) return <span style={{color:"#ccc"}}>—</span>;
-                              if(flag.disqualified) return <span className="badge b-err" style={{fontWeight:700,background:"#C0392B",color:"#fff"}}>✕ Descalificat</span>;
+                              if(flag.disqualified) return <span className="badge b-err" style={{fontWeight:700,background:"#dc2626",color:"#fff"}}>✕ Descalificat</span>;
                               const sc = flag.suspiciousCount || 0;
-                              return <span style={{color: sc>2?"#C0392B":"#888"}}>⚠ {sc} susp.</span>;
+                              return <span style={{color: sc>2?"#dc2626":"#888"}}>⚠ {sc} susp.</span>;
                             })()}
                           </td>
                           <td>
-                            <span style={{fontFamily:"monospace",fontSize:12,letterSpacing:2,background:"#f0f4f8",padding:"2px 6px",borderRadius:4}}>{p.accessCode}</span>
+                            <span style={{fontFamily:"monospace",fontSize:12,letterSpacing:2,background:"#f8fafc",padding:"2px 6px",borderRadius:4}}>{p.accessCode}</span>
                           </td>
                           <td>{statusBadge(p)}</td>
                           <td style={{fontSize:11,color:"#999",whiteSpace:"nowrap"}}>{new Date(p.registeredAt).toLocaleDateString("ro-RO")}</td>
@@ -290,7 +290,7 @@ function ParticipantsPage() {
   );
 }
 
-document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Georgia,serif;color:#2E75B6;font-size:15px;">Se încarcă…</div>';
+document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#2563eb;font-size:14px;">Se încarcă…</div>';
 CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<ParticipantsPage/>));
 </script>
 </body>

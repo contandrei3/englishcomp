@@ -6,114 +6,121 @@
 <title>ECHO – English Challenge Hub Online</title>
 <link rel="stylesheet" href="css/style.css"/>
 <style>
-/* ── Landing page overrides ───────────────────────────────────────────── */
+/* ── Landing page ─────────────────────────────────────────────────────── */
 body{background:#fff;}
 
-/* Hero */
 .lp-hero{
-  background:var(--dark);
-  background-image:
-    linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
-  background-size:40px 40px;
+  background:#1e3a5f;
   color:#fff;
-  padding:80px 24px 72px;
+  padding:88px 24px 76px;
   text-align:center;
-  position:relative;
 }
 .lp-eyebrow{
   display:inline-block;
-  font-size:11px;letter-spacing:3px;text-transform:uppercase;
-  color:var(--light);border:1px solid rgba(255,255,255,.2);
-  border-radius:20px;padding:4px 16px;margin-bottom:22px;
+  font-size:10px;letter-spacing:3px;text-transform:uppercase;
+  color:#64748b;
+  margin-bottom:26px;
 }
 .lp-title{
-  font-size:clamp(26px,5vw,48px);
-  font-weight:700;line-height:1.2;
-  max-width:720px;margin:0 auto 16px;
+  font-size:clamp(26px,5vw,46px);
+  font-weight:700;line-height:1.15;
+  max-width:680px;margin:0 auto 16px;
 }
 .lp-sub{
-  color:var(--light);font-size:clamp(14px,2vw,17px);
-  max-width:560px;margin:0 auto 36px;line-height:1.7;
+  color:#94a3b8;font-size:clamp(14px,2vw,16px);
+  max-width:500px;margin:0 auto 36px;line-height:1.8;
 }
-.lp-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:40px;}
+.lp-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:44px;}
 .lp-cta-primary{
-  display:inline-block;padding:14px 32px;border-radius:10px;
-  background:#fff;color:var(--dark);font-weight:700;font-size:15px;
-  text-decoration:none;transition:opacity .15s;
+  display:inline-block;padding:12px 28px;border-radius:7px;
+  background:#2563eb;color:#fff;font-weight:600;font-size:14px;
+  text-decoration:none;transition:background .12s;
 }
+.lp-cta-primary:hover{background:#1d4ed8;}
 .lp-cta-outline{
-  display:inline-block;padding:14px 32px;border-radius:10px;
-  background:transparent;color:#fff;font-weight:700;font-size:15px;
-  border:2px solid rgba(255,255,255,.5);text-decoration:none;transition:opacity .15s;
+  display:inline-block;padding:12px 28px;border-radius:7px;
+  background:transparent;color:#94a3b8;font-weight:600;font-size:14px;
+  border:1px solid rgba(255,255,255,.2);text-decoration:none;
+  transition:background .12s,color .12s;
 }
-.lp-cta-primary:hover,.lp-cta-outline:hover{opacity:.85;}
+.lp-cta-outline:hover{background:rgba(255,255,255,.06);color:#fff;}
 .lp-levels{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
 .lp-badge{
-  display:inline-block;padding:5px 16px;border-radius:20px;
-  font-size:12px;font-weight:700;
+  display:inline-block;padding:4px 12px;border-radius:20px;
+  font-size:11px;font-weight:700;
 }
 
 /* About */
-.lp-about{padding:72px 24px;background:#fff;max-width:1060px;margin:0 auto;}
-.lp-about-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start;}
-.lp-about h2{font-size:clamp(20px,3vw,30px);color:var(--dark);margin-bottom:14px;line-height:1.3;}
-.lp-about p{font-size:14px;color:#555;line-height:1.8;margin-bottom:14px;}
-.about-list{list-style:none;padding:0;}
+.lp-about{padding:88px 24px;background:#fff;}
+.lp-about-inner{max-width:1040px;margin:0 auto;}
+.lp-about-grid{display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:start;}
+.lp-about h2{font-size:clamp(20px,3vw,27px);color:#0f172a;margin-bottom:18px;line-height:1.3;font-weight:700;}
+.lp-about p{font-size:14px;color:#475569;line-height:1.85;margin-bottom:14px;}
+.about-list{list-style:none;padding:0;margin-top:8px;}
 .about-list li{
-  font-size:14px;color:#444;padding:10px 0 10px 32px;
-  border-bottom:1px solid #f0f0f0;position:relative;line-height:1.5;
+  font-size:14px;color:#374151;padding:11px 0 11px 26px;
+  border-bottom:1px solid #f1f5f9;position:relative;line-height:1.55;
 }
 .about-list li::before{
-  content:"✓";position:absolute;left:0;top:10px;
-  color:var(--mid);font-weight:700;font-size:15px;
+  content:"";position:absolute;left:0;top:19px;
+  width:7px;height:7px;border-radius:50%;
+  background:#2563eb;
 }
 .about-list li:last-child{border-bottom:none;}
 
 /* How it works */
-.lp-steps-wrap{background:#f7f9fc;padding:72px 24px;}
-.lp-steps{max-width:1060px;margin:0 auto;}
-.lp-steps h2{font-size:clamp(20px,3vw,30px);color:var(--dark);text-align:center;margin-bottom:8px;}
-.lp-steps-sub{text-align:center;color:#777;font-size:14px;margin-bottom:44px;}
-.steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;}
-.step{background:#fff;border-radius:14px;padding:28px 24px;box-shadow:0 4px 20px rgba(0,0,0,.06);}
-.step-num{font-size:36px;font-weight:700;color:var(--light);line-height:1;margin-bottom:12px;}
-.step h3{font-size:15px;font-weight:700;color:var(--dark);margin-bottom:8px;}
-.step p{font-size:13px;color:#666;line-height:1.7;}
+.lp-steps-wrap{background:#f8fafc;padding:88px 24px;}
+.lp-steps{max-width:1040px;margin:0 auto;}
+.lp-steps-head{text-align:center;margin-bottom:56px;}
+.lp-steps-head h2{font-size:clamp(20px,3vw,27px);color:#0f172a;font-weight:700;margin-bottom:8px;}
+.lp-steps-sub{color:#64748b;font-size:14px;}
+.steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;}
+.step-num{font-size:11px;font-weight:700;color:#2563eb;font-family:monospace;letter-spacing:2px;margin-bottom:16px;}
+.step h3{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px;}
+.step p{font-size:13px;color:#64748b;line-height:1.8;}
 
 /* Levels */
-.lp-levels-wrap{background:var(--dark);padding:72px 24px;}
-.lp-levels-inner{max-width:1060px;margin:0 auto;}
-.lp-levels-inner h2{font-size:clamp(20px,3vw,30px);color:#fff;text-align:center;margin-bottom:8px;}
-.lp-levels-sub{text-align:center;color:var(--light);font-size:14px;margin-bottom:44px;}
-.levels-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
-.level-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:24px 20px;}
-.level-badge{display:inline-block;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700;margin-bottom:12px;}
-.level-card h3{font-size:16px;font-weight:700;color:#fff;margin-bottom:8px;}
-.level-card p{font-size:13px;color:var(--light);line-height:1.7;}
+.lp-levels-wrap{background:#1e3a5f;padding:88px 24px;}
+.lp-levels-inner{max-width:1040px;margin:0 auto;}
+.lp-levels-head{text-align:center;margin-bottom:52px;}
+.lp-levels-head h2{font-size:clamp(20px,3vw,27px);color:#fff;font-weight:700;margin-bottom:8px;}
+.lp-levels-sub{color:#64748b;font-size:14px;}
+.levels-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.level-card{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:9px;padding:22px 20px;
+}
+.level-badge{display:inline-block;border-radius:5px;padding:3px 10px;font-size:11px;font-weight:700;margin-bottom:12px;}
+.level-card h3{font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:8px;}
+.level-card p{font-size:13px;color:#64748b;line-height:1.75;}
 
-/* CTA banner */
-.lp-cta-wrap{background:linear-gradient(135deg,#1a56db,#2E75B6);padding:64px 24px;text-align:center;}
-.lp-cta-wrap h2{font-size:clamp(20px,3vw,28px);color:#fff;margin-bottom:10px;}
-.lp-cta-wrap p{color:rgba(255,255,255,.8);font-size:14px;margin-bottom:28px;max-width:480px;margin-left:auto;margin-right:auto;}
+/* CTA */
+.lp-cta-wrap{background:#0f172a;padding:80px 24px;text-align:center;}
+.lp-cta-wrap h2{font-size:clamp(20px,3vw,26px);color:#fff;font-weight:700;margin-bottom:10px;}
+.lp-cta-wrap p{
+  color:#64748b;font-size:14px;
+  max-width:440px;margin:0 auto 28px;line-height:1.75;
+}
 
 /* Footer */
-.lp-footer{background:#151f30;padding:36px 24px;text-align:center;}
-.lp-footer-brand{color:#fff;font-weight:700;font-size:15px;margin-bottom:4px;}
-.lp-footer-domain{color:#7b91ad;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;}
-.lp-footer-links{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;}
-.lp-footer-links a{color:#7b91ad;font-size:12px;text-decoration:none;transition:color .15s;}
-.lp-footer-links a:hover{color:#fff;}
-.lp-footer-copy{color:#4a5a70;font-size:11px;}
+.lp-footer{background:#080e1a;padding:40px 24px;text-align:center;}
+.lp-footer-brand{color:#e2e8f0;font-weight:700;font-size:14px;margin-bottom:3px;letter-spacing:.3px;}
+.lp-footer-domain{color:#334155;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:20px;}
+.lp-footer-links{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-bottom:18px;}
+.lp-footer-links a{color:#334155;font-size:12px;text-decoration:none;transition:color .12s;}
+.lp-footer-links a:hover{color:#64748b;}
+.lp-footer-copy{color:#1e293b;font-size:11px;}
 
 /* Responsive */
 @media(max-width:860px){
-  .lp-about-grid{grid-template-columns:1fr;}
-  .steps-grid{grid-template-columns:1fr;}
+  .lp-about-grid{grid-template-columns:1fr;gap:40px;}
+  .steps-grid{grid-template-columns:1fr;gap:32px;}
   .levels-grid{grid-template-columns:1fr 1fr;}
 }
 @media(max-width:640px){
   .levels-grid{grid-template-columns:1fr;}
+  .lp-hero{padding:64px 20px 60px;}
 }
 </style>
 </head>
@@ -148,40 +155,42 @@ body{background:#fff;}
     <span class="lp-badge b-B1">B1 Intermediar</span>
     <span class="lp-badge b-B2">B2 Avansat</span>
     <span class="lp-badge b-C1">C1 Performanță</span>
-    <span class="lp-badge" style="background:#8B5E3C;color:#fff">FCE</span>
-    <span class="lp-badge" style="background:#2C4A7C;color:#fff">CAE</span>
+    <span class="lp-badge b-FCE">FCE</span>
+    <span class="lp-badge b-CAE">CAE</span>
   </div>
 </div>
 
 <!-- About -->
 <section class="lp-about">
-  <div class="lp-about-grid">
-    <div>
-      <h2>Un concurs serios,<br/>accesibil oricând și oriunde.</h2>
-      <p>
-        ECHO este un concurs de gramatică și vocabular engleză, organizat în format
-        online și supervizat. Subiectele sunt construite după modelul certificărilor
-        Cambridge — cu secțiuni de completare, transformare, cloze și formare de cuvinte.
-      </p>
-      <p>
-        Fiecare participant primește un cod unic de acces, care îi permite să susțină
-        examenul în mod securizat. Corectarea este automată și imediată.
-      </p>
-      <p>
-        Concursul se desfășoară în două etape: o etapă de calificare online și o
-        finală supervizată, deschisă celor mai buni participanți din fiecare nivel.
-      </p>
-    </div>
-    <div>
-      <ul class="about-list">
-        <li>Format digital complet — fără tipărit, fără scanat</li>
-        <li>Subiecte pe model Cambridge, adaptate pentru fiecare nivel</li>
-        <li>Corectare automată cu normalizare inteligentă a răspunsurilor</li>
-        <li>Cod de acces unic per participant, valabil pe toată perioada concursului</li>
-        <li>Calificare și finală — două etape cu subiecte diferite</li>
-        <li>Rezultate și clasamente disponibile imediat după finalizare</li>
-        <li>Administrare completă din panoul de profesor</li>
-      </ul>
+  <div class="lp-about-inner">
+    <div class="lp-about-grid">
+      <div>
+        <h2>Un concurs serios,<br/>accesibil oricând și oriunde.</h2>
+        <p>
+          ECHO este un concurs de gramatică și vocabular engleză, organizat în format
+          online și supervizat. Subiectele sunt construite după modelul certificărilor
+          Cambridge — cu secțiuni de completare, transformare, cloze și formare de cuvinte.
+        </p>
+        <p>
+          Fiecare participant primește un cod unic de acces, care îi permite să susțină
+          examenul în mod securizat. Corectarea este automată și imediată.
+        </p>
+        <p>
+          Concursul se desfășoară în două etape: o etapă de calificare online și o
+          finală supervizată, deschisă celor mai buni participanți din fiecare nivel.
+        </p>
+      </div>
+      <div>
+        <ul class="about-list">
+          <li>Format digital complet — fără tipărit, fără scanat</li>
+          <li>Subiecte pe model Cambridge, adaptate pentru fiecare nivel</li>
+          <li>Corectare automată cu normalizare inteligentă a răspunsurilor</li>
+          <li>Cod de acces unic per participant, valabil pe toată perioada concursului</li>
+          <li>Calificare și finală — două etape cu subiecte diferite</li>
+          <li>Rezultate și clasamente disponibile imediat după finalizare</li>
+          <li>Administrare completă din panoul de profesor</li>
+        </ul>
+      </div>
     </div>
   </div>
 </section>
@@ -189,8 +198,10 @@ body{background:#fff;}
 <!-- How it works -->
 <section class="lp-steps-wrap">
   <div class="lp-steps">
-    <h2>Cum funcționează?</h2>
-    <p class="lp-steps-sub">Trei pași simpli, de la înregistrare până la rezultat.</p>
+    <div class="lp-steps-head">
+      <h2>Cum funcționează?</h2>
+      <p class="lp-steps-sub">Trei pași simpli, de la înregistrare până la rezultat.</p>
+    </div>
     <div class="steps-grid">
       <div class="step">
         <div class="step-num">01</div>
@@ -226,56 +237,40 @@ body{background:#fff;}
 <!-- Levels -->
 <section class="lp-levels-wrap">
   <div class="lp-levels-inner">
-    <h2>Patru niveluri de competență</h2>
-    <p class="lp-levels-sub">Fiecare nivel are subiecte dedicate, calibrate după descriptori Cambridge.</p>
+    <div class="lp-levels-head">
+      <h2>Patru niveluri de competență</h2>
+      <p class="lp-levels-sub">Fiecare nivel are subiecte dedicate, calibrate după descriptori Cambridge.</p>
+    </div>
     <div class="levels-grid">
       <div class="level-card">
         <span class="level-badge b-A2">A2</span>
         <h3>Elementar</h3>
-        <p>
-          Gramatică de bază, vocabular frecvent, structuri simple. Ideal pentru elevi
-          la început de drum cu limba engleză formală.
-        </p>
+        <p>Gramatică de bază, vocabular frecvent, structuri simple. Ideal pentru elevi la început de drum cu limba engleză formală.</p>
       </div>
       <div class="level-card">
         <span class="level-badge b-B1">B1</span>
         <h3>Intermediar</h3>
-        <p>
-          Timp și aspect verbal, condiționale, vocabular tematic. Subiecte construite
-          pentru elevi cu o pregătire solidă de bază.
-        </p>
+        <p>Timp și aspect verbal, condiționale, vocabular tematic. Subiecte construite pentru elevi cu o pregătire solidă de bază.</p>
       </div>
       <div class="level-card">
         <span class="level-badge b-B2">B2</span>
         <h3>Avansat</h3>
-        <p>
-          Structuri complexe, formare de cuvinte, transformări de fraze. Nivelul la
-          care competiția devine cu adevărat interesantă.
-        </p>
+        <p>Structuri complexe, formare de cuvinte, transformări de fraze. Nivelul la care competiția devine cu adevărat interesantă.</p>
       </div>
       <div class="level-card">
         <span class="level-badge b-C1">C1</span>
         <h3>Performanță</h3>
-        <p>
-          Colocații, idiomuri, structuri avansate de exprimare. Nivelul rezervat
-          elevilor cu pregătire de nivel superior sau olimpici.
-        </p>
+        <p>Colocații, idiomuri, structuri avansate de exprimare. Nivelul rezervat elevilor cu pregătire de nivel superior sau olimpici.</p>
       </div>
       <div class="level-card">
-        <span class="level-badge" style="background:#8B5E3C;color:#fff">FCE</span>
+        <span class="level-badge b-FCE">FCE</span>
         <h3>First Certificate</h3>
-        <p>
-          Format Cambridge B2 First. Secțiuni de Use of English, Reading și Writing,
-          cu durată de 75 de minute.
-        </p>
+        <p>Format Cambridge B2 First. Secțiuni de Use of English, Reading și Writing, cu durată de 75 de minute.</p>
       </div>
       <div class="level-card">
-        <span class="level-badge" style="background:#2C4A7C;color:#fff">CAE</span>
+        <span class="level-badge b-CAE">CAE</span>
         <h3>Advanced</h3>
-        <p>
-          Format Cambridge C1 Advanced. Subiecte de nivel superior, vocabular
-          academic și structuri complexe. Durată: 90 de minute.
-        </p>
+        <p>Format Cambridge C1 Advanced. Subiecte de nivel superior, vocabular academic și structuri complexe. Durată: 90 de minute.</p>
       </div>
     </div>
   </div>

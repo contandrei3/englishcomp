@@ -18,7 +18,7 @@
 <div id="root"></div>
 <script type="text/babel">
 const { useState } = React;
-const C = {dark:"#1F3864",mid:"#2E75B6",red:"#C0392B",green:"#1D6027"};
+const C = {dark:"#0f172a",mid:"#2563eb",red:"#dc2626",green:"#15803d"};
 const LVL = ["A2","B1","B2","C1"];
 
 function LoginView() {
@@ -67,10 +67,10 @@ function LoginView() {
 
 function Metric({label, value, sub, color}) {
   return (
-    <div style={{background:"#fff",borderRadius:10,padding:"18px 20px",boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
-      <div style={{fontSize:32,fontWeight:700,color:color||C.dark}}>{value}</div>
-      <div style={{fontSize:13,fontWeight:600,color:"#444",marginTop:2}}>{label}</div>
-      {sub && <div style={{fontSize:11,color:"#999",marginTop:2}}>{sub}</div>}
+    <div style={{background:"#fff",borderRadius:10,padding:"18px 20px",border:"1px solid #e2e8f0"}}>
+      <div style={{fontSize:30,fontWeight:700,color:color||C.dark}}>{value}</div>
+      <div style={{fontSize:13,fontWeight:600,color:"#374151",marginTop:3}}>{label}</div>
+      {sub && <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{sub}</div>}
     </div>
   );
 }
@@ -125,7 +125,7 @@ function DashboardView() {
 
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:24}}>
           {/* Per-level breakdown */}
-          <div style={{background:"#fff",borderRadius:10,padding:"18px 20px",boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+          <div style={{background:"#fff",borderRadius:10,padding:"18px 20px",border:"1px solid #e2e8f0"}}>
             <div style={{fontWeight:700,color:C.dark,marginBottom:14,fontSize:14}}>Participanți per nivel</div>
             {lvlStats.map(({l,p,s,color})=>(
               <div key={l} style={{marginBottom:10}}>
@@ -138,7 +138,7 @@ function DashboardView() {
           </div>
 
           {/* Recent activity */}
-          <div style={{background:"#fff",borderRadius:10,padding:"18px 20px",boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+          <div style={{background:"#fff",borderRadius:10,padding:"18px 20px",border:"1px solid #e2e8f0"}}>
             <div style={{fontWeight:700,color:C.dark,marginBottom:14,fontSize:14}}>Activitate recentă</div>
             {recent.length === 0
               ? <div style={{color:"#aaa",fontSize:13}}>Nicio lucrare trimisă încă.</div>
@@ -159,7 +159,7 @@ function DashboardView() {
         {/* Quick-link cards */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14}}>
           {PAGES.map(pg=>(
-            <a key={pg.href} href={pg.href} style={{background:"#fff",borderRadius:10,padding:"20px",boxShadow:"0 2px 12px rgba(0,0,0,.07)",textDecoration:"none",display:"block"}}>
+            <a key={pg.href} href={pg.href} style={{background:"#fff",borderRadius:10,padding:"20px",border:"1px solid #e2e8f0",textDecoration:"none",display:"block",transition:"border-color .12s"}}>
               <div style={{fontSize:26,marginBottom:6}}>{pg.icon}</div>
               <div style={{fontWeight:700,color:C.dark,fontSize:14,marginBottom:4}}>{pg.label}</div>
               <div style={{fontSize:12,color:"#888"}}>{pg.desc}</div>
@@ -176,7 +176,7 @@ function App() {
   return <DashboardView/>;
 }
 
-document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Georgia,serif;color:#2E75B6;font-size:15px;">Se încarcă…</div>';
+document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#2563eb;font-size:14px;">Se încarcă…</div>';
 CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<App/>));
 </script>
 </body>

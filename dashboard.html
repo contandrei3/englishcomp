@@ -18,7 +18,7 @@
 
 <script type="text/babel">
 const { useState, useEffect } = React;
-const C = {dark:"#1F3864",mid:"#2E75B6",light:"#D6E4F0",green:"#1D6027",amber:"#B45309"};
+const C = {dark:"#0f172a",mid:"#2563eb",light:"#e2e8f0",green:"#15803d",amber:"#b45309"};
 const STORE_KEY = "cpeen_student_code";
 
 function Navbar() {
@@ -59,19 +59,19 @@ function SessionCard({s, exam}) {
   const score = s.result?.total;
 
   return (
-    <div style={{border:"1px solid #e3e8ef",borderRadius:10,padding:14,marginBottom:10,background:"#fff"}}>
+    <div style={{border:"1px solid #e2e8f0",borderRadius:8,padding:14,marginBottom:8,background:"#fff"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
         <div style={{flex:1,minWidth:200}}>
-          <div style={{fontWeight:700,color:C.dark,fontSize:14,marginBottom:4}}>{examTitle}</div>
+          <div style={{fontWeight:700,color:C.dark,fontSize:14,marginBottom:5}}>{examTitle}</div>
           <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
             <span className={`badge b-${s.level}`}>{s.level}</span>
-            <span style={{fontSize:12,color:"#666"}}>{stageL}</span>
-            <span style={{fontSize:11,color:"#aaa",fontFamily:"monospace"}}>· var. {variantId}</span>
+            <span style={{fontSize:12,color:"#64748b"}}>{stageL}</span>
+            <span style={{fontSize:11,color:"#94a3b8",fontFamily:"monospace"}}>· var. {variantId}</span>
             <StatusBadge status={s.status}/>
           </div>
           {s.status === "submitted" && typeof score === "number" && (
             <div style={{marginTop:8,fontSize:13,color:C.green,fontWeight:700}}>
-              Scor: {score}{s.submittedAt && <span style={{color:"#999",fontWeight:400,marginLeft:8,fontSize:12}}>· {new Date(s.submittedAt).toLocaleString("ro-RO")}</span>}
+              Scor: {score}{s.submittedAt && <span style={{color:"#94a3b8",fontWeight:400,marginLeft:8,fontSize:12}}>· {new Date(s.submittedAt).toLocaleString("ro-RO")}</span>}
             </div>
           )}
         </div>
@@ -100,8 +100,8 @@ function DashboardView({participant, onLogout}) {
       <div className="page">
         <div className="container" style={{maxWidth:780}}>
 
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
-            <h2 style={{color:C.dark,fontSize:20}}>Dashboard-ul tău</h2>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:8}}>
+            <h2 style={{color:C.dark,fontSize:19,fontWeight:700}}>Dashboard-ul tău</h2>
             <div style={{display:"flex",gap:8}}>
               <button className="btn btn-mid btn-sm" onClick={()=>setRefreshKey(k=>k+1)}>↻ Actualizează</button>
               <button className="btn btn-ghost btn-sm" onClick={onLogout}>Logout</button>
@@ -109,31 +109,31 @@ function DashboardView({participant, onLogout}) {
           </div>
 
           {/* Profil */}
-          <div style={{background:"#fff",borderRadius:10,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:16}}>
-            <div style={{fontSize:11,color:"#888",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>Profil</div>
-            <div style={{fontSize:18,fontWeight:700,color:C.dark,marginBottom:4}}>{participant.name}</div>
-            <div style={{fontSize:13,color:"#555",marginBottom:8}}>
+          <div style={{background:"#fff",borderRadius:10,padding:20,border:"1px solid #e2e8f0",marginBottom:14}}>
+            <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:10,fontWeight:700}}>Profil</div>
+            <div style={{fontSize:17,fontWeight:700,color:C.dark,marginBottom:4}}>{participant.name}</div>
+            <div style={{fontSize:13,color:"#64748b",marginBottom:10}}>
               {participant.school} · {participant.county}
               {participant.grade && <> · clasa {participant.grade}</>}
             </div>
-            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:12,color:"#666"}}>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:12,color:"#64748b"}}>
               <span className={`badge b-${participant.level}`}>{participant.level}</span>
               {participant.teacher && <span>Prof. {participant.teacher}</span>}
-              <span>· Cod: <span style={{fontFamily:"monospace",background:"#f0f4f8",padding:"2px 6px",borderRadius:4,letterSpacing:2}}>{participant.accessCode}</span></span>
+              <span>· Cod: <span style={{fontFamily:"monospace",background:"#f8fafc",padding:"2px 7px",borderRadius:4,letterSpacing:2,border:"1px solid #e2e8f0"}}>{participant.accessCode}</span></span>
             </div>
           </div>
 
           {/* Calificare */}
           <div style={{
-            background: qualified ? "#e8f7ec" : "#fff8e1",
-            border: `2px solid ${qualified ? "#27AE60" : "#f0c14b"}`,
-            borderRadius:10, padding:18, marginBottom:16
+            background: qualified ? "#f0fdf4" : "#fffbeb",
+            border: `1px solid ${qualified ? "#86efac" : "#fde68a"}`,
+            borderRadius:10, padding:18, marginBottom:14
           }}>
-            <div style={{fontSize:11,color:"#888",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Status calificare</div>
-            <div style={{fontSize:18,fontWeight:700,color: qualified ? C.green : C.amber}}>
-              {qualified ? "✓ Calificat pentru Finală" : "În etapa de Calificare"}
+            <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:6,fontWeight:700}}>Status calificare</div>
+            <div style={{fontSize:16,fontWeight:700,color: qualified ? C.green : C.amber}}>
+              {qualified ? "Calificat pentru Finală" : "În etapa de Calificare"}
             </div>
-            <div style={{fontSize:12,color:"#666",marginTop:4}}>
+            <div style={{fontSize:12,color:"#64748b",marginTop:4}}>
               {qualified
                 ? "Felicitări! Administratorul te-a calificat pentru etapa de finală."
                 : "Pentru a accesa etapa de finală, trebuie să fii calificat de către un administrator."}
@@ -141,8 +141,8 @@ function DashboardView({participant, onLogout}) {
           </div>
 
           {/* Sesiuni */}
-          <div style={{background:"#fff",borderRadius:10,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:16}}>
-            <div style={{fontSize:11,color:"#888",textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>
+          <div style={{background:"#fff",borderRadius:10,padding:20,border:"1px solid #e2e8f0",marginBottom:16}}>
+            <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:12,fontWeight:700}}>
               Sesiunile mele ({sessions.length})
             </div>
             {sessions.length === 0 ? (
@@ -250,7 +250,7 @@ function App() {
   return <CodeEntry onLogin={onLogin} presetCode={autoCode} presetErr={autoErr}/>;
 }
 
-document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Georgia,serif;color:#2E75B6;font-size:15px;">Se încarcă…</div>';
+document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#2563eb;font-size:14px;">Se încarcă…</div>';
 CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<App/>));
 </script>
 </body>

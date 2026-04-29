@@ -119,7 +119,7 @@ function Wizard({ exams, participants, onClose, onCreated }) {
                   <div key={t.v}
                     onClick={() => setTypeSel(t.v)}
                     style={{
-                      border:`2px solid ${typeSel===t.v?"#2E75B6":"#ddd"}`,
+                      border:`2px solid ${typeSel===t.v?"#2563eb":"#ddd"}`,
                       background: typeSel===t.v ? "#e8f4fd" : "#fafafa",
                       borderRadius:10, padding:"10px 14px", cursor:"pointer",
                       display:"flex", alignItems:"center", gap:10
@@ -200,7 +200,7 @@ function Wizard({ exams, participants, onClose, onCreated }) {
                       <input type="checkbox" checked={selected.has(p.id)} readOnly/>
                       <span className={`badge b-${p.level}`} style={{fontSize:10}}>{p.level}</span>
                       <div>
-                        <div style={{fontWeight:700,color:"#1F3864",fontSize:13}}>{p.name}</div>
+                        <div style={{fontWeight:700,color:"#0f172a",fontSize:13}}>{p.name}</div>
                         <div style={{fontSize:11,color:"#888"}}>{p.school} · {p.county}</div>
                       </div>
                     </label>
@@ -282,7 +282,7 @@ function EditModal({ group, exams, participants, onClose, onSaved }) {
                 <input type="checkbox" checked={selected.has(p.id)} readOnly/>
                 <span className={`badge b-${p.level}`} style={{fontSize:10}}>{p.level}</span>
                 <div>
-                  <div style={{fontWeight:700,color:"#1F3864",fontSize:13}}>{p.name}</div>
+                  <div style={{fontWeight:700,color:"#0f172a",fontSize:13}}>{p.name}</div>
                   <div style={{fontSize:11,color:"#888"}}>{p.school}</div>
                 </div>
               </label>
@@ -369,7 +369,7 @@ function ResultsModal({ group, exams, participants, sessions, onClose }) {
                             <td style={{fontWeight:700,fontFamily:"monospace"}}>
                               {submitted && score !== undefined ? score : "—"}
                             </td>
-                            <td style={{fontWeight:700,color:"#2E75B6"}}>
+                            <td style={{fontWeight:700,color:"#2563eb"}}>
                               {submitted && score !== undefined ? (score/10).toFixed(2) : "—"}
                             </td>
                           </tr>
@@ -405,12 +405,12 @@ function SessionCard({ group, exams, participants, sessions, tick, onStart, onSt
   }
 
   return (
-    <div style={{background:"#fff",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:12,padding:"14px 18px"}}>
+    <div style={{background:"#fff",borderRadius:10,border:"1px solid #e2e8f0",marginBottom:12,padding:"14px 18px"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
         <div style={{display:"flex",alignItems:"center",gap:10,flex:1,minWidth:0}}>
           <span className={`badge ${typeInfo.cls}`}>{typeInfo.l}</span>
           <div style={{minWidth:0}}>
-            <div style={{fontWeight:700,color:"#1F3864",fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+            <div style={{fontWeight:700,color:"#0f172a",fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
               {exam?.title || group.examId || "—"}
             </div>
             <div style={{fontSize:11,color:"#888"}}>
@@ -496,14 +496,14 @@ function SessionsPage() {
   );
 
   return (
-    <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
+    <div style={{minHeight:"100vh",background:"#f8fafc"}}>
       <ADMIN.Nav active="sessions"/>
       <div className="page"><div className="container">
 
         {/* Header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
           <div>
-            <h2 style={{color:"#1F3864",fontSize:18}}>Sesiuni de examen</h2>
+            <h2 style={{color:"#0f172a",fontSize:18}}>Sesiuni de examen</h2>
             <div style={{fontSize:12,color:"#888"}}>{groups.length} sesiuni în total</div>
           </div>
           <div style={{display:"flex",gap:8}}>
@@ -517,7 +517,7 @@ function SessionsPage() {
         {/* Active sessions */}
         {active.length > 0 && (
           <div style={{marginBottom:8}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#2E75B6",marginBottom:8,letterSpacing:.5}}>● SESIUNI ACTIVE</div>
+            <div style={{fontSize:12,fontWeight:700,color:"#2563eb",marginBottom:8,letterSpacing:.5}}>● SESIUNI ACTIVE</div>
             {active.map(cardFor)}
           </div>
         )}
@@ -539,7 +539,7 @@ function SessionsPage() {
         )}
 
         {groups.length === 0 && (
-          <div style={{background:"#fff",borderRadius:10,padding:48,textAlign:"center",color:"#aaa",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+          <div style={{background:"#fff",borderRadius:10,padding:48,textAlign:"center",color:"#aaa",border:"1px solid #e2e8f0"}}>
             <div style={{fontSize:32,marginBottom:10}}>📋</div>
             <div style={{marginBottom:16}}>Nicio sesiune creată.</div>
             <button className="btn btn-primary" onClick={() => setShowWiz(true)}>+ Creează prima sesiune</button>
@@ -596,7 +596,7 @@ function SessionsPage() {
   );
 }
 
-document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Georgia,serif;color:#2E75B6;font-size:15px;">Se încarcă…</div>';
+document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#2563eb;font-size:14px;">Se încarcă…</div>';
 CPEEN.init().then(() => ReactDOM.createRoot(document.getElementById("root")).render(<SessionsPage/>));
 </script>
 </body>
