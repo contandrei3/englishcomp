@@ -564,15 +564,11 @@ function ExamApp() {
       return;
     }
 
-    // Pending or in_progress → check activation, then start
-    if(s.status === "pending") {
-      if (s.groupId) {
-        const grp = CPEEN.getGroupSessions().find(g => g.id === s.groupId);
-        if (!grp || grp.status !== "active") { setPtcp(p); setView("noExam"); return; }
-      } else {
-        const cfg = CPEEN.getConfig();
-        if(!cfg.activeExams?.[s.level]?.[s.stage]) { setPtcp(p); setView("noExam"); return; }
-      }
+    // Pending → check group activation for group sessions only.
+    // Standalone sessions (no groupId) are always joinable once allocated.
+    if(s.status === "pending" && s.groupId) {
+      const grp = CPEEN.getGroupSessions().find(g => g.id === s.groupId);
+      if (!grp || grp.status !== "active") { setPtcp(p); setView("noExam"); return; }
     }
 
     const ex = CPEEN.getExams().find(e => e.id === s.examId) ||
