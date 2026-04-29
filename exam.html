@@ -248,7 +248,7 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
   <div style={{ background: "#fff", padding: "20px", borderRadius: 12, lineHeight: "2.5", fontSize: "16px", color: "#1e293b" }}>
     {(() => {
       // Împărțim textul după [număr]
-      const parts = (data.text || "").split(/(\[\d+\])/g);
+      const parts = (part.text || "").split(/(\[\d+\])/g);
       
       return parts.map((chunk, index) => {
         const match = chunk.match(/\[(\d+)\]/);
@@ -967,7 +967,7 @@ function ExamApp() {
                 <div style={{fontWeight:700,color:C.dark,fontSize:15}}>{ptcp?.name}</div>
                 <div style={{fontSize:13,color:"#64748b",marginBottom:20}}>{ptcp?.school} · {ptcp?.grade} · {ptcp?.county}</div>
                 {secs.map((sec,idx)=>{
-                  const sc = isNew ? sec.score : result.det[sec.k].filter(Boolean).length*(sec.max/Math.max(1,result.det[sec.k].length));
+                  const sc = isNew ? sec.score : result.details[sec.k].filter(Boolean).length*(sec.max/Math.max(1,result.details[sec.k].length));
                   return (
                     <div key={idx} style={{marginBottom:12}}>
                       <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:3}}>
