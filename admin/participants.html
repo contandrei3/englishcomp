@@ -20,6 +20,115 @@
 const { useState, useMemo, useEffect } = React;
 const C = {dark:"#0f172a",mid:"#2563eb",red:"#dc2626",green:"#15803d"};
 const LVL = ["A2","B1","B2","C1"];
+const LETTERS = ['A','B','C','D','E','F'];
+const PART_LBL = {p1:"MC Cloze",p2:"Open Cloze",p3:"Word Formation",p4:"KWT",
+  p5:"Multiple Choice",p6:"Gapped Text",p7:"Multiple Matching",p8:"Cross-text",
+  ec:"Error Correction",mc:"Multiple Choice",e1:"Error Correction I",e2:"Error Correction II"};
+
+function getCorrectDisplay(part, i) {
+  if (!part) return '—';
+  if (part.type==='p1'||part.type==='p5'||part.type==='mc') return LETTERS[part.items?.[i]?.answer] ?? '—';
+  if (part.type==='p8') return part.items?.[i]?.answer ?? '—';
+  if (part.type==='p2'||part.type==='p6') { const a=part.key?.[i]; return Array.isArray(a)?a[0]:(a??'—'); }
+  if (part.type==='p3'||part.type==='p4') { const a=part.items?.[i]?.key; return Array.isArray(a)?a[0]:(a??'—'); }
+  if (part.type==='p7') return part.items?.[i]?.answer ?? '—';
+  if (part.type==='ec'||part.type==='e1'||part.type==='e2') return part.key?.[i] ?? '—';
+  return '—';
+}
+function getStudentDisplay(part, raw) {
+  if ((part.type==='p1'||part.type==='p5'||part.type==='mc') && raw!==''&&raw!==undefined)
+    return LETTERS[parseInt(raw)] ?? raw;
+  return raw || '—';
+}
+function getItemLabel(part, i) {
+  if (part.type==='p2'||part.type==='p6') return `Gap (${i+1})`;
+  if (part.type==='ec'||part.type==='e1'||part.type==='e2') {
+    const l=part.lines?.[i]||''; return l.length>60?l.slice(0,60)+'…':l;
+  }
+  if (part.type==='p3') return `${part.items?.[i]?.before||''} ___ [${part.items?.[i]?.kw||''}]`.slice(0,70);
+  const q=part.items?.[i]?.question||part.items?.[i]?.s1||'';
+  return q.length>70?q.slice(0,70)+'…':q;
+}
+
+function DetailModal({participant, onClose}) {
+  const sessions = CPEEN.getSessionsByParticipant(participant.id);
+  const exams = CPEEN.getExams();
+  const examMap = {}; exams.forEach(e=>{ examMap[e.id]=e; });
+  const submitted = sessions.filter(s=>s.status==='submitted')
+    .sort((a,b)=>(b.submittedAt||0)-(a.submittedAt||0));
+  const s = submitted[0];
+  const exam = s ? examMap[s.examId] : null;
+  const variant = exam?.variants?.find(v=>v.id===s?.variantId);
+  const within24h = s?.submittedAt && (Date.now()-s.submittedAt)<86400000;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" style={{maxWidth:680}} onClick={e=>e.stopPropagation()}>
+        <div className="modal-head modal-head-dark">
+          <div>
+            <h3>{participant.name}</h3>
+            <p>{participant.school} · {participant.level}</p>
+          </div>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body" style={{maxHeight:"70vh",overflowY:"auto"}}>
+          {!s && <div style={{color:"#888",textAlign:"center",padding:20}}>No submitted session found.</div>}
+          {s && (
+            <>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+                <div>
+                  <div style={{fontWeight:700,color:C.dark}}>{exam?.title||s.examId} · var. {s.variantId}</div>
+                  <div style={{fontSize:12,color:"#666"}}>{s.submittedAt?new Date(s.submittedAt).toLocaleString("en-GB"):''}</div>
+                </div>
+                <div style={{fontSize:22,fontWeight:700,color:C.mid}}>{s.result?.total??'—'}/100</div>
+              </div>
+              {!within24h && (
+                <div className="alert alert-warn" style={{marginBottom:12}}>
+                  Detailed answers are only available for 24h after submission.
+                </div>
+              )}
+              {within24h && variant?.parts && (
+                (variant.parts).map((part, pi) => {
+                  const det = s.result?.details?.[pi] || [];
+                  const correct = det.filter(Boolean).length;
+                  const lbl = part.type==='e1'?'E1':part.type==='e2'?'E2':`Part ${pi+1}`;
+                  return (
+                    <div key={pi} style={{marginBottom:14}}>
+                      <div style={{fontWeight:700,fontSize:12,color:C.dark,marginBottom:6,display:"flex",justifyContent:"space-between",background:"#f8fafc",padding:"6px 10px",borderRadius:6}}>
+                        <span>{lbl} — {PART_LBL[part.type]||part.type}</span>
+                        <span style={{color:correct===det.length?C.green:C.mid}}>{correct}/{det.length} correct</span>
+                      </div>
+                      {det.map((ok, i) => {
+                        const raw = s.answers?.parts?.[pi]?.[i];
+                        const std = getStudentDisplay(part, raw);
+                        const cor = getCorrectDisplay(part, i);
+                        const lbl2 = getItemLabel(part, i);
+                        return (
+                          <div key={i} style={{
+                            display:"flex",gap:6,alignItems:"flex-start",padding:"4px 8px",borderRadius:4,marginBottom:2,
+                            background:ok?"#f0fdf4":"#fef2f2"
+                          }}>
+                            <span style={{color:ok?C.green:C.red,fontWeight:700,fontSize:13,minWidth:16,flexShrink:0}}>{ok?"✓":"✗"}</span>
+                            <span style={{flex:1,fontSize:12,color:"#444",lineHeight:1.4}}>{i+1}. {lbl2}</span>
+                            <span style={{fontSize:12,fontFamily:"monospace",fontWeight:700,color:ok?C.green:C.red,flexShrink:0,minWidth:30,textAlign:"right"}}>{std}</span>
+                            {!ok && <span style={{fontSize:12,fontFamily:"monospace",fontWeight:700,color:C.green,flexShrink:0}}>→ {cor}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })
+              )}
+              {!variant?.parts && (
+                <div style={{color:"#888",fontSize:13}}>Exam uses legacy format — no per-question breakdown available.</div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ParticipantsPage() {
   if(!ADMIN.isAuthed()) { window.location.replace("index.html"); return null; }
@@ -34,6 +143,7 @@ function ParticipantsPage() {
   const [toConfirm, setToConfirm] = useState(null);
   const [toDequal, setToDequal] = useState(null);
   const [proctorFlags, setPFlags] = useState({});
+  const [detailPtcp, setDetailPtcp] = useState(null);
 
   const sessions      = CPEEN.getSessions();
   const groupSessions = CPEEN.getGroupSessions();
@@ -302,6 +412,9 @@ function ParticipantsPage() {
                                 style={{padding:"3px 8px",fontSize:11}}>
                                 {copied===p.id?"✓":"⎘"}
                               </button>
+                              <button className="btn btn-sm btn-outline" title="View results"
+                                onClick={()=>setDetailPtcp(p)}
+                                style={{padding:"3px 8px",fontSize:11}}>📋</button>
                               <button className="btn btn-sm btn-danger" title="Șterge"
                                 onClick={()=>setToConfirm(p.id)}
                                 style={{padding:"3px 8px",fontSize:11}}>✕</button>
@@ -317,6 +430,7 @@ function ParticipantsPage() {
           </div>
         </div>
       </div>
+      {detailPtcp && <DetailModal participant={detailPtcp} onClose={()=>setDetailPtcp(null)}/>}
     </div>
   );
 }

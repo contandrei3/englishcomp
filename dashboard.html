@@ -20,6 +20,77 @@
 const { useState, useEffect } = React;
 const C = {dark:"#0f172a",mid:"#2563eb",light:"#e2e8f0",green:"#15803d",amber:"#b45309"};
 const STORE_KEY = "cpeen_student_code";
+const LETTERS = ['A','B','C','D','E','F'];
+
+function getCorrectDisplay(part, i) {
+  if (!part) return '—';
+  if (part.type==='p1'||part.type==='p5'||part.type==='mc') return LETTERS[part.items?.[i]?.answer] ?? '—';
+  if (part.type==='p8') return part.items?.[i]?.answer ?? '—';
+  if (part.type==='p2'||part.type==='p6') {
+    const a = part.key?.[i]; return Array.isArray(a) ? a[0] : (a ?? '—');
+  }
+  if (part.type==='p3'||part.type==='p4') {
+    const a = part.items?.[i]?.key; return Array.isArray(a) ? a[0] : (a ?? '—');
+  }
+  if (part.type==='p7') return part.items?.[i]?.answer ?? '—';
+  if (part.type==='ec'||part.type==='e1'||part.type==='e2') return part.key?.[i] ?? '—';
+  return '—';
+}
+function getStudentDisplay(part, raw) {
+  if ((part.type==='p1'||part.type==='p5'||part.type==='mc') && raw!=='' && raw!==undefined)
+    return LETTERS[parseInt(raw)] ?? raw;
+  return raw || '—';
+}
+function getItemLabel(part, i) {
+  if (part.type==='p2'||part.type==='p6') return `(${i+1})`;
+  if (part.type==='ec'||part.type==='e1'||part.type==='e2') {
+    const line = part.lines?.[i] || '';
+    return line.length > 60 ? line.slice(0,60)+'…' : line;
+  }
+  if (part.type==='p3') return `${part.items?.[i]?.before||''} ___ ${part.items?.[i]?.after||''} [${part.items?.[i]?.kw||''}]`.slice(0,70);
+  const q = part.items?.[i]?.question || part.items?.[i]?.s1 || '';
+  return q.length > 70 ? q.slice(0,70)+'…' : q;
+}
+const PART_LABELS_DASH = {p1:"MC Cloze",p2:"Open Cloze",p3:"Word Formation",p4:"KWT",
+  p5:"Multiple Choice",p6:"Gapped Text",p7:"Multiple Matching",p8:"Cross-text",
+  ec:"Error Correction",mc:"Multiple Choice",e1:"Error Correction I",e2:"Error Correction II"};
+
+function ResultDetail({parts, answers, result}) {
+  return (
+    <div style={{marginTop:12,borderTop:"1px solid #e2e8f0",paddingTop:12}}>
+      {(parts||[]).map((part, pi) => {
+        const det = result?.details?.[pi] || [];
+        const correct = det.filter(Boolean).length;
+        const label = part.type==='e1'?'E1':part.type==='e2'?'E2':`Part ${pi+1}`;
+        return (
+          <div key={pi} style={{marginBottom:12}}>
+            <div style={{fontWeight:700,fontSize:11,color:C.dark,marginBottom:5,display:"flex",justifyContent:"space-between"}}>
+              <span>{label} · {PART_LABELS_DASH[part.type]||part.type}</span>
+              <span style={{color:correct===det.length?C.green:C.mid}}>{correct}/{det.length}</span>
+            </div>
+            {det.map((ok, i) => {
+              const raw = answers?.parts?.[pi]?.[i];
+              const std = getStudentDisplay(part, raw);
+              const cor = getCorrectDisplay(part, i);
+              const lbl = getItemLabel(part, i);
+              return (
+                <div key={i} style={{
+                  display:"flex",gap:6,alignItems:"flex-start",padding:"3px 7px",borderRadius:4,marginBottom:2,
+                  background:ok?"#f0fdf4":"#fef2f2"
+                }}>
+                  <span style={{color:ok?C.green:"#dc2626",fontWeight:700,fontSize:12,minWidth:14,flexShrink:0}}>{ok?"✓":"✗"}</span>
+                  <span style={{flex:1,fontSize:11,color:"#555",lineHeight:1.4}}>{lbl}</span>
+                  <span style={{fontSize:11,fontFamily:"monospace",fontWeight:700,color:ok?C.green:"#dc2626",flexShrink:0}}>{std}</span>
+                  {!ok && <span style={{fontSize:11,fontFamily:"monospace",fontWeight:700,color:C.green,flexShrink:0}}>→ {cor}</span>}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function Navbar() {
   return (
@@ -46,17 +117,21 @@ function StatusBadge({status}) {
 }
 
 function SessionCard({s, exam}) {
+  const [showDetail, setShowDetail] = useState(false);
   const stageL = stageLabel(s.stage);
   const examTitle = exam?.title || s.examId || "—";
   const variantId = s.variantId;
   const link = `exam.html?sid=${encodeURIComponent(s.id)}`;
   const btnLabel = s.status === "submitted"
-    ? "Vezi rezultatele →"
+    ? "View results →"
     : s.status === "in_progress"
-      ? "Continuă examenul →"
-      : "Începe examenul →";
+      ? "Continue exam →"
+      : "Start exam →";
   const btnClass = s.status === "submitted" ? "btn btn-mid btn-sm" : "btn btn-primary btn-sm";
   const score = s.result?.total;
+  const within24h = s.submittedAt && (Date.now() - s.submittedAt) < 86400000;
+  const variant = exam?.variants?.find(v => v.id === s.variantId);
+  const canDetail = s.status === "submitted" && within24h && variant?.parts?.length && s.result;
 
   return (
     <div style={{border:"1px solid #e2e8f0",borderRadius:8,padding:14,marginBottom:8,background:"#fff"}}>
@@ -71,12 +146,22 @@ function SessionCard({s, exam}) {
           </div>
           {s.status === "submitted" && typeof score === "number" && (
             <div style={{marginTop:8,fontSize:13,color:C.green,fontWeight:700}}>
-              Scor: {score}{s.submittedAt && <span style={{color:"#94a3b8",fontWeight:400,marginLeft:8,fontSize:12}}>· {new Date(s.submittedAt).toLocaleString("ro-RO")}</span>}
+              Score: {score}/100{s.submittedAt && <span style={{color:"#94a3b8",fontWeight:400,marginLeft:8,fontSize:12}}>· {new Date(s.submittedAt).toLocaleString("en-GB")}</span>}
             </div>
           )}
         </div>
-        <a href={link} className={btnClass} style={{whiteSpace:"nowrap"}}>{btnLabel}</a>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"flex-start"}}>
+          {canDetail && (
+            <button className="btn btn-ghost btn-sm" onClick={()=>setShowDetail(d=>!d)}>
+              {showDetail ? "Hide details ▲" : "View details ▼"}
+            </button>
+          )}
+          <a href={link} className={btnClass} style={{whiteSpace:"nowrap"}}>{btnLabel}</a>
+        </div>
       </div>
+      {showDetail && canDetail && (
+        <ResultDetail parts={variant.parts} answers={s.answers} result={s.result}/>
+      )}
     </div>
   );
 }
