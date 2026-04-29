@@ -298,4 +298,34 @@ a{color:var(--mid);}
   .nav-menu{display:block;}
   .card-head,.card-body{padding:18px 20px;}
   .hide-sm{display:none;}
+
+  /* Passage text: single col, no max-width */
+  .passage{max-width:100%;padding:12px 14px;font-size:14px;}
+
+  /* q-rows: wrap answer to new line */
+  .q-row{flex-wrap:wrap;}
+  .q-row .q-ans{min-width:auto;}
+
+  /* Line rows: allow text wrap */
+  .line-row{flex-wrap:wrap;}
+  .line-row .ln-text{min-width:0;word-break:break-word;}
+
+  /* Gap buttons: smaller */
+  .gap-btn{min-width:44px;font-size:12px;}
+
+  /* Paragraph chips: full width */
+  .para-chip{font-size:12px;}
+
+  /* Exam page: tighter padding */
+  .exam-wrap{padding:12px 10px 70px;}
+
+  /* Admin table: allow horizontal scroll */
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+
+  /* Inputs full width on mobile */
+  .ans-inp{width:100%!important;max-width:100%;}
+
+  /* Modal: full screen feel */
+  .modal-overlay{padding:8px;}
+  .modal-box{border-radius:10px;}
 }
