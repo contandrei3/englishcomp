@@ -381,7 +381,7 @@ function P3Edit({data, onChange}) {
           <div key={i} style={{ display: "grid", gridTemplateColumns: "80px 1fr 2fr 40px", gap: 10, alignItems: "center", marginBottom: 8 }}>
             {/* Afișăm automat ce marker ar trebui să folosești în text pentru acest rând */}
             <div style={{ fontWeight: 700, textAlign: "center", background: "#f0f4ff", borderRadius: 4, padding: "4px 0" }}>
-              [{startNum + i + 1}]
+              [{i + 1}]
             </div>
             <Inp 
               value={it.base} 
