@@ -244,7 +244,7 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
 
       {/* P3 — Word Formation (text mode) */}
 {/* P3 — Word Formation (text mode) */}
-{part.type === 'p3' && part.mode === 'text' && (
+{part.type === 'p3' && (
   <div style={{ background: "#fff", padding: "20px", borderRadius: 12, lineHeight: "2.5", fontSize: "16px", color: "#1e293b" }}>
     {(() => {
       // Împărțim textul după [număr]
@@ -302,7 +302,7 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
 
       {/* P4 — KWT (text mode): Format original cu design fluid */}
 {/* P4 — Key Word Transformation (text mode) */}
-{part.type === 'p4' && part.mode === 'text' && (
+{part.type === 'p4' && (
   <div style={{ background: "#fff", borderRadius: 12, padding: "15px" }}>
     {(part.items || []).map((item, i) => {
       const filled = ans[i] !== undefined && String(ans[i]).length > 0;
