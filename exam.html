@@ -41,7 +41,9 @@ function Navbar({participant}) {
 // ── New parts rendering ───────────────────────────────────────────────────
 const PART_LABELS = {p1:"Multiple Choice Cloze",p2:"Open Cloze",p3:"Word Formation",
   p4:"Key Word Transformations",p5:"Multiple Choice Reading",p6:"Gapped Text",
-  p7:"Multiple Matching",p8:"Cross-text Multiple Matching",ec:"Error Correction",mc:"Multiple Choice"};
+  p7:"Multiple Matching",p8:"Cross-text Multiple Matching",
+  ec:"Error Correction",mc:"Multiple Choice",
+  e1:"Error Correction I",e2:"Error Correction II"};
 const PART_INSTRS = {
   p1:"Read the text and decide which answer (A, B, C or D) best fits each gap.",
   p2:"Read the text and think of ONE word which best fits each gap.",
@@ -52,7 +54,9 @@ const PART_INSTRS = {
   p7:"Read the text. For each question choose from the sections (A–F). The sections may be chosen more than once.",
   p8:"Read the four texts. For each question, choose from the texts (A–D).",
   ec:"Some of the lines contain ONE extra word which does not belong. Write the extra word. Write ✓ if the line is correct.",
-  mc:"Choose the answer which best fits each question."
+  mc:"Read the question and choose the best answer (A, B, C or D).",
+  e1:"Some of the lines contain ONE extra word which does not belong. Write the extra word. Write ✓ if the line is correct.",
+  e2:"Some of the lines contain ONE incorrect word. Write the correct word. Write ✓ if the line is correct."
 };
 
 function gapNums(text) {
@@ -61,7 +65,7 @@ function gapNums(text) {
 
 function getPartCount(part) {
   if (part.type === 'p2' || part.type === 'p6') return (part.key||[]).length;
-  if (part.type === 'ec') return (part.lines||[]).length;
+  if (part.type === 'ec' || part.type === 'e1' || part.type === 'e2') return (part.lines||[]).length;
   return (part.items||[]).length;
 }
 
@@ -199,10 +203,11 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
     part.type==='ec' ? (part.lines||[]).length * part.pts :
     (part.items||[]).length * part.pts;
 
+  const isExtra = part.type === 'e1' || part.type === 'e2';
   return (
     <div id={`part${pi}`} style={secStyle}>
       <div className="sec-badge">
-        <span>PART {pi+1} — {(PART_LABELS[part.type]||"").toUpperCase()}</span>
+        <span>{isExtra ? part.type.toUpperCase() : `PART ${pi+1}`} — {(PART_LABELS[part.type]||"").toUpperCase()}</span>
         <span>{totalPts} pts</span>
       </div>
       <div className="instr">{PART_INSTRS[part.type]}</div>
@@ -610,28 +615,84 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
         </div>
       </>}
 
-      {/* MC — Simple Multiple Choice */}
+      {/* MC — Simple Multiple Choice (popup) */}
       {part.type==='mc' && <>
         {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
-        {part.text && <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:14,marginBottom:16,fontSize:13,lineHeight:1.9,whiteSpace:"pre-wrap"}}>{part.text}</div>}
-        {(part.items||[]).map((item,i)=>(
-          <div key={i} style={{marginBottom:16}}>
-            <div style={{fontWeight:600,color:C.dark,fontSize:13,marginBottom:8}}>{startNum+i+1}. {item.question}</div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {(item.options||[]).map((opt,oi)=>{
-                const sel=parseInt(ans[i])===oi;
-                return (
-                  <label key={oi} onClick={()=>setAns(pi,i,String(oi))} style={{
-                    display:"flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:8,cursor:"pointer",
-                    border:`2px solid ${sel?C.mid:"#dde"}`,background:sel?"#eff6ff":"#fff",fontSize:13,userSelect:"none"
-                  }}>
-                    <span style={{fontWeight:700,color:C.mid}}>{['A','B','C','D','E','F'][oi]}.</span> {opt}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+        {part.text && <div className="passage" style={{marginBottom:16,whiteSpace:"pre-wrap"}}>{part.text}</div>}
+        <div>
+          {(part.items||[]).map((item,i)=>{
+            const filled = ans[i] !== undefined && ans[i] !== '';
+            return (
+              <div key={i} className={`q-row${filled?' answered':''}`}
+                onClick={()=>requestPopup({
+                  pi, i, number:startNum+i+1, partLabel,
+                  prompt: item.question,
+                  variant:"mc",
+                  options:(item.options||[]).map((opt, oi) => ({
+                    value: String(oi), letter: ['A','B','C','D','E','F'][oi], label: opt
+                  }))
+                })}>
+                <span className="q-num">{startNum+i+1}.</span>
+                <span className="q-text">{item.question}</span>
+                <span className="q-ans">{filled ? ['A','B','C','D','E','F'][parseInt(ans[i])] : <span className="q-ans-empty">—</span>}</span>
+              </div>
+            );
+          })}
+        </div>
+      </>}
+
+      {/* E1 — Error Correction I (extra word) */}
+      {part.type==='e1' && <>
+        {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
+        {part.intro && <div style={{fontSize:12,color:"#666",marginBottom:10,fontStyle:"italic"}}>{part.intro}</div>}
+        <div className="line-list">
+          {(part.lines||[]).map((line,i)=>{
+            const filled = ans[i] !== undefined && String(ans[i]).length > 0;
+            return (
+              <div key={i} className={`line-row${filled?' answered':''}`}
+                onClick={()=>requestPopup({
+                  pi, i, number:startNum+i+1, partLabel:"E1",
+                  prompt:"Write the extra word, or ✓ if the line is correct.",
+                  variant:"input"
+                })}>
+                <span className="ln-num">{startNum+i+1}.</span>
+                <span className="ln-text" style={{fontFamily:"'Courier New',monospace",fontSize:13}}>{line}</span>
+                <span className="ln-ans">
+                  {filled
+                    ? <span style={{fontWeight:700,color:C.mid,fontFamily:"monospace"}}>{ans[i]}</span>
+                    : <span style={{color:"#cbd5e1"}}>—</span>}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </>}
+
+      {/* E2 — Error Correction II (wrong word → correction) */}
+      {part.type==='e2' && <>
+        {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
+        {part.intro && <div style={{fontSize:12,color:"#666",marginBottom:10,fontStyle:"italic"}}>{part.intro}</div>}
+        <div className="line-list">
+          {(part.lines||[]).map((line,i)=>{
+            const filled = ans[i] !== undefined && String(ans[i]).length > 0;
+            return (
+              <div key={i} className={`line-row${filled?' answered':''}`}
+                onClick={()=>requestPopup({
+                  pi, i, number:startNum+i+1, partLabel:"E2",
+                  prompt:"Write the correct word that replaces the error, or ✓ if the line is correct.",
+                  variant:"input"
+                })}>
+                <span className="ln-num">{startNum+i+1}.</span>
+                <span className="ln-text" style={{fontFamily:"'Courier New',monospace",fontSize:13}}>{line}</span>
+                <span className="ln-ans">
+                  {filled
+                    ? <span style={{fontWeight:700,color:C.mid,fontFamily:"monospace"}}>{ans[i]}</span>
+                    : <span style={{color:"#cbd5e1"}}>—</span>}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </>}
     </div>
   );
@@ -1109,10 +1170,13 @@ function ExamApp() {
           <div className={`timer${urgent?" urgent":""}`}>⏱ {fmt(timeLeft)}</div>
           <div style={{display:"flex",gap:5}}>
             {isNewFormat
-              ? (variant.parts||[]).map((_,pi)=>(
-                  <button key={pi} onClick={()=>document.getElementById(`part${pi}`)?.scrollIntoView({behavior:"smooth"})}
-                    style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"none",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:600}}>P{pi+1}</button>
-                ))
+              ? (variant.parts||[]).map((p,pi)=>{
+                  const lbl = p.type==='e1'?'E1':p.type==='e2'?'E2':`P${pi+1}`;
+                  return (
+                    <button key={pi} onClick={()=>document.getElementById(`part${pi}`)?.scrollIntoView({behavior:"smooth"})}
+                      style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"none",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:600}}>{lbl}</button>
+                  );
+                })
               : [1,2,3,4].map(n=>(
                   <button key={n} onClick={()=>document.getElementById(`sec${n}`)?.scrollIntoView({behavior:"smooth"})}
                     style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"none",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:600}}>S{n}</button>
