@@ -308,108 +308,117 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
 
       {/* P5 — Multiple Choice Reading */}
       {part.type==='p5' && <>
-        {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
-        {part.text && <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:14,marginBottom:16,fontSize:13,lineHeight:1.9,whiteSpace:"pre-wrap"}}>{part.text}</div>}
-        {(part.items||[]).map((item,i)=>(
-          <div key={i} style={{marginBottom:16}}>
-            <div style={{fontWeight:600,color:C.dark,fontSize:13,marginBottom:8}}>{startNum+i+1}. {item.question}</div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {(item.options||[]).map((opt,oi)=>{
-                const sel=parseInt(ans[i])===oi;
-                return (
-                  <label key={oi} onClick={()=>setAns(pi,i,String(oi))} style={{
-                    display:"flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:8,cursor:"pointer",
-                    border:`2px solid ${sel?C.mid:"#dde"}`,background:sel?"#eff6ff":"#fff",fontSize:13,userSelect:"none"
-                  }}>
-                    <span style={{fontWeight:700,color:C.mid}}>{['A','B','C','D'][oi]}.</span> {opt}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+        {part.title && <strong className="title" style={{display:"block",marginBottom:10,color:C.dark,fontSize:15}}>{part.title}</strong>}
+        {part.text && <div className="passage" style={{whiteSpace:"pre-wrap",marginBottom:16}}>{part.text}</div>}
+        <div>
+          {(part.items||[]).map((item,i)=>{
+            const filled = ans[i] !== undefined && ans[i] !== '';
+            return (
+              <div key={i} className={`q-row${filled?' answered':''}`}
+                onClick={()=>requestPopup({
+                  pi, i, number:startNum+i+1, partLabel,
+                  prompt: item.question,
+                  variant:"mc",
+                  options:(item.options||[]).map((opt, oi) => ({
+                    value: String(oi), letter: ['A','B','C','D'][oi], label: opt
+                  }))
+                })}>
+                <span className="q-num">{startNum+i+1}.</span>
+                <span className="q-text">{item.question}</span>
+                <span className="q-ans">{filled ? ['A','B','C','D'][parseInt(ans[i])] : <span className="q-ans-empty">—</span>}</span>
+              </div>
+            );
+          })}
+        </div>
       </>}
 
       {/* P6 — Cross-text Multiple Matching */}
       {part.type==='p6' && <>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
           {(part.texts||[]).map((t,i)=>(
-            <div key={i} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:12,fontSize:12,lineHeight:1.7}}>
-              <strong style={{color:C.dark,display:"block",marginBottom:4}}>{t.label}. {t.title}</strong>
+            <div key={i} className="passage" style={{padding:"12px 14px",fontSize:13,lineHeight:1.7}}>
+              <strong className="title" style={{marginBottom:6}}>{t.label}. {t.title}</strong>
               {t.content}
             </div>
           ))}
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-          {(part.items||[]).map((item,i)=>(
-            <div key={i} style={{display:"flex",gap:8,alignItems:"center",fontSize:13}}>
-              <span style={{fontWeight:700,color:C.dark,minWidth:22}}>{startNum+i+1}.</span>
-              <span style={{flex:1}}>{item.question}</span>
-              <select value={ans[i]||''} onChange={e=>setAns(pi,i,e.target.value)}
-                style={{border:"1px solid #ccd",borderRadius:4,padding:"4px 6px",fontSize:13,minWidth:60}}>
-                <option value="">—</option>
-                {(part.texts||[]).map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
-              </select>
-            </div>
-          ))}
+        <div>
+          {(part.items||[]).map((item,i)=>{
+            const filled = ans[i] !== undefined && ans[i] !== '';
+            return (
+              <div key={i} className={`q-row${filled?' answered':''}`}
+                onClick={()=>requestPopup({
+                  pi, i, number:startNum+i+1, partLabel,
+                  prompt: item.question,
+                  variant:"mc",
+                  options:(part.texts||[]).map(t => ({
+                    value: t.label, letter: t.label, label: t.title || `Text ${t.label}`
+                  }))
+                })}>
+                <span className="q-num">{startNum+i+1}.</span>
+                <span className="q-text">{item.question}</span>
+                <span className="q-ans">{filled ? ans[i] : <span className="q-ans-empty">—</span>}</span>
+              </div>
+            );
+          })}
         </div>
       </>}
 
       {/* P7 — Gapped Text */}
       {part.type==='p7' && <>
-        {part.title && <strong style={{color:C.dark,display:"block",marginBottom:8}}>{part.title}</strong>}
-        {part.text && <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:14,marginBottom:16,fontSize:13,lineHeight:1.9}}><GapText text={part.text}/></div>}
-        <div style={{marginBottom:14}}>
-          <div style={{fontWeight:600,color:C.dark,fontSize:12,marginBottom:8}}>Paragrafe disponibile:</div>
+        {part.title && <strong className="title" style={{display:"block",marginBottom:10,color:C.dark,fontSize:15}}>{part.title}</strong>}
+        {part.text && (
+          <div className="passage" style={{marginBottom:16}}>
+            <GapText text={part.text} ans={ans} kind="select"
+              onGapClick={(itemIdx, n) => requestPopup({
+                pi, i:itemIdx, number:n, partLabel,
+                prompt:"Alege paragraful care completează acest gol.",
+                variant:"paragraphs",
+                options:(part.paragraphs||[]).map(p => ({ value: p.label, label: p.content }))
+              })}/>
+          </div>
+        )}
+        <div>
+          <div style={{fontWeight:700,color:"#94a3b8",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>Paragrafe disponibile (referință)</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
             {(part.paragraphs||[]).map((p,i)=>(
-              <div key={i} style={{background:"#f0f4f8",borderRadius:6,padding:"8px 10px",fontSize:12,lineHeight:1.6}}>
-                <strong style={{color:C.mid}}>{p.label}. </strong>{p.content}
+              <div key={i} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:7,padding:"8px 12px",fontSize:12,lineHeight:1.65}}>
+                <strong style={{color:C.mid,marginRight:6}}>{p.label}.</strong>{p.content}
               </div>
             ))}
           </div>
         </div>
-        {(()=>{
-          const nums = gapNums(part.text);
-          return (
-            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-              {(part.key||[]).map((_,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
-                  <span style={{fontWeight:700,color:C.dark,fontSize:12}}>({nums[i]??startNum+i+1})</span>
-                  <select value={ans[i]||''} onChange={e=>setAns(pi,i,e.target.value)}
-                    style={{border:"1px solid #ccd",borderRadius:4,padding:"4px 6px",fontSize:13,minWidth:65}}>
-                    <option value="">—</option>
-                    {(part.paragraphs||[]).map(p=><option key={p.label} value={p.label}>{p.label}</option>)}
-                  </select>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
       </>}
 
       {/* P8 — Multiple Matching */}
       {part.type==='p8' && <>
         <div style={{marginBottom:16}}>
           {(part.texts||[]).map((t,i)=>(
-            <div key={i} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:12,marginBottom:8,fontSize:12,lineHeight:1.7}}>
-              <strong style={{color:C.dark,display:"block",marginBottom:4}}>{t.label}. {t.title}</strong>
+            <div key={i} className="passage" style={{padding:"12px 14px",marginBottom:8,fontSize:13,lineHeight:1.7}}>
+              <strong className="title" style={{marginBottom:6}}>{t.label}. {t.title}</strong>
               {t.content}
             </div>
           ))}
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-          {(part.items||[]).map((item,i)=>(
-            <div key={i} style={{display:"flex",gap:8,alignItems:"center",fontSize:13}}>
-              <span style={{fontWeight:700,color:C.dark,minWidth:22}}>{startNum+i+1}.</span>
-              <span style={{flex:1}}>{item.question}</span>
-              <select value={ans[i]||''} onChange={e=>setAns(pi,i,e.target.value)}
-                style={{border:"1px solid #ccd",borderRadius:4,padding:"4px 6px",fontSize:13,minWidth:60}}>
-                <option value="">—</option>
-                {(part.texts||[]).map(t=><option key={t.label} value={t.label}>{t.label}</option>)}
-              </select>
-            </div>
-          ))}
+        <div>
+          {(part.items||[]).map((item,i)=>{
+            const filled = ans[i] !== undefined && ans[i] !== '';
+            return (
+              <div key={i} className={`q-row${filled?' answered':''}`}
+                onClick={()=>requestPopup({
+                  pi, i, number:startNum+i+1, partLabel,
+                  prompt: item.question,
+                  variant:"mc",
+                  options:(part.texts||[]).map(t => ({
+                    value: t.label, letter: t.label, label: t.title || `Section ${t.label}`
+                  }))
+                })}>
+                <span className="q-num">{startNum+i+1}.</span>
+                <span className="q-text">{item.question}</span>
+                <span className="q-ans">{filled ? ans[i] : <span className="q-ans-empty">—</span>}</span>
+              </div>
+            );
+          })}
         </div>
       </>}
 
