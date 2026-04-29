@@ -242,91 +242,151 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
         )}
       </>}
 
-      {/* P3 — Word Formation */}
+      {/* P3 — Word Formation — continuous text with inline gaps */}
 {part.type === 'p3' && (() => {
   const hasText = part.text && part.text.trim().length > 0;
 
-  /* ── Mode A: text with [N] gap markers ── */
+  /* ── Mode A: passage with [N] markers → continuous flowing text ── */
   if (hasText) {
+    const chunks = (part.text || "").split(/(\[\d+\])/g);
     return (
-      <div style={{ background: "#fff", padding: "20px", borderRadius: 12, lineHeight: "2.5", fontSize: "16px", color: "#1e293b" }}>
-        {part.title && <strong style={{ display: "block", marginBottom: 10, color: C.dark, fontSize: 15 }}>{part.title}</strong>}
-        {(part.text || "").split(/(\[\d+\])/g).map((chunk, index) => {
-          const match = chunk.match(/\[(\d+)\]/);
-          if (!match) return <span key={index}>{chunk}</span>;
-          const gapNumber = parseInt(match[1]);
-          const gapIdx = gapNumber - startNum - 1;
-          const item = (part.items || [])[gapIdx];
-          const filled = ans[gapIdx] !== undefined && String(ans[gapIdx]).length > 0;
-          return (
-            <span key={index} style={{ display: "inline-flex", alignItems: "baseline", whiteSpace: "nowrap" }}>
-              <button type="button"
-                className={`gap-btn ${filled ? 'filled' : ''}`}
-                style={{
-                  all: "unset", cursor: "pointer",
-                  borderBottom: "1px solid #334155", minWidth: "100px",
-                  textAlign: "center", padding: "0 5px", margin: "0 5px",
-                  color: filled ? "#2563eb" : "#94a3b8",
-                  fontWeight: filled ? "600" : "400"
-                }}
-                onClick={() => requestPopup({
-                  pi, i: gapIdx, number: gapNumber, partLabel,
-                  prompt: `Form a word from: ${item?.base || item?.kw || '...'}`,
-                  variant: "input"
-                })}>
-                <span style={{ fontSize: "11px", opacity: 0.6, marginRight: "4px" }}>({gapNumber})</span>
-                {filled ? ans[gapIdx] : "................"}
-              </button>
-              {(item?.base || item?.kw) && (
-                <span style={{ fontWeight: "700", fontSize: "14px", color: "#475569" }}>
-                  ({item.base || item.kw})
-                </span>
-              )}
-            </span>
-          );
-        })}
+      <div style={{
+        background: "#fff", padding: "20px 24px", borderRadius: 10,
+        fontSize: "15.5px", lineHeight: "2.2", color: "#2d2d2d",
+        fontFamily: "Georgia, 'Times New Roman', serif"
+      }}>
+        {part.title && (
+          <strong style={{ display: "block", marginBottom: 12, color: C.dark, fontSize: 15, fontFamily: "inherit" }}>
+            {part.title}
+          </strong>
+        )}
+        <span>
+          {chunks.map((chunk, index) => {
+            const match = chunk.match(/^\[(\d+)\]$/);
+            if (!match) return <span key={index}>{chunk}</span>;
+            const gapNumber = parseInt(match[1]);
+            const gapIdx = gapNumber - startNum - 1;
+            const item = (part.items || [])[gapIdx];
+            const kw = item?.base || item?.kw || '';
+            const filled = ans[gapIdx] !== undefined && String(ans[gapIdx]).length > 0;
+            const displayVal = filled ? String(ans[gapIdx]) : null;
+            return (
+              <span key={index} style={{ display: "inline", whiteSpace: "nowrap" }}>
+                {/* Clickable gap */}
+                <button
+                  type="button"
+                  onClick={() => requestPopup({
+                    pi, i: gapIdx, number: gapNumber, partLabel,
+                    prompt: `Form a word from: ${kw}`,
+                    variant: "input"
+                  })}
+                  style={{
+                    display: "inline",
+                    background: "none",
+                    border: "none",
+                    borderBottom: `1.5px solid ${filled ? "#2563eb" : "#94a3b8"}`,
+                    cursor: "pointer",
+                    padding: "0 4px",
+                    margin: "0 2px",
+                    minWidth: 100,
+                    textAlign: "center",
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 13,
+                    fontWeight: filled ? 700 : 400,
+                    color: filled ? "#2563eb" : "#94a3b8",
+                    letterSpacing: filled ? 0 : "2px",
+                    verticalAlign: "baseline",
+                  }}>
+                  <span style={{ fontSize: 11, opacity: 0.7, marginRight: 2 }}>({gapNumber})</span>
+                  {displayVal || "............"}
+                </button>
+                {/* Inline keyword badge */}
+                {kw && (
+                  <span style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontWeight: 700,
+                    fontSize: 12,
+                    color: "#1a1a2e",
+                    letterSpacing: "0.5px",
+                    marginLeft: 3,
+                    marginRight: 1,
+                  }}>({kw})</span>
+                )}
+              </span>
+            );
+          })}
+        </span>
       </div>
     );
   }
 
-  /* ── Mode B: items-only list (no passage text) ── */
+  /* ── Mode B: items-only (no passage) → continuous text from before/after ── */
   return (
-    <div style={{ background: "#fff", borderRadius: 12, padding: "15px" }}>
-      {part.title && <strong style={{ display: "block", marginBottom: 10, color: C.dark, fontSize: 15 }}>{part.title}</strong>}
-      {(part.items || []).map((item, i) => {
-        const filled = ans[i] !== undefined && String(ans[i]).length > 0;
-        const itemNum = startNum + i + 1;
-        return (
-          <div key={i} style={{
-            display: "flex", alignItems: "center", gap: 6,
-            marginBottom: 9, flexWrap: "wrap"
-          }}>
-            <span style={{ fontWeight: 700, color: C.dark, minWidth: 22, fontSize: 12 }}>{itemNum}.</span>
-            {item.before && <span style={{ fontSize: 13 }}>{item.before}</span>}
-            <button type="button"
-              className={`gap-btn ${filled ? 'filled' : ''}`}
-              style={{
-                all: "unset", cursor: "pointer",
-                borderBottom: "1px solid #334155", minWidth: "120px",
-                textAlign: "center", padding: "0 6px", margin: "0 4px",
-                color: filled ? "#2563eb" : "#94a3b8",
-                fontWeight: filled ? "600" : "400", fontSize: 14
-              }}
-              onClick={() => requestPopup({
-                pi, i, number: itemNum, partLabel,
-                prompt: `Form a word from: ${item.base || item.kw || '...'}`,
-                variant: "input"
-              })}>
-              <span style={{ fontSize: "11px", opacity: 0.6, marginRight: "4px" }}>({itemNum})</span>
-              {filled ? ans[i] : "................"}
-            </button>
-            {item.after && <span style={{ fontSize: 13 }}>{item.after}</span>}
-            <span style={{ background: "#e2e8f0", color: C.dark, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4, letterSpacing: 1 }}>
-              {item.base || item.kw}
+    <div style={{
+      background: "#fff", padding: "20px 24px", borderRadius: 10,
+      fontSize: "15.5px", lineHeight: "2.4", color: "#2d2d2d",
+      fontFamily: "Georgia, 'Times New Roman', serif"
+    }}>
+      {part.title && (
+        <strong style={{ display: "block", marginBottom: 12, color: C.dark, fontSize: 15 }}>
+          {part.title}
+        </strong>
+      )}
+      <span>
+        {(part.items || []).map((item, i) => {
+          const filled = ans[i] !== undefined && String(ans[i]).length > 0;
+          const itemNum = startNum + i + 1;
+          const kw = item.base || item.kw || '';
+          return (
+            <span key={i}>
+              {/* sentence number */}
+              <span style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 13, color: C.dark, marginRight: 4 }}>
+                {itemNum}.
+              </span>
+              {item.before && <span>{item.before} </span>}
+              {/* gap button */}
+              <button
+                type="button"
+                onClick={() => requestPopup({
+                  pi, i, number: itemNum, partLabel,
+                  prompt: `Form a word from: ${kw}`,
+                  variant: "input"
+                })}
+                style={{
+                  display: "inline",
+                  background: "none",
+                  border: "none",
+                  borderBottom: `1.5px solid ${filled ? "#2563eb" : "#94a3b8"}`,
+                  cursor: "pointer",
+                  padding: "0 4px",
+                  margin: "0 2px",
+                  minWidth: 100,
+                  textAlign: "center",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 13,
+                  fontWeight: filled ? 700 : 400,
+                  color: filled ? "#2563eb" : "#94a3b8",
+                  letterSpacing: filled ? 0 : "2px",
+                  verticalAlign: "baseline",
+                }}>
+                <span style={{ fontSize: 11, opacity: 0.7, marginRight: 2 }}>({itemNum})</span>
+                {filled ? String(ans[i]) : "............"}
+              </button>
+              {/* keyword badge */}
+              {kw && (
+                <span style={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontWeight: 700, fontSize: 12,
+                  color: "#1a1a2e", letterSpacing: "0.5px",
+                  marginLeft: 3, marginRight: 4,
+                }}>({kw})</span>
+              )}
+              {item.after && <span>{item.after}</span>}
+              {i < (part.items.length - 1) && <span>{"  "}</span>}
             </span>
-          </div>
-        );
-      })}
+          );
+        })}
+      </span>
     </div>
   );
 })()}
