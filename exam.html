@@ -510,13 +510,17 @@ function ExamApp() {
   const [result,  setResult]  = useState(null);
   const [bootErr, setBootErr] = useState("");
   const [popup,   setPopup]   = useState(null); // null or {pi,i,number,variant,prompt,partLabel,options,keyword}
-  const timerRef   = useRef(null);
-  const subRef     = useRef(false);
-  const sessIdRef  = useRef(null);
-  const answersRef = useRef({s1:[],s2:[],s3:[],s4:[],writing:""});
-  const sessRef    = useRef(null);
-  const examRef    = useRef(null);
-  const variantRef = useRef(null);
+  const [noExamReason, setNoExamReason] = useState(""); // "group_pending" | "group_finished" | ""
+  const [checking, setChecking] = useState(false);
+  const timerRef      = useRef(null);
+  const subRef        = useRef(false);
+  const sessIdRef     = useRef(null);
+  const answersRef    = useRef({s1:[],s2:[],s3:[],s4:[],writing:""});
+  const sessRef       = useRef(null);
+  const examRef       = useRef(null);
+  const variantRef    = useRef(null);
+  const noExamSessRef = useRef(null);
+  const noExamPtcpRef = useRef(null);
 
   const setAns = (sec, i, v) => {
     setAnswers(prev => {
@@ -568,7 +572,14 @@ function ExamApp() {
     // Standalone sessions (no groupId) are always joinable once allocated.
     if(s.status === "pending" && s.groupId) {
       const grp = CPEEN.getGroupSessions().find(g => g.id === s.groupId);
-      if (!grp || grp.status !== "active") { setPtcp(p); setView("noExam"); return; }
+      if (!grp || grp.status !== "active") {
+        noExamSessRef.current = s;
+        noExamPtcpRef.current = p;
+        setPtcp(p);
+        setNoExamReason(grp?.status === "finished" ? "group_finished" : "group_pending");
+        setView("noExam");
+        return;
+      }
     }
 
     const ex = CPEEN.getExams().find(e => e.id === s.examId) ||
@@ -654,18 +665,52 @@ function ExamApp() {
 
     if(s) { loadSession(p, s); return; }
 
-    // 4. No active session — legacy no-group fallback
+    // 4. Allocated to a group session but group hasn't started (or is finished)
+    const pendingGroupSess = allSess.find(x => x.status === "pending" && x.groupId);
+    if (pendingGroupSess) {
+      const grp = groups.find(g => g.id === pendingGroupSess.groupId);
+      noExamSessRef.current = pendingGroupSess;
+      noExamPtcpRef.current = p;
+      setPtcp(p);
+      setNoExamReason(grp?.status === "finished" ? "group_finished" : "group_pending");
+      setView("noExam");
+      return;
+    }
+
+    // 5. Legacy no-group fallback
     const stage = CPEEN.isQualified(p) ? "finala" : "calificare";
     const cfg = CPEEN.getConfig();
     if(!cfg.activeExams?.[p.level]?.[stage]) {
-      setPtcp(p); setView("noExam"); return;
+      setNoExamReason(""); setPtcp(p); setView("noExam"); return;
     }
     const ex = CPEEN.getExamForParticipant(p.level, stage);
-    if(!ex) { setPtcp(p); setView("noExam"); return; }
+    if(!ex) { setNoExamReason(""); setPtcp(p); setView("noExam"); return; }
     const vIdx = Math.floor(Math.random() * ex.variants.length);
     s = CPEEN.createSession(p.id, ex, ex.variants[vIdx].id);
     loadSession(p, s);
   };
+
+  // Auto-check: when waiting for a group session to start, poll Firestore every 5s
+  const retryGroupCheck = useCallback(() => {
+    const s = noExamSessRef.current;
+    const p = noExamPtcpRef.current;
+    if (!s || !p) return;
+    setChecking(true);
+    CPEEN.init().then(() => {
+      setChecking(false);
+      const grp = CPEEN.getGroupSessions().find(g => g.id === s.groupId);
+      if (grp?.status === "active") {
+        setNoExamReason("");
+        loadSession(p, s);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (view !== "noExam" || noExamReason !== "group_pending") return;
+    const id = setInterval(retryGroupCheck, 5000);
+    return () => clearInterval(id);
+  }, [view, noExamReason]);
 
   // Timer — uses refs so auto-submit always sees current values
   useEffect(() => {
@@ -750,30 +795,59 @@ function ExamApp() {
   );
 
   // ── No exam available ───────────────────────────────────────────────────
-  if(view === "noExam") return (
-    <>
-      <Navbar/>
-      <div className="page-center">
-        <div className="wrap-sm">
-          <div className="card">
-            <div className="card-head" style={{textAlign:"center"}}>
-              <div style={{fontSize:36,marginBottom:8}}>⏳</div>
-              <h2>Subiecte în pregătire</h2>
-              <p>Codul este valid — subiectele nu sunt disponibile încă.</p>
-            </div>
-            <div className="card-body" style={{textAlign:"center"}}>
-              <p style={{fontSize:14,color:"#555",marginBottom:8}}>Bun venit, <strong>{ptcp?.name}</strong>.</p>
-              <p style={{fontSize:13,color:"#777",marginBottom:20}}>
-                Subiectele pentru nivelul <strong>{ptcp?.level}</strong> – {ptcp?.stage==="finala"?"Finală":"Calificare"} nu au fost activate încă de administrator.
-                Reveniți mai târziu.
-              </p>
-              <a href="index.html" className="btn btn-primary">← Pagina principală</a>
+  if(view === "noExam") {
+    const isGroupPending  = noExamReason === "group_pending";
+    const isGroupFinished = noExamReason === "group_finished";
+    return (
+      <>
+        <Navbar/>
+        <div className="page-center">
+          <div className="wrap-sm">
+            <div className="card">
+              <div className="card-head" style={{textAlign:"center"}}>
+                <div style={{fontSize:36,marginBottom:8}}>{isGroupFinished ? "🏁" : "⏳"}</div>
+                <h2>{isGroupFinished ? "Sesiune încheiată" : "Așteptați pornirea sesiunii"}</h2>
+                <p>Bun venit, {ptcp?.name}</p>
+              </div>
+              <div className="card-body" style={{textAlign:"center"}}>
+                {isGroupPending && <>
+                  <p style={{fontSize:14,color:"#333",marginBottom:8,fontWeight:600}}>
+                    Ai fost alocat(ă) la această sesiune de examen.
+                  </p>
+                  <p style={{fontSize:13,color:"#666",marginBottom:20}}>
+                    Așteptați ca profesorul/administratorul să pornească sesiunea.
+                    Pagina se actualizează automat la fiecare 5 secunde.
+                  </p>
+                  <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+                    <button className="btn btn-mid" onClick={retryGroupCheck} disabled={checking}>
+                      {checking ? "Se verifică…" : "↺ Verificați acum"}
+                    </button>
+                    <a href="dashboard.html" className="btn btn-outline">← Dashboard</a>
+                  </div>
+                  <div style={{marginTop:16,fontSize:11,color:"#aaa"}}>
+                    {checking ? "Se sincronizează cu serverul…" : "Actualizare automată activă…"}
+                  </div>
+                </>}
+                {isGroupFinished && <>
+                  <p style={{fontSize:13,color:"#666",marginBottom:20}}>
+                    Sesiunea la care ai fost alocat(ă) s-a terminat. Contactați administratorul pentru mai multe detalii.
+                  </p>
+                  <a href="dashboard.html" className="btn btn-primary">← Dashboard</a>
+                </>}
+                {!isGroupPending && !isGroupFinished && <>
+                  <p style={{fontSize:14,color:"#555",marginBottom:8}}>Bun venit, <strong>{ptcp?.name}</strong>.</p>
+                  <p style={{fontSize:13,color:"#777",marginBottom:20}}>
+                    Subiectele nu au fost activate încă de administrator. Reveniți mai târziu.
+                  </p>
+                  <a href="index.html" className="btn btn-primary">← Pagina principală</a>
+                </>}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </>
-  );
+      </>
+    );
+  }
 
   // ── Result view ─────────────────────────────────────────────────────────
   if(view === "result" && result && variant) {
