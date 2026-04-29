@@ -260,94 +260,56 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
         ))}
       </>}
 
-      {/* P4 — KWT (sentence mode, default) */}
-      {part.type==='p4' && part.mode !== 'text' && (part.items||[]).map((item,i)=>(
-        <div key={i} style={{borderBottom:"1px solid #eee",paddingBottom:14,marginBottom:14}}>
-          <div style={{fontSize:13,color:"#333",marginBottom:5}}><strong style={{color:C.dark,marginRight:5}}>{startNum+i+1}.</strong>{item.s1}</div>
-          <div style={{display:"inline-block",background:C.dark,color:"#fff",fontWeight:700,fontSize:10,letterSpacing:2,padding:"2px 9px",borderRadius:4,marginBottom:7}}>{item.kw}</div>
-          <div style={{fontSize:13,display:"flex",alignItems:"center",flexWrap:"wrap",gap:4}}>
-            {item.before && <span>{item.before}</span>}
-            {ansInp(i,ans[i],"3–6 words...",210)}
-            {item.after && <span>{item.after}</span>}
-          </div>
-        </div>
-      ))}
-
-      {/* P4 — KWT (text mode): Stil tip paragraf fluid */}
+      {/* P4 — KWT (text mode) cu markeri [n] */}
 {part.type === 'p4' && part.mode === 'text' && (
-  <div style={{ background: "#fff", borderRadius: 12, padding: "10px" }}>
-    {(part.items || []).map((item, i) => {
-      const filled = ans[i] !== undefined && String(ans[i]).length > 0;
-      const itemNum = startNum + i + 1;
+  <div style={{ background: "#fff", padding: "15px", borderRadius: 8, lineHeight: "2" }}>
+    {(() => {
+      const parts = (data.text || "").split(/(\[\d+\])/g);
+      return parts.map((chunk, index) => {
+        const match = chunk.match(/\[(\d+)\]/);
+        if (match) {
+          const gapIdx = parseInt(match[1]) - 1; // Indexul din array (0-based)
+          const item = (part.items || [])[gapIdx];
+          const itemNum = startNum + gapIdx + 1;
+          const filled = ans[gapIdx] !== undefined && String(ans[gapIdx]).length > 0;
 
-      return (
-        <div key={i} style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto", // Textul ocupă tot spațiul, indiciul doar cât are nevoie
-          gap: "20px",
-          alignItems: "baseline",
-          padding: "12px 0",
-          borderBottom: i < (part.items.length - 1) ? "1px solid #f0f0f0" : "none"
-        }}>
-          
-          {/* Stânga: Propoziția care curge ca un paragraf */}
-          <div style={{ fontSize: "15px", lineHeight: "1.7", color: "#334155" }}>
-            <strong style={{ color: "#64748b", marginRight: "8px" }}>{itemNum}.</strong>
-            
-            {/* Propoziția originală (opțional, dacă vrei să apară deasupra) */}
-            {item.s1 && <div style={{ fontSize: "13px", color: "#94a3b8", marginBottom: "4px", fontStyle: "italic" }}>{item.s1}</div>}
-            
-            <span style={{ display: "inline" }}>
-              {item.before && <span>{item.before} </span>}
-              
+          return (
+            <span key={index} style={{ display: "inline-flex", alignItems: "baseline", gap: "10px" }}>
+              {/* Butonul pentru Gap */}
               <button type="button"
                 className={`gap-btn ${filled ? 'filled' : ''}`}
                 style={{
-                  all: "unset", // Resetăm stilurile de buton care pot strica flow-ul
-                  display: "inline-block",
+                  all: "unset",
                   cursor: "pointer",
-                  borderBottom: "1px dashed #cbd5e1",
-                  minWidth: "100px",
-                  padding: "0 4px",
+                  borderBottom: "1px solid #000",
+                  minWidth: "120px",
                   textAlign: "center",
+                  padding: "0 5px",
                   color: filled ? "#2563eb" : "#94a3b8",
-                  fontWeight: filled ? "600" : "400"
+                  margin: "0 5px"
                 }}
                 onClick={() => requestPopup({
-                  pi, i, number: itemNum, partLabel,
-                  prompt: item.s1 || "Transform the sentence:",
-                  keyword: item.kw,
+                  pi, i: gapIdx, number: itemNum, partLabel,
+                  prompt: "Transform the sentence using the keyword:",
+                  keyword: item?.kw,
                   variant: "input"
                 })}>
-                <span style={{ fontSize: "11px", opacity: 0.6, marginRight: "4px" }}>({itemNum})</span>
-                {filled ? ans[i] : "...................."}
+                <span style={{ fontSize: "10px", color: "#999" }}>({itemNum})</span>
+                {filled ? ans[gapIdx] : "...................."}
               </button>
 
-              {item.after && <span> {item.after}</span>}
+              {/* Keyword-ul afișat în paranteze lângă gap */}
+              {item?.kw && (
+                <span style={{ fontWeight: "700", textTransform: "uppercase", fontSize: "13px", color: "#444" }}>
+                  ({item.kw})
+                </span>
+              )}
             </span>
-          </div>
-
-          {/* Dreapta: Indiciul (Keyword) aliniat perfect */}
-          <div style={{ flexShrink: 0 }}>
-            <span style={{
-              background: "#f1f5f9",
-              color: "#475569",
-              fontWeight: "700",
-              fontSize: "12px",
-              letterSpacing: "1.5px",
-              padding: "4px 10px",
-              borderRadius: "6px",
-              textTransform: "uppercase",
-              display: "inline-block",
-              minWidth: "80px",
-              textAlign: "center"
-            }}>
-              {item.kw}
-            </span>
-          </div>
-        </div>
-      );
-    })}
+          );
+        }
+        return <span key={index}>{chunk}</span>;
+      });
+    })()}
   </div>
 )}
       {/* P5 — Multiple Choice Reading */}
