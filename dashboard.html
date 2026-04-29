@@ -100,20 +100,20 @@ function Navbar() {
         <span className="nav-title">ECHO</span>
       </a>
       <div className="nav-links">
-        <a href="register.html" className="nav-link">Înregistrare</a>
-        <a href="dashboard.html" className="nav-link active">Dashboard Elev</a>
+        <a href="register.html" className="nav-link">Register</a>
+        <a href="dashboard.html" className="nav-link active">My Dashboard</a>
         <a href="admin/index.html" className="nav-link">Admin</a>
       </div>
     </nav>
   );
 }
 
-const stageLabel = stg => stg === "finala" ? "Finală" : stg === "calificare" ? "Calificare" : (stg||"—");
+const stageLabel = stg => stg === "finala" ? "Final" : stg === "calificare" ? "Qualifying" : (stg||"—");
 
 function StatusBadge({status}) {
-  if(status === "submitted")    return <span className="badge b-ok">Trimis</span>;
-  if(status === "in_progress")  return <span className="badge b-mid">În desfășurare</span>;
-  return <span className="badge b-gray">Alocat</span>;
+  if(status === "submitted")    return <span className="badge b-ok">Submitted</span>;
+  if(status === "in_progress")  return <span className="badge b-mid">In progress</span>;
+  return <span className="badge b-gray">Allocated</span>;
 }
 
 function SessionCard({s, exam}) {
@@ -186,54 +186,54 @@ function DashboardView({participant, onLogout}) {
         <div className="container" style={{maxWidth:780}}>
 
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:8}}>
-            <h2 style={{color:C.dark,fontSize:19,fontWeight:700}}>Dashboard-ul tău</h2>
+            <h2 style={{color:C.dark,fontSize:19,fontWeight:700}}>Your Dashboard</h2>
             <div style={{display:"flex",gap:8}}>
-              <button className="btn btn-mid btn-sm" onClick={()=>setRefreshKey(k=>k+1)}>↻ Actualizează</button>
-              <button className="btn btn-ghost btn-sm" onClick={onLogout}>Logout</button>
+              <button className="btn btn-mid btn-sm" onClick={()=>setRefreshKey(k=>k+1)}>↻ Refresh</button>
+              <button className="btn btn-ghost btn-sm" onClick={onLogout}>Log out</button>
             </div>
           </div>
 
-          {/* Profil */}
+          {/* Profile */}
           <div style={{background:"#fff",borderRadius:10,padding:20,border:"1px solid #e2e8f0",marginBottom:14}}>
-            <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:10,fontWeight:700}}>Profil</div>
+            <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:10,fontWeight:700}}>Profile</div>
             <div style={{fontSize:17,fontWeight:700,color:C.dark,marginBottom:4}}>{participant.name}</div>
             <div style={{fontSize:13,color:"#64748b",marginBottom:10}}>
               {participant.school} · {participant.county}
-              {participant.grade && <> · clasa {participant.grade}</>}
+              {participant.grade && <> · Grade {participant.grade}</>}
             </div>
             <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:12,color:"#64748b"}}>
               <span className={`badge b-${participant.level}`}>{participant.level}</span>
-              {participant.teacher && <span>Prof. {participant.teacher}</span>}
-              <span>· Cod: <span style={{fontFamily:"monospace",background:"#f8fafc",padding:"2px 7px",borderRadius:4,letterSpacing:2,border:"1px solid #e2e8f0"}}>{participant.accessCode}</span></span>
+              {participant.teacher && <span>Teacher: {participant.teacher}</span>}
+              <span>· Code: <span style={{fontFamily:"monospace",background:"#f8fafc",padding:"2px 7px",borderRadius:4,letterSpacing:2,border:"1px solid #e2e8f0"}}>{participant.accessCode}</span></span>
             </div>
           </div>
 
-          {/* Calificare */}
+          {/* Qualification */}
           <div style={{
             background: qualified ? "#f0fdf4" : "#fffbeb",
             border: `1px solid ${qualified ? "#86efac" : "#fde68a"}`,
             borderRadius:10, padding:18, marginBottom:14
           }}>
-            <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:6,fontWeight:700}}>Status calificare</div>
+            <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:6,fontWeight:700}}>Qualification status</div>
             <div style={{fontSize:16,fontWeight:700,color: qualified ? C.green : C.amber}}>
-              {qualified ? "Calificat pentru Finală" : "În etapa de Calificare"}
+              {qualified ? "Qualified for the Final" : "In the Qualifying round"}
             </div>
             <div style={{fontSize:12,color:"#64748b",marginTop:4}}>
               {qualified
-                ? "Felicitări! Administratorul te-a calificat pentru etapa de finală."
-                : "Pentru a accesa etapa de finală, trebuie să fii calificat de către un administrator."}
+                ? "Congratulations! You have been qualified for the final stage."
+                : "To access the final stage, you must be qualified by an administrator."}
             </div>
           </div>
 
-          {/* Sesiuni */}
+          {/* Sessions */}
           <div style={{background:"#fff",borderRadius:10,padding:20,border:"1px solid #e2e8f0",marginBottom:16}}>
             <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:12,fontWeight:700}}>
-              Sesiunile mele ({sessions.length})
+              My sessions ({sessions.length})
             </div>
             {sessions.length === 0 ? (
               <div style={{padding:"20px 0",textAlign:"center",color:"#999",fontSize:13}}>
-                Nicio sesiune alocată momentan.<br/>
-                Așteaptă confirmarea administratorului.
+                No sessions allocated yet.<br/>
+                Please wait for confirmation from your administrator.
               </div>
             ) : sorted.map(s => (
               <SessionCard key={s.id} s={s} exam={examMap[s.examId]}/>
@@ -254,9 +254,9 @@ function CodeEntry({onLogin, presetCode, presetErr}) {
   const submit = () => {
     setErr("");
     const c = (code||"").toUpperCase().trim();
-    if(c.length < 4) { setErr("Cod de acces invalid."); return; }
+    if(c.length < 4) { setErr("Invalid access code."); return; }
     const p = CPEEN.findParticipantByCode(c);
-    if(!p) { setErr("Cod de acces invalid. Verificați și reîncercați."); return; }
+    if(!p) { setErr("Invalid access code. Please check and try again."); return; }
     onLogin(p);
   };
 
@@ -267,24 +267,24 @@ function CodeEntry({onLogin, presetCode, presetErr}) {
         <div className="wrap-sm">
           <div className="card">
             <div className="card-head" style={{textAlign:"center"}}>
-              <h2>Dashboard Elev</h2>
-              <p>ECHO · Introduceți codul de acces</p>
+              <h2>Student Dashboard</h2>
+              <p>ECHO · Enter your access code</p>
             </div>
             <div className="card-body">
               <div className="fg">
-                <label>Cod de acces<span className="req">*</span></label>
+                <label>Access code<span className="req">*</span></label>
                 <input className={`inp${err?" err":""}`}
                   value={code} onChange={e=>setCode(e.target.value.toUpperCase())}
                   onKeyDown={e=>e.key==="Enter"&&submit()}
-                  placeholder="ex: ABC12345" maxLength={8}
+                  placeholder="e.g. ABC12345" maxLength={8}
                   style={{letterSpacing:4,fontSize:20,fontFamily:"monospace",textAlign:"center"}}/>
                 {err && <div className="ferr">{err}</div>}
               </div>
               <button className="btn btn-primary btn-lg btn-block" onClick={submit}>
-                Accesează dashboard-ul →
+                Access dashboard →
               </button>
               <div style={{textAlign:"center",marginTop:14}}>
-                <a href="register.html" style={{fontSize:13}}>Nu ai un cod? Înregistrează-te →</a>
+                <a href="register.html" style={{fontSize:13}}>No code? Register →</a>
               </div>
             </div>
           </div>
@@ -314,7 +314,7 @@ function App() {
         setParticipant(p);
       } else if(urlCode) {
         setAutoCode(urlCode);
-        setAutoErr("Cod de acces invalid. Verificați și reîncercați.");
+        setAutoErr("Invalid access code. Please check and try again.");
       }
     }
   }, []);

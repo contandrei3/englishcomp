@@ -256,13 +256,13 @@ function ParticipantsPage() {
 
   const statusBadge = (p) => {
     const s = sessMap[p.id];
-    if (!s) return <span className="badge b-gray">Fără test</span>;
-    if (s.status === "submitted") return <span className="badge b-ok">Trimis</span>;
-    if (s.status === "in_progress") return <span className="badge b-mid">Activ</span>;
+    if (!s) return <span className="badge b-gray">No test</span>;
+    if (s.status === "submitted") return <span className="badge b-ok">Submitted</span>;
+    if (s.status === "in_progress") return <span className="badge b-mid">Active</span>;
     if (s.status === "pending") {
       const grp = s.groupId ? groupMap[s.groupId] : null;
-      if (grp?.status === "active") return <span className="badge b-mid" style={{background:"#27AE60"}}>Alocat ●</span>;
-      return <span className="badge b-gray">Alocat</span>;
+      if (grp?.status === "active") return <span className="badge b-mid" style={{background:"#27AE60"}}>Allocated ●</span>;
+      return <span className="badge b-gray">Allocated</span>;
     }
     return <span className="badge b-gray">—</span>;
   };
@@ -274,30 +274,30 @@ function ParticipantsPage() {
         <div className="container">
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
             <div>
-              <h2 style={{color:C.dark,fontSize:18}}>Participanți</h2>
-              <div style={{fontSize:12,color:"#888"}}>{filtered.length} din {all.length} înregistrați</div>
+              <h2 style={{color:C.dark,fontSize:18}}>Participants</h2>
+              <div style={{fontSize:12,color:"#888"}}>{filtered.length} of {all.length} registered</div>
             </div>
             <div style={{display:"flex",gap:8}}>
-              <button className="btn btn-mid btn-sm" onClick={reload}>↻ Actualizează</button>
+              <button className="btn btn-mid btn-sm" onClick={reload}>↻ Refresh</button>
               <button className="btn btn-success btn-sm" onClick={exportCSV} disabled={!filtered.length}>⬇ Export CSV</button>
             </div>
           </div>
 
           {/* Filters */}
           <div style={{background:"#fff",borderRadius:10,padding:"12px 16px",marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",border:"1px solid #e2e8f0"}}>
-            <input className="inp inp-sm" style={{flex:1,minWidth:180}} placeholder="Caută după nume, școală, email…"
+            <input className="inp inp-sm" style={{flex:1,minWidth:180}} placeholder="Search by name, school, email…"
               value={search} onChange={e=>setSearch(e.target.value)}/>
             <select className="inp inp-sm" style={{width:120}} value={fLvl} onChange={e=>setFLvl(e.target.value)}>
-              <option value="all">Toate nivelurile</option>
+              <option value="all">All levels</option>
               {LVL.map(l=><option key={l} value={l}>{l}</option>)}
             </select>
             <select className="inp inp-sm" style={{width:140}} value={fQual} onChange={e=>setFQual(e.target.value)}>
               <option value="all">Toți (calificat?)</option>
-              <option value="yes">Doar calificați</option>
-              <option value="no">Doar ne-calificați</option>
+              <option value="yes">Qualified only</option>
+              <option value="no">Not qualified</option>
             </select>
             <select className="inp inp-sm" style={{width:150}} value={fCounty} onChange={e=>setFCounty(e.target.value)}>
-              <option value="all">Toate județele</option>
+              <option value="all">All counties</option>
               {counties.map(c=><option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -307,10 +307,10 @@ function ParticipantsPage() {
             const p = all.find(x=>x.id===toConfirm);
             return (
               <div style={{background:"#fce4e4",border:"1px solid #ef9a9a",borderRadius:8,padding:"12px 16px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-                <span style={{fontSize:13,color:C.red}}>Sigur vrei să ștergi <strong>{p?.name}</strong>? Sesiunea de examen va fi ștearsă și ea.</span>
+                <span style={{fontSize:13,color:C.red}}>Delete <strong>{p?.name}</strong>? Their exam session will also be deleted.</span>
                 <div style={{display:"flex",gap:8}}>
-                  <button className="btn btn-danger btn-sm" onClick={()=>doDelete(toConfirm)}>Șterge</button>
-                  <button className="btn btn-ghost btn-sm" onClick={()=>setToConfirm(null)}>Anulează</button>
+                  <button className="btn btn-danger btn-sm" onClick={()=>doDelete(toConfirm)}>Delete</button>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>setToConfirm(null)}>Cancel</button>
                 </div>
               </div>
             );
@@ -321,10 +321,10 @@ function ParticipantsPage() {
             const p = all.find(x=>x.id===toDequal);
             return (
               <div style={{background:"#fff3e0",border:"1px solid #ffb74d",borderRadius:8,padding:"12px 16px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-                <span style={{fontSize:13,color:"#7a4f00"}}>Sigur vrei să decalifici <strong>{p?.name}</strong>? Va pierde accesul la finală.</span>
+                <span style={{fontSize:13,color:"#7a4f00"}}>Disqualify <strong>{p?.name}</strong>? They will lose access to the final.</span>
                 <div style={{display:"flex",gap:8}}>
-                  <button className="btn btn-mid btn-sm" onClick={()=>doDequal(toDequal)}>Decalifică</button>
-                  <button className="btn btn-ghost btn-sm" onClick={()=>setToDequal(null)}>Anulează</button>
+                  <button className="btn btn-mid btn-sm" onClick={()=>doDequal(toDequal)}>Disqualify</button>
+                  <button className="btn btn-ghost btn-sm" onClick={()=>setToDequal(null)}>Cancel</button>
                 </div>
               </div>
             );
@@ -333,24 +333,24 @@ function ParticipantsPage() {
           {/* Table */}
           <div style={{background:"#fff",borderRadius:10,border:"1px solid #e2e8f0"}}>
             {filtered.length === 0
-              ? <div style={{padding:40,textAlign:"center",color:"#aaa"}}>Niciun participant găsit.</div>
+              ? <div style={{padding:40,textAlign:"center",color:"#aaa"}}>No participants found.</div>
               : (
                 <div className="tbl-wrap">
                   <table className="tbl">
                     <thead>
                       <tr>
                         <th>#</th>
-                        <th>Nume</th>
-                        <th>Școală</th>
-                        <th>Județ</th>
-                        <th>Cls</th>
-                        <th>Nivel</th>
-                        <th>Calificat</th>
+                        <th>Name</th>
+                        <th>School</th>
+                        <th>County</th>
+                        <th>Grade</th>
+                        <th>Level</th>
+                        <th>Qualified</th>
                         <th>Proctor</th>
-                        <th>Cod acces</th>
+                        <th>Access code</th>
                         <th>Status</th>
-                        <th>Înregistrat</th>
-                        <th>Acțiuni</th>
+                        <th>Registered</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -367,14 +367,14 @@ function ParticipantsPage() {
                           <td><span className={`badge b-${p.level}`}>{p.level}</span></td>
                           <td style={{fontSize:12}}>
                             {CPEEN.isQualified(p)
-                              ? <span className="badge b-ok" style={{fontWeight:700}}>✓ Calificat</span>
+                              ? <span className="badge b-ok" style={{fontWeight:700}}>✓ Qualified</span>
                               : <span style={{color:"#aaa"}}>—</span>}
                           </td>
                           <td style={{fontSize:12}}>
                             {(()=>{
                               const flag = proctorFlags[(p.accessCode||"").toUpperCase()];
                               if(!flag) return <span style={{color:"#ccc"}}>—</span>;
-                              if(flag.disqualified) return <span className="badge b-err" style={{fontWeight:700,background:"#dc2626",color:"#fff"}}>✕ Descalificat</span>;
+                              if(flag.disqualified) return <span className="badge b-err" style={{fontWeight:700,background:"#dc2626",color:"#fff"}}>✕ Disqualified</span>;
                               const sc = flag.suspiciousCount || 0;
                               return <span style={{color: sc>2?"#dc2626":"#888"}}>⚠ {sc} susp.</span>;
                             })()}
@@ -387,7 +387,7 @@ function ParticipantsPage() {
                           <td>
                             <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                               <button className={`btn btn-sm ${CPEEN.isQualified(p)?"btn-ghost":"btn-success"}`}
-                                title={CPEEN.isQualified(p)?"Decalifică":"Califică pentru finală"}
+                                title={CPEEN.isQualified(p)?"Disqualify":"Qualify for final"}
                                 onClick={()=>toggleQualified(p)}
                                 style={{padding:"3px 8px",fontSize:11}}>
                                 {CPEEN.isQualified(p)?"✕ Decal.":"✓ Cal."}
@@ -397,17 +397,17 @@ function ParticipantsPage() {
                                 if(flag?.disqualified) return (
                                   <button className="btn btn-sm btn-mid" title="Reabiliteaza proctoring"
                                     onClick={()=>doClearDisq(p)} style={{padding:"3px 8px",fontSize:11}}>
-                                    ↩ Reabilit.
+                                    ↩ Reinstate
                                   </button>
                                 );
                                 return (
-                                  <button className="btn btn-sm btn-danger" title="Descalifică (proctoring)"
+                                  <button className="btn btn-sm btn-danger" title="Disqualify (proctoring)"
                                     onClick={()=>doManualDisq(p)} style={{padding:"3px 8px",fontSize:11}}>
                                     ⛔ Descal.
                                   </button>
                                 );
                               })()}
-                              <button className="btn btn-sm btn-outline" title="Copiază codul"
+                              <button className="btn btn-sm btn-outline" title="Copy code"
                                 onClick={()=>copyCode(p)}
                                 style={{padding:"3px 8px",fontSize:11}}>
                                 {copied===p.id?"✓":"⎘"}

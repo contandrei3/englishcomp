@@ -30,8 +30,8 @@ function Navbar({participant}) {
         <span className="nav-title">ECHO</span>
       </a>
       <div className="nav-links">
-        <a href="register.html" className="nav-link">Înregistrare</a>
-        <a href="dashboard.html" className="nav-link">Dashboard Elev</a>
+        <a href="register.html" className="nav-link">Register</a>
+        <a href="dashboard.html" className="nav-link">My Dashboard</a>
         <a href="admin/index.html" className="nav-link">Admin</a>
       </div>
     </nav>
@@ -128,7 +128,7 @@ function GapPopup({open, number, prompt, partLabel, variant, options, keyword, c
         <div style={{padding:"18px 22px 8px",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
           <div>
             <div style={{fontSize:11,color:"#94a3b8",letterSpacing:1.5,textTransform:"uppercase",fontWeight:700}}>
-              {partLabel} · Întrebarea {number}
+              {partLabel} · Question {number}
             </div>
             {prompt && <div style={{fontSize:13,color:C.dark,marginTop:4,fontWeight:600}}>{prompt}</div>}
           </div>
@@ -145,7 +145,7 @@ function GapPopup({open, number, prompt, partLabel, variant, options, keyword, c
             <div style={{display:"flex",gap:8}}>
               <input ref={inputRef} className="inp" value={val}
                 onChange={e=>setVal(e.target.value)} onKeyDown={onKeyDown}
-                placeholder="Scrie răspunsul…" style={{flex:1}}/>
+                placeholder="Type your answer…" style={{flex:1}}/>
               <button className="btn btn-primary" onClick={()=>submit(val)}>OK</button>
             </div>
           )}
@@ -183,7 +183,7 @@ function GapPopup({open, number, prompt, partLabel, variant, options, keyword, c
           )}
 
           {variant === 'input' && (
-            <div style={{fontSize:11,color:"#94a3b8",marginTop:8}}>Apasă <strong>Enter</strong> pentru a confirma · <strong>Esc</strong> pentru a închide.</div>
+            <div style={{fontSize:11,color:"#94a3b8",marginTop:8}}>Press <strong>Enter</strong> to confirm · <strong>Esc</strong> to close.</div>
           )}
         </div>
       </div>
@@ -220,7 +220,7 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
             <GapText text={part.text} ans={ans} kind="mc"
               onGapClick={(itemIdx, n) => requestPopup({
                 pi, i:itemIdx, number:n, partLabel,
-                prompt:"Alege varianta corectă pentru acest gol.",
+                prompt:"Choose the correct option for this gap.",
                 variant:"mc",
                 options:(part.items[itemIdx]?.options||[]).map((opt, oi) => ({
                   value: String(oi),
@@ -240,7 +240,7 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
             <GapText text={part.text} ans={ans} kind="input"
               onGapClick={(itemIdx, n) => requestPopup({
                 pi, i:itemIdx, number:n, partLabel,
-                prompt:"Scrie cuvântul (UN singur cuvânt) care completează cel mai bine acest gol.",
+                prompt:"Write ONE word that best fits this gap.",
                 variant:"input"
               })}/>
           </div>
@@ -513,7 +513,7 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
           </div>
         )}
         <div>
-          <div style={{fontWeight:700,color:"#94a3b8",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>Available paragraphs (reference)</div>
+          <div style={{fontWeight:700,color:"#94a3b8",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>Available paragraphs</div>
           <div className="para-grid">
             {(part.paragraphs||[]).map((p,i)=>(
               <div key={i} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:7,padding:"8px 12px",fontSize:12,lineHeight:1.65}}>
@@ -599,7 +599,7 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
               <div key={i} className={`line-row${filled?' answered':''}`}
                 onClick={()=>requestPopup({
                   pi, i, number:startNum+i+1, partLabel,
-                  prompt:"Scrie cuvântul în plus, sau ✓ dacă linia este corectă.",
+                  prompt:"Write the extra word, or ✓ if the line is correct.",
                   variant:"input"
                 })}>
                 <span className="ln-num">{startNum+i+1}.</span>
@@ -835,7 +835,7 @@ function ExamApp() {
     if(!sid) return;
     const s = CPEEN.getSessions().find(x => x.id === sid);
     if(!s) {
-      setBootErr("Sesiunea nu a fost găsită. Reveniți la dashboard și încercați din nou.");
+      setBootErr("Session not found. Return to your dashboard and try again.");
       setView("bootErr");
       return;
     }
@@ -851,7 +851,7 @@ function ExamApp() {
   const enterCode = () => {
     setCodeErr("");
     const p = CPEEN.findParticipantByCode(code);
-    if(!p) { setCodeErr("Cod de acces invalid. Verificați și reîncercați."); return; }
+    if(!p) { setCodeErr("Invalid access code. Please check and try again."); return; }
 
     const allSess = CPEEN.getSessionsByParticipant(p.id);
     const groups  = CPEEN.getGroupSessions();
@@ -950,7 +950,7 @@ function ExamApp() {
       <Navbar/>
       <div className="page-center"><div className="wrap-sm">
         <div className="card"><div className="card-body" style={{textAlign:"center",padding:40}}>
-          <div style={{fontSize:14,color:C.mid}}>Se încarcă sesiunea…</div>
+          <div style={{fontSize:14,color:C.mid}}>Loading session…</div>
         </div></div>
       </div></div>
     </>
@@ -964,11 +964,11 @@ function ExamApp() {
         <div className="card">
           <div className="card-head" style={{textAlign:"center"}}>
             <div style={{fontSize:36,marginBottom:8}}>⚠️</div>
-            <h2>Sesiune indisponibilă</h2>
+            <h2>Session unavailable</h2>
           </div>
           <div className="card-body" style={{textAlign:"center"}}>
             <p style={{marginBottom:16,color:"#666"}}>{bootErr}</p>
-            <a href="dashboard.html" className="btn btn-primary btn-lg btn-block">← Înapoi la dashboard</a>
+            <a href="dashboard.html" className="btn btn-primary btn-lg btn-block">← Back to dashboard</a>
           </div>
         </div>
       </div></div>
@@ -983,24 +983,24 @@ function ExamApp() {
         <div className="wrap-sm">
           <div className="card">
             <div className="card-head" style={{textAlign:"center"}}>
-              <h2>Acces Examen</h2>
-              <p>ECHO · Introduceți codul de acces</p>
+              <h2>Exam Access</h2>
+              <p>ECHO · Enter your access code</p>
             </div>
             <div className="card-body">
               <div className="fg">
-                <label>Cod de acces<span className="req">*</span></label>
+                <label>Access code<span className="req">*</span></label>
                 <input className={`inp${codeErr?" err":""}`}
                   value={code} onChange={e=>setCode(e.target.value.toUpperCase())}
                   onKeyDown={e=>e.key==="Enter"&&enterCode()}
-                  placeholder="ex: ABC12345" maxLength={8}
+                  placeholder="e.g. ABC12345" maxLength={8}
                   style={{letterSpacing:4,fontSize:20,fontFamily:"monospace",textAlign:"center"}}/>
                 {codeErr && <div className="ferr">{codeErr}</div>}
               </div>
               <button className="btn btn-primary btn-lg btn-block" onClick={enterCode}>
-                Accesează examenul →
+                Enter exam →
               </button>
               <div style={{textAlign:"center",marginTop:14}}>
-                <a href="register.html" style={{fontSize:13}}>Nu ai un cod? Înregistrează-te →</a>
+                <a href="register.html" style={{fontSize:13}}>No code? Register →</a>
               </div>
             </div>
           </div>
@@ -1022,40 +1022,40 @@ function ExamApp() {
             <div className="card">
               <div className="card-head" style={{textAlign:"center"}}>
                 <div style={{fontSize:36,marginBottom:8}}>{isGroupFinished ? "🏁" : "⏳"}</div>
-                <h2>{isGroupFinished ? "Sesiune încheiată" : "Așteptați pornirea sesiunii"}</h2>
-                <p>Bun venit, {ptcp?.name}</p>
+                <h2>{isGroupFinished ? "Session ended" : "Waiting for session to start"}</h2>
+                <p>Welcome, {ptcp?.name}</p>
               </div>
               <div className="card-body" style={{textAlign:"center"}}>
                 {isGroupPending && <>
                   <p style={{fontSize:14,color:"#333",marginBottom:8,fontWeight:600}}>
-                    Ai fost alocat(ă) la această sesiune de examen.
+                    You have been allocated to this exam session.
                   </p>
                   <p style={{fontSize:13,color:"#666",marginBottom:20}}>
-                    Așteptați ca profesorul/administratorul să pornească sesiunea.
-                    Pagina se actualizează automat la fiecare 5 secunde.
+                    Wait for the teacher/administrator to start the session.
+                    This page refreshes automatically every 5 seconds.
                   </p>
                   <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
                     <button className="btn btn-mid" onClick={retryGroupCheck} disabled={checking}>
-                      {checking ? "Se verifică…" : "↺ Verificați acum"}
+                      {checking ? "Checking…" : "↺ Check now"}
                     </button>
                     <a href="dashboard.html" className="btn btn-outline">← Dashboard</a>
                   </div>
                   <div style={{marginTop:16,fontSize:11,color:"#aaa"}}>
-                    {checking ? "Se sincronizează cu serverul…" : "Actualizare automată activă…"}
+                    {checking ? "Syncing with server…" : "Auto-refresh active…"}
                   </div>
                 </>}
                 {isGroupFinished && <>
                   <p style={{fontSize:13,color:"#666",marginBottom:20}}>
-                    Sesiunea la care ai fost alocat(ă) s-a terminat. Contactați administratorul pentru mai multe detalii.
+                    The session you were allocated to has ended. Contact your administrator for more details.
                   </p>
                   <a href="dashboard.html" className="btn btn-primary">← Dashboard</a>
                 </>}
                 {!isGroupPending && !isGroupFinished && <>
-                  <p style={{fontSize:14,color:"#555",marginBottom:8}}>Bun venit, <strong>{ptcp?.name}</strong>.</p>
+                  <p style={{fontSize:14,color:"#555",marginBottom:8}}>Welcome, <strong>{ptcp?.name}</strong>.</p>
                   <p style={{fontSize:13,color:"#777",marginBottom:20}}>
-                    Subiectele nu au fost activate încă de administrator. Reveniți mai târziu.
+                    No exam has been activated yet. Please check back later.
                   </p>
-                  <a href="index.html" className="btn btn-primary">← Pagina principală</a>
+                  <a href="index.html" className="btn btn-primary">← Home</a>
                 </>}
               </div>
             </div>
@@ -1080,8 +1080,8 @@ function ExamApp() {
                 <p>Răspunsurile tale au fost salvate.</p>
               </div>
               <div className="card-body" style={{textAlign:"center"}}>
-                <p style={{fontSize:14,color:"#555",marginBottom:20}}>Rezultatele vor fi afișate după activarea de administrator.</p>
-                <a href="index.html" className="btn btn-primary">← Pagina principală</a>
+                <p style={{fontSize:14,color:"#555",marginBottom:20}}>Results will be released by your administrator.</p>
+                <a href="index.html" className="btn btn-primary">← Home</a>
               </div>
             </div>
           </div>
@@ -1110,14 +1110,14 @@ function ExamApp() {
             <div className="card">
               <div className="card-head" style={{textAlign:"center",padding:"28px",background:"#1e3a5f",borderBottom:"none"}}>
                 <div style={{color:"#64748b",fontSize:10,letterSpacing:2,marginBottom:8,textTransform:"uppercase"}}>
-                  ECHO · {ptcp?.level} · {ptcp?.stage==="finala"?"Finală":"Calificare"} · {variant.id}
+                  ECHO · {ptcp?.level} · {ptcp?.stage==="finala"?"Final":"Qualifying"} · {variant.id}
                 </div>
                 <div style={{color:"#fff",fontSize:44,fontWeight:700,lineHeight:1}}>{result.total}</div>
-                <div style={{color:"#94a3b8",fontSize:13,marginTop:6}}>puncte din 100 · Nota: <strong style={{fontSize:17,color:"#e2e8f0"}}>{(result.total/10).toFixed(2)}</strong></div>
+                <div style={{color:"#94a3b8",fontSize:13,marginTop:6}}>points out of 100 · Grade: <strong style={{fontSize:17,color:"#e2e8f0"}}>{(result.total/10).toFixed(2)}</strong></div>
               </div>
               <div className="card-body">
                 <div style={{fontWeight:700,color:C.dark,fontSize:15}}>{ptcp?.name}</div>
-                <div style={{fontSize:13,color:"#64748b",marginBottom:20}}>{ptcp?.school} · {ptcp?.grade} · {ptcp?.county}</div>
+                <div style={{fontSize:13,color:"#64748b",marginBottom:20}}>{ptcp?.school} · Grade {ptcp?.grade} · {ptcp?.county}</div>
                 {secs.map((sec,idx)=>{
                   const sc = isNew ? sec.score : result.details[sec.k].filter(Boolean).length*(sec.max/Math.max(1,result.details[sec.k].length));
                   return (
@@ -1133,19 +1133,19 @@ function ExamApp() {
                   );
                 })}
                 <div className="alert alert-warn" style={{marginTop:12}}>
-                  Secțiunea KWT poate fi reverificată manual de profesor.
+                  The KWT section may be manually reviewed by your teacher.
                 </div>
                 {sess?.answers?.writing && (
                   <div className="alert alert-info" style={{marginTop:8}}>
-                    Răspunsul la secțiunea Writing a fost salvat și va fi corectat manual.
-                    {sess.writingGrade !== null && <> · <strong>Notă writing: {sess.writingGrade}/20</strong></>}
+                    Your writing response has been saved and will be graded manually.
+                    {sess.writingGrade !== null && <> · <strong>Writing grade: {sess.writingGrade}/20</strong></>}
                   </div>
                 )}
                 <div style={{textAlign:"center",marginTop:14,color:"#888",fontSize:11}}>
-                  Răspunsurile au fost salvate.<br/>
+                  Your answers have been saved.<br/>
                   <span style={{color:C.mid}}>englishgrammarchallenge.ro · ECHO</span>
                 </div>
-                <a href="dashboard.html" className="btn btn-primary btn-block mt16" style={{display:"flex"}}>← Înapoi la dashboard</a>
+                <a href="dashboard.html" className="btn btn-primary btn-block mt16" style={{display:"flex"}}>← Back to dashboard</a>
               </div>
             </div>
           </div>
@@ -1165,7 +1165,7 @@ function ExamApp() {
         <div style={{position:"sticky",top:0,zIndex:100,background:C.dark,padding:"9px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
           <div style={{color:"#94a3b8",fontSize:11,fontWeight:600,letterSpacing:1}}>
             <span style={{background:LVL_C[ptcp?.level],color:"#fff",borderRadius:6,padding:"1px 7px",marginRight:8,fontWeight:700}}>{ptcp?.level}</span>
-            {ptcp?.stage==="finala"?"Finală":"Calificare"} · {variant.id} · {ptcp?.name}
+            {ptcp?.stage==="finala"?"Final":"Qualifying"} · {variant.id} · {ptcp?.name}
           </div>
           <div className={`timer${urgent?" urgent":""}`}>⏱ {fmt(timeLeft)}</div>
           <div style={{display:"flex",gap:5}}>
@@ -1301,28 +1301,28 @@ function ExamApp() {
             <div id="sec5" style={{background:"#fff",borderRadius:12,padding:22,marginBottom:22,border:"1px solid #e2e8f0"}}>
               <div className="sec-badge">
                 <span>WRITING</span>
-                <span>corectat manual</span>
+                <span>manually graded</span>
               </div>
               <div className="instr">{variant.writing.prompt}</div>
               {variant.writing.minWords && (
-                <div style={{fontSize:11,color:"#888",marginBottom:8}}>{variant.writing.minWords}–{variant.writing.maxWords} cuvinte</div>
+                <div style={{fontSize:11,color:"#888",marginBottom:8}}>{variant.writing.minWords}–{variant.writing.maxWords} words</div>
               )}
               <textarea className="inp" value={answers.writing||""} onChange={e=>setAns("writing",null,e.target.value)}
-                rows={10} style={{resize:"vertical",lineHeight:1.6}} placeholder="Scrie răspunsul tău aici..."/>
+                rows={10} style={{resize:"vertical",lineHeight:1.6}} placeholder="Write your answer here..."/>
               <div style={{fontSize:11,color:"#888",marginTop:4}}>
-                Cuvinte: {(answers.writing||"").trim().split(/\s+/).filter(Boolean).length}
+                Words: {(answers.writing||"").trim().split(/\s+/).filter(Boolean).length}
               </div>
             </div>
           )}
 
           {/* Submit */}
           <div style={{textAlign:"center"}}>
-            <div style={{fontSize:12,color:"#888",marginBottom:8}}>Verificați toate răspunsurile înainte de a trimite.</div>
+            <div style={{fontSize:12,color:"#888",marginBottom:8}}>Check all answers before submitting.</div>
             <button onClick={()=>doSubmit(answersRef.current,sessRef.current,examRef.current,variantRef.current)}
               style={{background:C.mid,color:"#fff",border:"none",borderRadius:8,padding:"13px 44px",fontSize:15,fontWeight:700,cursor:"pointer",letterSpacing:.5,transition:"background .12s"}}
               onMouseEnter={e=>e.target.style.background="#1d4ed8"}
               onMouseLeave={e=>e.target.style.background=C.mid}>
-              Trimite lucrarea →
+              Submit exam →
             </button>
           </div>
         </div>
@@ -1348,7 +1348,7 @@ function ExamApp() {
   return null;
 }
 
-document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#2563eb;font-size:14px;">Se încarcă…</div>';
+document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#2563eb;font-size:14px;">Loading…</div>';
 CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<ExamApp/>));
 </script>
 </body>
