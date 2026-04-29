@@ -357,41 +357,47 @@ function P3Edit({data, onChange}) {
 
   return (
     <>
-      <Fld label="Textul Exercițiului (Folosește [1], [2] etc. pentru spații)">
+      <Fld label="Textul Exercițiului">
+        <div style={{fontSize:11, color:"#666", marginBottom:4}}>
+          Exemplu: Folosește <b>[17]</b>, <b>[18]</b> etc. (Ele vor accesa elementele 1, 2... din lista de jos).
+        </div>
         <Ta 
           value={data.text || ''} 
           onChange={e => onChange({...data, text: e.target.value})} 
           rows={8}
-          placeholder="Ex: The [1] of the building was amazing. It was very [2]."
+          placeholder="The [17] of the building... It was [18]..."
         />
       </Fld>
 
       <div style={{ marginTop: 20 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 2fr 40px", gap: 10, marginBottom: 8, fontSize: 11, fontWeight: 700, color: "#666" }}>
-          <div>ID</div>
+        <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 2fr 40px", gap: 10, marginBottom: 8, fontSize: 11, fontWeight: 700 }}>
+          <div>ID (Corelat)</div>
           <div>CUVÂNT BAZĂ</div>
           <div>RĂSPUNS CORECT</div>
           <div></div>
         </div>
         
         {(data.items || []).map((it, i) => (
-          <div key={i} style={{ display: "grid", gridTemplateColumns: "40px 1fr 2fr 40px", gap: 10, alignItems: "center", marginBottom: 8 }}>
-            <div style={{ fontWeight: 700, color: "#2563eb" }}>[{i + 1}]</div>
+          <div key={i} style={{ display: "grid", gridTemplateColumns: "80px 1fr 2fr 40px", gap: 10, alignItems: "center", marginBottom: 8 }}>
+            {/* Afișăm automat ce marker ar trebui să folosești în text pentru acest rând */}
+            <div style={{ fontWeight: 700, textAlign: "center", background: "#f0f4ff", borderRadius: 4, padding: "4px 0" }}>
+              [{startNum + i + 1}]
+            </div>
             <Inp 
               value={it.base} 
               onChange={e => updIt(i, 'base', e.target.value)} 
-              placeholder="Ex: ABLE"
+              placeholder="BASE"
               style={{ textTransform: "uppercase", fontWeight: 700 }}
             />
             <Inp 
               value={it.answers} 
               onChange={e => updIt(i, 'answers', e.target.value)} 
-              placeholder="Ex: ability; abilities"
+              placeholder="answer"
             />
             <button onClick={() => delIt(i)} style={{ border: "none", background: "none", cursor: "pointer", color: "#ef4444" }}>✕</button>
           </div>
         ))}
-        <AddBtn onClick={addIt} label="Adaugă spațiu (Gap)" />
+        <AddBtn onClick={addIt} label="Adaugă Gap" />
       </div>
     </>
   );
