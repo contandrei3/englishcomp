@@ -64,7 +64,9 @@ function gapNums(text) {
 }
 
 function getPartCount(part) {
-  if (part.type === 'p2' || part.type === 'p6') return (part.key||[]).length;
+  if (part.type === 'p2') return (part.key||[]).length;
+  if (part.type === 'p6') return part.text ? (part.key||[]).length : (part.items||[]).length;
+  if (part.type === 'p7') return part.texts ? (part.items||[]).length : (part.key||[]).length;
   if (part.type === 'ec' || part.type === 'e1' || part.type === 'e2') return (part.lines||[]).length;
   return (part.items||[]).length;
 }
@@ -198,10 +200,13 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
     <input className="ans-inp" value={val||""} onChange={e=>setAns(pi,i,e.target.value)}
       placeholder={ph} style={{width:w||160}}/>
   );
-  const totalPts =
-    (part.type==='p2'||part.type==='p7') ? (part.key||[]).length * part.pts :
-    part.type==='ec' ? (part.lines||[]).length * part.pts :
-    (part.items||[]).length * part.pts;
+  const totalPts = (() => {
+    if (part.type==='p2') return (part.key||[]).length * part.pts;
+    if (part.type==='p6') return (part.text ? (part.key||[]).length : (part.items||[]).length) * part.pts;
+    if (part.type==='p7') return (part.texts ? (part.items||[]).length : (part.key||[]).length) * part.pts;
+    if (part.type==='ec'||part.type==='e1'||part.type==='e2') return (part.lines||[]).length * part.pts;
+    return (part.items||[]).length * part.pts;
+  })();
 
   const isExtra = part.type === 'e1' || part.type === 'e2';
   return (
@@ -498,8 +503,8 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
         </div>
       </>}
 
-      {/* P6 — Gapped Text */}
-      {part.type==='p6' && <>
+      {/* P6 — Gapped Text (new) or legacy Cross-text (old data stored as p6) */}
+      {part.type==='p6' && (part.text || part.paragraphs ? <>
         {part.title && <strong className="title" style={{display:"block",marginBottom:10,color:C.dark,fontSize:15}}>{part.title}</strong>}
         {part.text && (
           <div className="passage" style={{marginBottom:16}}>
@@ -522,10 +527,40 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
             ))}
           </div>
         </div>
-      </>}
+      </> : <>
+        {/* Legacy Cross-text data stored as p6 before the remap */}
+        <div className="para-grid" style={{marginBottom:16}}>
+          {(part.texts||[]).map((t,i)=>(
+            <div key={i} className="passage" style={{padding:"12px 14px",fontSize:13,lineHeight:1.7}}>
+              <strong className="title" style={{marginBottom:6}}>{t.label}. {t.title}</strong>
+              {t.content}
+            </div>
+          ))}
+        </div>
+        <div>
+          {(part.items||[]).map((item,i)=>{
+            const filled = ans[i] !== undefined && ans[i] !== '';
+            return (
+              <div key={i} className={`q-row${filled?' answered':''}`}
+                onClick={()=>requestPopup({
+                  pi, i, number:startNum+i+1, partLabel,
+                  prompt: item.question,
+                  variant:"mc",
+                  options:(part.texts||[]).map(t => ({
+                    value: t.label, letter: t.label, label: t.title || `Text ${t.label}`
+                  }))
+                })}>
+                <span className="q-num">{startNum+i+1}.</span>
+                <span className="q-text">{item.question}</span>
+                <span className="q-ans">{filled ? ans[i] : <span className="q-ans-empty">—</span>}</span>
+              </div>
+            );
+          })}
+        </div>
+      </>)}
 
-      {/* P7 — Multiple Matching */}
-      {part.type==='p7' && <>
+      {/* P7 — Multiple Matching (new) or legacy Gapped Text (old data stored as p7) */}
+      {part.type==='p7' && (part.texts ? <>
         <div style={{marginBottom:16}}>
           {(part.texts||[]).map((t,i)=>(
             <div key={i} className="passage" style={{padding:"12px 14px",marginBottom:8,fontSize:13,lineHeight:1.7}}>
@@ -554,7 +589,31 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
             );
           })}
         </div>
-      </>}
+      </> : <>
+        {/* Legacy Gapped Text data stored as p7 before the remap */}
+        {part.title && <strong className="title" style={{display:"block",marginBottom:10,color:C.dark,fontSize:15}}>{part.title}</strong>}
+        {part.text && (
+          <div className="passage" style={{marginBottom:16}}>
+            <GapText text={part.text} ans={ans} kind="select"
+              onGapClick={(itemIdx, n) => requestPopup({
+                pi, i:itemIdx, number:n, partLabel,
+                prompt:"Choose the paragraph that fits this gap.",
+                variant:"paragraphs",
+                options:(part.paragraphs||[]).map(p => ({ value: p.label, label: p.content }))
+              })}/>
+          </div>
+        )}
+        <div>
+          <div style={{fontWeight:700,color:"#94a3b8",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>Available paragraphs</div>
+          <div className="para-grid">
+            {(part.paragraphs||[]).map((p,i)=>(
+              <div key={i} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:7,padding:"8px 12px",fontSize:12,lineHeight:1.65}}>
+                <strong style={{color:C.mid,marginRight:6}}>{p.label}.</strong>{p.content}
+              </div>
+            ))}
+          </div>
+        </div>
+      </>)}
 
       {/* P8 — Cross-text Multiple Matching */}
       {part.type==='p8' && <>

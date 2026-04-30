@@ -174,7 +174,8 @@ var CPEEN = (function () {
 
   function partAnswerCount(part) {
     if (part.type === 'p2') return (part.key || []).length;
-    if (part.type === 'p6') return (part.key || []).length;
+    if (part.type === 'p6') return part.text ? (part.key || []).length : (part.items || []).length;
+    if (part.type === 'p7') return part.texts ? (part.items || []).length : (part.key || []).length;
     if (part.type === 'ec' || part.type === 'e1' || part.type === 'e2') return (part.lines || []).length;
     return (part.items || []).length;
   }
@@ -375,16 +376,39 @@ var CPEEN = (function () {
           var ok = (item.key || []).some(function(x) { return norm(x) === norm(ans[i]); });
           det.push(ok); if (ok) total += part.pts;
         });
-      } else if (part.type === 'p7' || part.type === 'p8') {
+      } else if (part.type === 'p8') {
         (part.items || []).forEach(function(item, i) {
           var ok = norm(ans[i]) === norm(item.answer);
           det.push(ok); if (ok) total += part.pts;
         });
+      } else if (part.type === 'p7') {
+        if (part.texts) {
+          // New Multiple Matching: item.answer is section label
+          (part.items || []).forEach(function(item, i) {
+            var ok = norm(ans[i]) === norm(item.answer);
+            det.push(ok); if (ok) total += part.pts;
+          });
+        } else {
+          // Legacy Gapped Text stored as p7: key[]
+          (part.key || []).forEach(function(expected, i) {
+            var ok = norm(ans[i]) === norm(expected);
+            det.push(ok); if (ok) total += part.pts;
+          });
+        }
       } else if (part.type === 'p6') {
-        (part.key || []).forEach(function(expected, i) {
-          var ok = norm(ans[i]) === norm(expected);
-          det.push(ok); if (ok) total += part.pts;
-        });
+        if (part.text) {
+          // New Gapped Text: key[]
+          (part.key || []).forEach(function(expected, i) {
+            var ok = norm(ans[i]) === norm(expected);
+            det.push(ok); if (ok) total += part.pts;
+          });
+        } else {
+          // Legacy Cross-text stored as p6: item.answer is text label
+          (part.items || []).forEach(function(item, i) {
+            var ok = norm(ans[i]) === norm(item.answer);
+            det.push(ok); if (ok) total += part.pts;
+          });
+        }
       } else if (part.type === 'ec' || part.type === 'e1' || part.type === 'e2') {
         (part.lines || []).forEach(function(line, i) {
           var expected = norm((part.key || [])[i] || '');
