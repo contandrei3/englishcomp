@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Editor subiect – Admin ECHO</title>
+<title>Exam Builder – Admin ECHO</title>
 <link rel="stylesheet" href="../css/style.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -21,17 +21,21 @@ const { useState, useEffect } = React;
 const C = {dark:"#0f172a",mid:"#2563eb",red:"#dc2626",green:"#15803d",bg:"#f8fafc"};
 
 const PARTS_META = [
-  { id:'p1', num:1, label:'Multiple Choice Cloze',        hint:'Text cu goluri; alegi A/B/C/D pentru fiecare', defPts:1 },
-  { id:'p2', num:2, label:'Open Cloze',                   hint:'Text cu goluri; scrii UN cuvânt per gol',      defPts:1 },
-  { id:'p3', num:3, label:'Word Formation',               hint:'Transformi un cuvânt cheie',                   defPts:1 },
-  { id:'p4', num:4, label:'Key Word Transformations',     hint:'Rescrii propoziția folosind cuvântul cheie',   defPts:2 },
-  { id:'p5', num:5, label:'Multiple Choice (Reading)',    hint:'Text cu întrebări; alegi A/B/C/D',             defPts:2 },
-  { id:'p6', num:6, label:'Cross-text Multiple Matching', hint:'4 texte; potrivești întrebări la scriitori',   defPts:2 },
-  { id:'p7', num:7, label:'Gapped Text',                  hint:'Plasezi paragrafele înapoi în text',           defPts:2 },
-  { id:'p8', num:8, label:'Multiple Matching',            hint:'Potrivești întrebări la secțiuni A–F',         defPts:1 },
+  { id:'p1', sec:'Part 1', label:'Multiple Choice Cloze',        hint:'Gapped text; choose A/B/C/D per gap',         defPts:1 },
+  { id:'p2', sec:'Part 2', label:'Open Cloze',                   hint:'Gapped text; write ONE word per gap',         defPts:1 },
+  { id:'p3', sec:'Part 3', label:'Word Formation',               hint:'Use base word to form the correct word',      defPts:1 },
+  { id:'p4', sec:'Part 4', label:'Key Word Transformations',     hint:'Rewrite sentence using key word (3–6 words)', defPts:2 },
+  { id:'p5', sec:'Part 5', label:'Multiple Choice (Reading)',    hint:'Reading text; choose A/B/C/D',                defPts:2 },
+  { id:'p6', sec:'Part 6', label:'Gapped Text',                  hint:'Place removed paragraphs back into text',     defPts:2 },
+  { id:'p7', sec:'Part 7', label:'Multiple Matching',            hint:'Match questions to sections A–F',             defPts:1 },
+  { id:'p8', sec:'Part 8', label:'Cross-text Multiple Matching', hint:'4 short texts; match questions to writers',   defPts:2 },
+  { id:'ec', sec:'EC',     label:'Error Correction',             hint:'Find extra word per line; ✓ if correct',     defPts:1 },
+  { id:'e1', sec:'E1',     label:'Error Correction I',           hint:'Find extra word per line; ✓ if correct',     defPts:1 },
+  { id:'e2', sec:'E2',     label:'Error Correction II',          hint:'Find wrong word, write correction',           defPts:1 },
+  { id:'mc', sec:'MC',     label:'Multiple Choice',              hint:'Questions with up to 6 options (A–F)',        defPts:1 },
 ];
 
-const IMPLEMENTED = { p1:true, p2:true, p3:true, p4:true, p5:true, p6:true, p7:true, p8:true };
+const IMPLEMENTED = { p1:true,p2:true,p3:true,p4:true,p5:true,p6:true,p7:true,p8:true,ec:true,e1:true,e2:true,mc:true };
 
 function initPart(id, defPts) {
   const pts = String(defPts);
@@ -40,9 +44,11 @@ function initPart(id, defPts) {
   if (id==='p3') return { text:'', pts, items:[] };
   if (id==='p4') return { pts, items:[] };
   if (id==='p5') return { title:'', text:'', pts, items:[] };
-  if (id==='p6') return { pts, texts:['A','B','C','D'].map(l=>({label:l,title:'',content:''})), items:[] };
-  if (id==='p7') return { title:'', text:'', pts, paragraphs:[], key:[] };
-  if (id==='p8') return { pts, texts:[], items:[] };
+  if (id==='p6') return { title:'', text:'', pts, paragraphs:[], key:[] };       // Gapped Text
+  if (id==='p7') return { pts, texts:[], items:[] };                              // Multiple Matching
+  if (id==='p8') return { pts, texts:['A','B','C','D'].map(l=>({label:l,title:'',content:''})), items:[] }; // Cross-text
+  if (id==='ec'||id==='e1'||id==='e2') return { title:'', intro:'', pts, lines:[], key:[] };
+  if (id==='mc') return { title:'', text:'', pts, items:[] };
   return { pts };
 }
 
@@ -88,20 +94,33 @@ function toDBVariant(meta, enabled, partData) {
         }))
       });
     } else if (id==='p6') {
-      parts.push({ type:'p6', pts,
-        texts: d.texts.map(t=>({label:t.label, title:t.title||'', content:t.content||''})),
-        items: d.items.map(it=>({question:it.question||'', answer:it.answer||'A'}))
-      });
-    } else if (id==='p7') {
-      const gapN = (d.text.match(/\[\d+\]/g)||[]).length;
-      parts.push({ type:'p7', title:d.title, text:d.text, pts,
+      const gapN = ((d.text||'').match(/\[\d+\]/g)||[]).length;
+      parts.push({ type:'p6', title:d.title||'', text:d.text||'', pts,
         paragraphs:(d.paragraphs||[]).map(p=>({label:p.label, content:p.content||''})),
         key:(d.key||[]).slice(0, gapN)
       });
+    } else if (id==='p7') {
+      parts.push({ type:'p7', pts,
+        texts: (d.texts||[]).map(t=>({label:t.label, title:t.title||'', content:t.content||''})),
+        items: (d.items||[]).map(it=>({question:it.question||'', answer:it.answer||'A'}))
+      });
     } else if (id==='p8') {
       parts.push({ type:'p8', pts,
-        texts: d.texts.map(t=>({label:t.label, title:t.title||'', content:t.content||''})),
-        items: d.items.map(it=>({question:it.question||'', answer:it.answer||'A'}))
+        texts: (d.texts||[]).map(t=>({label:t.label, title:t.title||'', content:t.content||''})),
+        items: (d.items||[]).map(it=>({question:it.question||'', answer:it.answer||'A'}))
+      });
+    } else if (id==='ec'||id==='e1'||id==='e2') {
+      parts.push({ type:id, title:d.title||'', intro:d.intro||'', pts,
+        lines:[...(d.lines||[])],
+        key:[...(d.key||[])]
+      });
+    } else if (id==='mc') {
+      parts.push({ type:'mc', title:d.title||'', text:d.text||'', pts,
+        items:(d.items||[]).map(it=>({
+          question:it.question||'',
+          options:(it.opts||[]).filter(Boolean),
+          answer:parseInt(it.correct)||0
+        }))
       });
     }
   });
@@ -162,21 +181,35 @@ function fromDB(exam) {
       };
     } else if (id==='p6') {
       partData.p6 = {
-        pts:String(part.pts||2),
-        texts:(part.texts||[]).map(t=>({label:t.label||'A', title:t.title||'', content:t.content||''})),
-        items:(part.items||[]).map(it=>({question:it.question||'', answer:it.answer||'A'}))
-      };
-    } else if (id==='p7') {
-      partData.p7 = {
         title:part.title||'', text:part.text||'', pts:String(part.pts||2),
         paragraphs:(part.paragraphs||[]).map(p=>({label:p.label||'', content:p.content||''})),
         key:[...(part.key||[])]
       };
-    } else if (id==='p8') {
-      partData.p8 = {
+    } else if (id==='p7') {
+      partData.p7 = {
         pts:String(part.pts||1),
         texts:(part.texts||[]).map(t=>({label:t.label||'A', title:t.title||'', content:t.content||''})),
         items:(part.items||[]).map(it=>({question:it.question||'', answer:it.answer||'A'}))
+      };
+    } else if (id==='p8') {
+      partData.p8 = {
+        pts:String(part.pts||2),
+        texts:(part.texts||[]).map(t=>({label:t.label||'A', title:t.title||'', content:t.content||''})),
+        items:(part.items||[]).map(it=>({question:it.question||'', answer:it.answer||'A'}))
+      };
+    } else if (id==='ec'||id==='e1'||id==='e2') {
+      partData[id] = {
+        title:part.title||'', intro:part.intro||'', pts:String(part.pts||1),
+        lines:[...(part.lines||[])], key:[...(part.key||[])]
+      };
+    } else if (id==='mc') {
+      partData.mc = {
+        title:part.title||'', text:part.text||'', pts:String(part.pts||1),
+        items:(part.items||[]).map(it=>({
+          question:it.question||'',
+          opts:[...(it.options||['','','',''])],
+          correct:String(it.answer||0)
+        }))
       };
     }
   });
@@ -235,7 +268,7 @@ function MCOpts({item,onChange,nameKey}) {
         ))}
       </div>
       <div style={{display:"flex",alignItems:"center",gap:10,marginTop:4}}>
-        <span style={{fontSize:12,color:"#555",fontWeight:600}}>Răspuns corect:</span>
+        <span style={{fontSize:12,color:"#555",fontWeight:600}}>Correct answer:</span>
         {['a','b','c','d'].map(l=>(
           <label key={l} style={{display:"flex",alignItems:"center",gap:3,cursor:"pointer",fontSize:13,
             fontWeight:item.correct===l?700:400,color:item.correct===l?C.mid:"#555"}}>
@@ -247,12 +280,12 @@ function MCOpts({item,onChange,nameKey}) {
     </>
   );
 }
-function PartCard({num,label,pts,onPtsChange,onRemove,children}) {
+function PartCard({sec,label,pts,onPtsChange,onRemove,children}) {
   const [open,setOpen] = useState(true);
   return (
     <div style={{background:"#fff",borderRadius:12,boxShadow:"0 2px 10px rgba(0,0,0,.07)",marginBottom:16,overflow:"hidden"}}>
       <div style={{background:C.dark,padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
-        <div style={{background:"rgba(255,255,255,.18)",borderRadius:6,padding:"2px 10px",fontSize:11,fontWeight:700,color:"#fff"}}>Part {num}</div>
+        <div style={{background:"rgba(255,255,255,.18)",borderRadius:6,padding:"2px 10px",fontSize:11,fontWeight:700,color:"#fff"}}>{sec}</div>
         <div style={{flex:1,fontWeight:600,color:"#fff",fontSize:14}}>{label}</div>
         <span style={{color:"rgba(255,255,255,.7)",fontSize:12}}>pts/item:</span>
         <input type="number" min="1" max="10" value={pts} onChange={onPtsChange}
@@ -274,8 +307,8 @@ function P1Edit({data,onChange}) {
   return (
     <>
       <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,marginBottom:14}}>
-        <Fld label="Titlu text"><Inp value={data.title} onChange={e=>upd('title',e.target.value)} placeholder="THE DIGITAL AGE"/></Fld>
-        <Fld label="Text (cu [1] [2]... unde sunt golurile)">
+        <Fld label="Text title"><Inp value={data.title} onChange={e=>upd('title',e.target.value)} placeholder="THE DIGITAL AGE"/></Fld>
+        <Fld label="Text (with [1] [2]... marking the gaps)">
           <Ta value={data.text} onChange={e=>upd('text',e.target.value)} rows={4}
             placeholder="In today's world, technology has [1] the way we [2] information..."/>
         </Fld>
@@ -285,7 +318,7 @@ function P1Edit({data,onChange}) {
           <MCOpts item={it} onChange={(f,v)=>updIt(i,f,v)} nameKey={`p1-${i}`}/>
         </ItemCard>
       ))}
-      <AddBtn onClick={addIt} label="Adaugă gol (item)"/>
+      <AddBtn onClick={addIt} label="Add gap (item)"/>
     </>
   );
 }
@@ -309,10 +342,10 @@ function P2Edit({data,onChange}) {
   return (
     <>
       <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,marginBottom:14}}>
-        <Fld label="Titlu text">
+        <Fld label="Text title">
           <Inp value={data.title} onChange={e=>upd('title',e.target.value)} placeholder="SOCIAL MEDIA"/>
         </Fld>
-        <Fld label={`Text cu goluri [1] [2]... (${gapN} detectate)`}>
+        <Fld label={`Text with gaps [1] [2]... (${gapN} detected)`}>
           <Ta value={data.text} onChange={e=>onTextChange(e.target.value)} rows={6}
             placeholder="Social media has [1] the way we [2] information. Many people now [3] their news online rather than from traditional sources..."/>
         </Fld>
@@ -320,8 +353,8 @@ function P2Edit({data,onChange}) {
       {gapN > 0 && (
         <>
           <div style={{fontSize:12,fontWeight:600,color:"#444",marginBottom:6}}>
-            Răspunsuri acceptate per gol
-            <span style={{color:"#999",fontWeight:400,marginLeft:6}}>variante separate prin ;</span>
+            Accepted answers per gap
+            <span style={{color:"#999",fontWeight:400,marginLeft:6}}>variants separated by ;</span>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:6}}>
             {Array.from({length:gapN},(_,i)=>(
@@ -357,9 +390,9 @@ function P3Edit({data, onChange}) {
 
   return (
     <>
-      <Fld label="Textul Exercițiului">
+      <Fld label="Exercise Text">
         <div style={{fontSize:11, color:"#666", marginBottom:4}}>
-          Exemplu: Folosește <b>[17]</b>, <b>[18]</b> etc. (Ele vor accesa elementele 1, 2... din lista de jos).
+          Example: Use <b>[17]</b>, <b>[18]</b> etc. (They map to rows 1, 2... in the list below).
         </div>
         <Ta 
           value={data.text || ''} 
@@ -371,9 +404,9 @@ function P3Edit({data, onChange}) {
 
       <div style={{ marginTop: 20 }}>
         <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 2fr 40px", gap: 10, marginBottom: 8, fontSize: 11, fontWeight: 700 }}>
-          <div>ID (Corelat)</div>
-          <div>CUVÂNT BAZĂ</div>
-          <div>RĂSPUNS CORECT</div>
+          <div>ID (Linked)</div>
+          <div>BASE WORD</div>
+          <div>CORRECT ANSWER</div>
           <div></div>
         </div>
         
@@ -397,7 +430,7 @@ function P3Edit({data, onChange}) {
             <button onClick={() => delIt(i)} style={{ border: "none", background: "none", cursor: "pointer", color: "#ef4444" }}>✕</button>
           </div>
         ))}
-        <AddBtn onClick={addIt} label="Adaugă Gap" />
+        <AddBtn onClick={addIt} label="Add Gap" />
       </div>
     </>
   );
@@ -422,35 +455,35 @@ function P4Edit({data, onChange}) {
   return (
     <>
       <div style={{ fontSize: 12, color: "#888", marginBottom: 12 }}>
-        Elevul rescrie propoziția folosind cuvântul cheie fără să îl modifice (3–6 cuvinte).
+        Student rewrites the sentence using the key word without changing it (3–6 words).
       </div>
       {(data.items || []).map((it, i) => (
         <ItemCard key={i} num={i + 1} onDelete={() => delIt(i)}>
-          <Fld label="Propoziție originală">
+          <Fld label="Original sentence">
             <Ta value={it.s1} onChange={e => updIt(i, 's1', e.target.value)} rows={2}
               placeholder="She had no idea how costly the renovation would turn out to be."/>
           </Fld>
-          
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 150px 1fr", gap: 10, alignItems: "end", marginTop: 10 }}>
-            <Fld label="Context înainte (fix)">
+            <Fld label="Context before (fixed)">
               <Inp value={it.before} onChange={e => updIt(i, 'before', e.target.value)} placeholder="It only"/>
             </Fld>
-            <Fld label="CUVÂNT CHEIE">
+            <Fld label="KEY WORD">
               <input value={it.kw} onChange={e => updIt(i, 'kw', e.target.value)} placeholder="DAWNED"
                 style={{ ...IS, width: "100%", textAlign: "center", fontWeight: 700, textTransform: "uppercase", color: "#2563eb" }}/>
             </Fld>
-            <Fld label="Context după (fix)">
+            <Fld label="Context after (fixed)">
               <Inp value={it.after} onChange={e => updIt(i, 'after', e.target.value)} placeholder="costly the renovation would be."/>
             </Fld>
           </div>
 
-          <Fld label="Răspunsuri acceptate (partea de completat)" hint="separate prin ;">
+          <Fld label="Accepted answers (fill-in part)" hint="separated by ;">
             <Inp value={it.answers} onChange={e => updIt(i, 'answers', e.target.value)}
               placeholder="dawned on her how; only dawned on her how"/>
           </Fld>
         </ItemCard>
       ))}
-      <AddBtn onClick={addIt} label="Adaugă item" />
+      <AddBtn onClick={addIt} label="Add item" />
     </>
   );
 }
@@ -650,7 +683,103 @@ function P8Edit({data,onChange}) {
   );
 }
 
-const EDITORS = { p1: P1Edit, p2: P2Edit, p3: P3Edit, p4: P4Edit, p5: P5Edit, p6: P6Edit, p7: P7Edit, p8: P8Edit };
+// ── EC / E1 / E2 — Error Correction ──────────────────────────────────────
+function ECEdit({data, onChange, hint}) {
+  const upd = (k,v) => onChange({...data,[k]:v});
+  const addLine = () => onChange({...data, lines:[...(data.lines||[]),''], key:[...(data.key||[]),'']});
+  const delLine = i => onChange({...data, lines:(data.lines||[]).filter((_,j)=>j!==i), key:(data.key||[]).filter((_,j)=>j!==i)});
+  const updLine = (i,v) => { const ls=[...(data.lines||[])]; ls[i]=v; onChange({...data,lines:ls}); };
+  const updKey  = (i,v) => { const ks=[...(data.key||[])]; ks[i]=v; onChange({...data,key:ks}); };
+  return (
+    <>
+      <Fld label="Title" hint="optional"><Inp value={data.title||''} onChange={e=>upd('title',e.target.value)} placeholder="Read the text below."/></Fld>
+      <Fld label="Intro / context" hint="optional">
+        <Ta value={data.intro||''} onChange={e=>upd('intro',e.target.value)} rows={2}
+          placeholder={hint||"Some lines contain one extra word. Find the extra word and write it. Write ✓ if the line is correct."}/>
+      </Fld>
+      <div style={{fontSize:12,fontWeight:600,color:"#444",marginBottom:6}}>
+        Lines
+        <span style={{color:"#999",fontWeight:400,marginLeft:6}}>— type each line of text | key = extra/wrong word or ✓</span>
+      </div>
+      {(data.lines||[]).map((line,i)=>(
+        <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 130px 36px",gap:6,marginBottom:6,alignItems:"center"}}>
+          <Inp value={line} onChange={e=>updLine(i,e.target.value)} placeholder="Line of text with the error in it..."/>
+          <Inp value={(data.key||[])[i]||''} onChange={e=>updKey(i,e.target.value)} placeholder="key (word / ✓)"/>
+          <button onClick={()=>delLine(i)} style={{background:C.red,color:"#fff",border:"none",borderRadius:4,padding:"4px 6px",cursor:"pointer",fontSize:11}}>✕</button>
+        </div>
+      ))}
+      <AddBtn onClick={addLine} label="Add line"/>
+    </>
+  );
+}
+
+// ── MC — Simple Multiple Choice ───────────────────────────────────────────
+function MCEdit({data,onChange}) {
+  const upd = (k,v) => onChange({...data,[k]:v});
+  const addIt = () => onChange({...data, items:[...(data.items||[]),{question:'',opts:['','','',''],correct:'0'}]});
+  const delIt = i => onChange({...data, items:(data.items||[]).filter((_,j)=>j!==i)});
+  const updIt = (i,f,v) => onChange({...data, items:(data.items||[]).map((it,j)=>j===i?{...it,[f]:v}:it)});
+  const addOpt = i => {
+    const it = {...(data.items||[])[i]};
+    if ((it.opts||[]).length >= 6) return;
+    it.opts = [...(it.opts||[]),''];
+    onChange({...data, items:(data.items||[]).map((x,j)=>j===i?it:x)});
+  };
+  const delOpt = (i,oi) => {
+    const it = {...(data.items||[])[i]};
+    it.opts = (it.opts||[]).filter((_,j)=>j!==oi);
+    if (parseInt(it.correct||0) >= it.opts.length) it.correct='0';
+    onChange({...data, items:(data.items||[]).map((x,j)=>j===i?it:x)});
+  };
+  const updOpt = (i,oi,v) => {
+    const it = {...(data.items||[])[i]};
+    it.opts = (it.opts||[]).map((o,j)=>j===oi?v:o);
+    onChange({...data, items:(data.items||[]).map((x,j)=>j===i?it:x)});
+  };
+  return (
+    <>
+      <Fld label="Title" hint="optional"><Inp value={data.title||''} onChange={e=>upd('title',e.target.value)}/></Fld>
+      <Fld label="Passage / context text" hint="optional">
+        <Ta value={data.text||''} onChange={e=>upd('text',e.target.value)} rows={3} placeholder="Optional reading passage shown before the questions..."/>
+      </Fld>
+      {(data.items||[]).map((it,i)=>(
+        <ItemCard key={i} num={i+1} onDelete={()=>delIt(i)}>
+          <Fld label="Question">
+            <Ta value={it.question||''} onChange={e=>updIt(i,'question',e.target.value)} rows={2}
+              placeholder="What does the author suggest about...?"/>
+          </Fld>
+          <div style={{fontSize:11,fontWeight:600,color:"#444",marginBottom:6}}>Options (A–F)</div>
+          {(it.opts||[]).map((opt,oi)=>(
+            <div key={oi} style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
+              <input type="radio" name={`mc-${i}`} checked={String(it.correct)===String(oi)}
+                onChange={()=>updIt(i,'correct',String(oi))}/>
+              <span style={{fontWeight:700,color:C.mid,minWidth:18}}>{'ABCDEF'[oi]}</span>
+              <Inp value={opt} onChange={e=>updOpt(i,oi,e.target.value)} placeholder={`Option ${'ABCDEF'[oi]}`} style={{flex:1}}/>
+              {(it.opts||[]).length > 2 && (
+                <button onClick={()=>delOpt(i,oi)} style={{background:"none",border:"none",color:C.red,cursor:"pointer",fontSize:14,lineHeight:1}}>✕</button>
+              )}
+            </div>
+          ))}
+          {(it.opts||[]).length < 6 && (
+            <button onClick={()=>addOpt(i)} style={{background:"transparent",border:"1px dashed #b0c4d8",color:C.mid,borderRadius:6,padding:"4px 10px",fontSize:11,cursor:"pointer",marginTop:4}}>
+              + Add option
+            </button>
+          )}
+          <div style={{fontSize:11,color:"#888",marginTop:6}}>Correct answer: <strong>{'ABCDEF'[parseInt(it.correct||0)]}</strong></div>
+        </ItemCard>
+      ))}
+      <AddBtn onClick={addIt} label="Add question"/>
+    </>
+  );
+}
+
+const EDITORS = {
+  p1: P1Edit, p2: P2Edit, p3: P3Edit, p4: P4Edit, p5: P5Edit,
+  p6: P7Edit,  // p6 = Gapped Text → uses P7Edit logic
+  p7: P8Edit,  // p7 = Multiple Matching → uses P8Edit logic
+  p8: P6Edit,  // p8 = Cross-text → uses P6Edit logic
+  ec: ECEdit, e1: ECEdit, e2: ECEdit, mc: MCEdit
+};
 
 // ── Main ──────────────────────────────────────────────────────────────────
 function ExamBuilder() {
@@ -659,7 +788,7 @@ function ExamBuilder() {
   const editId = params.get("id");
 
   const [meta, setMeta] = useState({title:'',variantId:'V1'});
-  const [enabled, setEnabled] = useState({p1:false,p2:false,p3:false,p4:false,p5:false,p6:false,p7:false,p8:false});
+  const [enabled, setEnabled] = useState({p1:false,p2:false,p3:false,p4:false,p5:false,p6:false,p7:false,p8:false,ec:false,e1:false,e2:false,mc:false});
   const [partData, setPartData] = useState(()=>{
     const d = {};
     PARTS_META.forEach(p => { d[p.id] = initPart(p.id, p.defPts); });
@@ -815,7 +944,7 @@ function ExamBuilder() {
                   opacity:ready?1:0.6
                 }}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                    <span style={{fontWeight:700,fontSize:12,color:on?C.mid:"#888"}}>Part {p.num}</span>
+                    <span style={{fontWeight:700,fontSize:12,color:on?C.mid:"#888"}}>{p.sec}</span>
                     {ready ? (
                       <div style={{width:16,height:16,borderRadius:3,border:`2px solid ${on?C.mid:"#bbb"}`,
                         background:on?C.mid:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -837,7 +966,7 @@ function ExamBuilder() {
         {PARTS_META.filter(p => enabled[p.id]).map(p => {
           const Ed = EDITORS[p.id];
           return (
-            <PartCard key={`${p.id}_${editorKey}`} num={p.num} label={p.label}
+            <PartCard key={`${p.id}_${editorKey}`} sec={p.sec} label={p.label}
               pts={partData[p.id]?.pts || String(p.defPts)}
               onPtsChange={e=>updPts(p.id, e.target.value)}
               onRemove={()=>toggle(p.id)}>
