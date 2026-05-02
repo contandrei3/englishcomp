@@ -20,157 +20,185 @@
 const { useState, useMemo } = React;
 const C = {dark:"#0f172a",mid:"#2563eb",red:"#dc2626",green:"#15803d"};
 const LVL = ["A2","B1","B2","C1"];
-const SEC_LABELS = ["KWT","Error Correction","Open Cloze","Word Formation"];
 
-function DetailPanel({sel, ptcp, onBack}) {
-  const exams = CPEEN.getExams();
-  const ex    = exams.find(e => e.id === sel.examId) || exams.find(e => e.level===sel.level && e.stage===sel.stage);
-  const v     = ex?.variants?.find(v => v.id === sel.variantId);
+const PART_LABELS = {
+  p1:"Multiple Choice Cloze",p2:"Open Cloze",p3:"Word Formation",
+  p4:"Key Word Transformations",p5:"Multiple Choice Reading",
+  p6:"Gapped Text",p7:"Multiple Matching",p8:"Cross-text Multiple Matching",
+  ec:"Error Correction",mc:"Multiple Choice",
+  e1:"Error Correction I",e2:"Error Correction II"
+};
 
-  const [s1det,      setS1det]      = useState(sel.result?.det?.s1 || []);
-  const [savedS1,    setSavedS1]    = useState(false);
-  const [totalVal,   setTotalVal]   = useState(String(sel.result?.total || 0));
-  const [savedTotal, setSavedTotal] = useState(false);
-  const [wGrade,     setWGrade]     = useState(sel.writingGrade != null ? String(sel.writingGrade) : "");
-  const [wFb,        setWFb]        = useState(sel.writingFeedback || "");
-  const [savedW,     setSavedW]     = useState(false);
+// Returns a human-readable display of what the student typed/chose.
+function fmtStudentAns(part, i, ans) {
+  const L = ['A','B','C','D','E','F'];
+  if (part.type==='p1'||part.type==='p5'||part.type==='mc') {
+    const idx = parseInt(ans);
+    if (isNaN(idx) || !part.items[i]) return ans||'—';
+    return `${L[idx]} – ${part.items[i].options?.[idx]||''}`;
+  }
+  return ans||'—';
+}
 
-  const recalc = (newS1) => {
-    if(!v) return parseInt(totalVal)||0;
-    const det = sel.result?.det || {};
-    return 10
-      + newS1.filter(Boolean).length           * (v.s1?.pts||0)
-      + (det.s2||[]).filter(Boolean).length    * (v.s2?.pts||0)
-      + (det.s3||[]).filter(Boolean).length    * (v.s3?.pts||0)
-      + (det.s4||[]).filter(Boolean).length    * (v.s4?.pts||0);
+// Returns the accepted correct answer(s) as a string.
+function fmtKey(part, i) {
+  const L = ['A','B','C','D','E','F'];
+  if (part.type==='p1'||part.type==='p5'||part.type==='mc') {
+    const idx = part.items[i]?.answer;
+    return `${L[idx]||'?'} – ${part.items[i]?.options?.[idx]||''}`;
+  }
+  if (part.type==='p2') return (part.key[i]||[]).join(' / ')||'—';
+  if (part.type==='p3'||part.type==='p4') return (part.items[i]?.key||[]).join(' / ')||'—';
+  if (part.type==='p6'||part.type==='p8') return part.items[i]?.answer||'—';
+  if (part.type==='p7') return part.key?.[i]||'—';
+  if (part.type==='ec'||part.type==='e1'||part.type==='e2') return part.key?.[i]||'✓';
+  return '—';
+}
+
+// Returns the question/sentence label for a given item index.
+function fmtItemLabel(part, i, globalNum) {
+  if (part.type==='ec'||part.type==='e1'||part.type==='e2') return `${globalNum+i+1}. ${part.lines?.[i]||''}`;
+  if (part.type==='p4') return `${globalNum+i+1}. ${part.items?.[i]?.s1||''}`;
+  if (part.type==='p5'||part.type==='mc') return `${globalNum+i+1}. ${part.items?.[i]?.question||''}`;
+  if (part.type==='p6'||part.type==='p8') return `${globalNum+i+1}. ${part.items?.[i]?.question||''}`;
+  return `${globalNum+i+1}.`;
+}
+
+// ── New-format detail panel (parts[]) ─────────────────────────────────────────
+function NewFormatPanel({sel, v, ptcp}) {
+  const initDet = () => (sel.result?.details||[]).map(arr=>[...(arr||[])]);
+  const [det,     setDet]   = useState(initDet);
+  const [saved,   setSaved] = useState(false);
+  const [totalVal,setTotal] = useState(String(sel.result?.total||0));
+  const [wGrade,  setWGrade]= useState(sel.writingGrade!=null?String(sel.writingGrade):"");
+  const [wFb,     setWFb]   = useState(sel.writingFeedback||"");
+  const [savedW,  setSavedW]= useState(false);
+
+  const recalcTotal = (d) =>
+    10 + (v.parts||[]).reduce((sum,part,pi)=>
+      sum + ((d[pi]||[]).filter(Boolean).length * (part.pts||0))
+    , 0);
+
+  const toggle = (pi, i) => {
+    setDet(prev => {
+      const next = prev.map(a=>[...a]);
+      if (!next[pi]) next[pi]=[];
+      next[pi][i] = !next[pi][i];
+      setTotal(String(recalcTotal(next)));
+      setSaved(false);
+      return next;
+    });
   };
 
-  const toggleS1 = i => {
-    const next = s1det.map((x,j)=>j===i?!x:x);
-    setS1det(next);
-    setTotalVal(String(recalc(next)));
-    setSavedS1(false);
+  const save = () => {
+    const total = recalcTotal(det);
+    CPEEN.updateSession(sel.id, {result:{...sel.result, total, details: det}});
+    setTotal(String(total));
+    setSaved(true); setTimeout(()=>setSaved(false), 2000);
   };
 
-  const saveS1 = () => {
-    const newDet = {...(sel.result?.det||{}), s1: s1det};
-    const total  = recalc(s1det);
-    CPEEN.updateSession(sel.id, {result: {...sel.result, total, det: newDet}});
-    setTotalVal(String(total));
-    setSavedS1(true); setTimeout(()=>setSavedS1(false), 2000);
+  const saveWriting = () => {
+    const g = wGrade===""?null:Number(wGrade);
+    CPEEN.updateSession(sel.id, {writingGrade:g, writingFeedback:wFb});
+    setSavedW(true); setTimeout(()=>setSavedW(false), 2000);
   };
 
   const saveTotal = () => {
     const t = parseInt(totalVal);
     if(isNaN(t)) return;
-    CPEEN.updateSession(sel.id, {result: {...sel.result, total: t}});
-    setSavedTotal(true); setTimeout(()=>setSavedTotal(false), 2000);
+    CPEEN.updateSession(sel.id, {result:{...sel.result, total:t}});
   };
 
-  const saveWriting = () => {
-    const g = wGrade==="" ? null : Number(wGrade);
-    CPEEN.updateSession(sel.id, {writingGrade: g, writingFeedback: wFb});
-    setSavedW(true); setTimeout(()=>setSavedW(false), 2000);
-  };
+  // Global question numbering
+  let globalOffset = 0;
 
   return (
-    <div style={{background:"#fff",borderRadius:10,padding:24,border:"1px solid #e2e8f0"}}>
-      <button className="btn btn-ghost btn-sm" onClick={onBack} style={{marginBottom:16}}>← Înapoi la lista</button>
-
-      {/* Student info + score */}
-      <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:20}}>
-        <div style={{flex:1,minWidth:200}}>
-          <div style={{fontSize:18,fontWeight:700,color:C.dark}}>{ptcp?.name||"—"}</div>
-          <div style={{fontSize:13,color:"#666"}}>{ptcp?.school} · {ptcp?.county} · {ptcp?.grade||""}</div>
-          {ptcp?.teacher && <div style={{fontSize:12,color:"#888"}}>Prof. {ptcp.teacher}</div>}
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6}}>
-            <span className={`badge b-${sel.level}`}>{sel.level}</span>
-            <span className="badge b-dark">{ADMIN.stageLabel[sel.stage]||sel.stage}</span>
-            <span className="badge b-gray">Var. {sel.variantId}</span>
-          </div>
-          <div style={{fontSize:11,color:"#aaa",marginTop:4}}>{sel.submittedAt?new Date(sel.submittedAt).toLocaleString("ro-RO"):""}</div>
-        </div>
+    <div>
+      {/* Score header */}
+      <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
         <div style={{background:C.dark,color:"#fff",borderRadius:10,padding:"14px 24px",textAlign:"center",minWidth:140}}>
           <div style={{fontSize:42,fontWeight:700}}>{totalVal}</div>
           <div style={{fontSize:12,opacity:.8}}>din 100 · Nota: {(parseInt(totalVal||0)/10).toFixed(2)}</div>
-          {sel.writingGrade!=null && <div style={{fontSize:11,opacity:.7,marginTop:2}}>Writing: {sel.writingGrade}/20</div>}
-          <div style={{display:"flex",gap:6,marginTop:10,alignItems:"center",justifyContent:"center"}}>
+          <div style={{display:"flex",gap:6,marginTop:8,justifyContent:"center"}}>
             <input type="number" value={totalVal} min="0" max="200"
-              onChange={e=>{ setTotalVal(e.target.value); setSavedTotal(false); }}
-              style={{width:58,textAlign:"center",borderRadius:5,border:"1px solid rgba(255,255,255,.4)",background:"rgba(255,255,255,.15)",color:"#fff",padding:"3px 4px",fontSize:13}}/>
+              onChange={e=>{ setTotal(e.target.value); setSaved(false); }}
+              style={{width:58,textAlign:"center",borderRadius:5,border:"1px solid rgba(255,255,255,.4)",
+                background:"rgba(255,255,255,.15)",color:"#fff",padding:"3px 4px",fontSize:13}}/>
             <button onClick={saveTotal}
-              style={{background:"rgba(255,255,255,.2)",color:"#fff",border:"1px solid rgba(255,255,255,.4)",borderRadius:5,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:600}}>
-              {savedTotal?"✓":"Set"}
-            </button>
+              style={{background:"rgba(255,255,255,.2)",color:"#fff",border:"1px solid rgba(255,255,255,.4)",
+                borderRadius:5,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:600}}>Set</button>
           </div>
+        </div>
+        <div style={{fontSize:12,color:"#64748b",lineHeight:1.7}}>
+          <strong style={{color:C.dark}}>Clic pe oricare răspuns</strong> pentru a schimba evaluarea (✓ ↔ ✗).<br/>
+          Apasă <strong>Salvează corecțiile</strong> pentru a persista modificările.
         </div>
       </div>
 
-      {/* S1 – KWT clickable correction */}
-      {v && (
-        <div style={{marginBottom:16}}>
-          <div style={{background:C.mid,color:"#fff",padding:"5px 12px",borderRadius:6,fontSize:13,fontWeight:600,marginBottom:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span>S1 – KWT <span style={{fontSize:11,fontWeight:400,opacity:.85}}>(click pe item pentru a corecta)</span></span>
-            <span>{s1det.filter(Boolean).length*(v.s1?.pts||0)}/{s1det.length*(v.s1?.pts||0)}p</span>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:5,marginBottom:8}}>
-            {(sel.answers?.s1||[]).map((ans,i)=>{
-              const ok  = s1det[i];
-              const cas = v.s1?.key?.[i]||[];
-              return (
-                <div key={i} onClick={()=>toggleS1(i)}
-                  style={{background:ok?"#e8f5e9":"#fce4e4",border:`2px solid ${ok?"#a5d6a7":"#ef9a9a"}`,borderRadius:6,padding:"6px 10px",fontSize:11,cursor:"pointer",userSelect:"none"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
-                    <span style={{fontWeight:700,color:"#555"}}>#{i+1}</span>
-                    <span style={{fontSize:14,fontWeight:700,color:ok?C.green:C.red}}>{ok?"✓":"✗"}</span>
-                  </div>
-                  <div style={{color:ok?C.green:C.red,marginBottom:ok?0:2}}>{ans||"—"}</div>
-                  {!ok && cas.length>0 && <div style={{color:C.green,fontSize:10}}>✓ {cas[0]}</div>}
-                </div>
-              );
-            })}
-          </div>
-          <button className="btn btn-primary btn-sm" onClick={saveS1}>
-            {savedS1?"✓ Salvat!":"Salvează KWT + recalculează total"}
-          </button>
-        </div>
-      )}
+      {/* Parts */}
+      {(v.parts||[]).map((part, pi) => {
+        const ans = (sel.answers?.parts||[])[pi] || [];
+        const d   = det[pi] || [];
+        const correct = d.filter(Boolean).length;
+        const count   = d.length;
+        const offset  = globalOffset;
+        globalOffset += count;
 
-      {/* S2 / S3 / S4 – read-only */}
-      {v ? [
-        {k:"s2",lbl:"S2 – Error Correction",data:v.s2},
-        {k:"s3",lbl:"S3 – Open Cloze",data:v.s3},
-        {k:"s4",lbl:"S4 – Word Formation",data:v.s4},
-      ].map(({k,lbl,data})=>{
-        const det = sel.result?.det?.[k]||[];
-        const pts = data.pts||0;
         return (
-          <div key={k} style={{marginBottom:16}}>
-            <div style={{background:C.mid,color:"#fff",padding:"5px 12px",borderRadius:6,fontSize:13,fontWeight:600,marginBottom:6,display:"flex",justifyContent:"space-between"}}>
-              <span>{lbl}</span><span>{det.filter(Boolean).length*pts}/{det.length*pts}p</span>
+          <div key={pi} style={{marginBottom:18}}>
+            <div style={{background:C.mid,color:"#fff",padding:"6px 14px",borderRadius:7,
+              fontSize:13,fontWeight:600,marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span>Part {pi+1} — {PART_LABELS[part.type]||part.type}
+                <span style={{fontSize:11,fontWeight:400,opacity:.8,marginLeft:8}}>(click pentru corecție)</span>
+              </span>
+              <span>{correct*part.pts}/{count*part.pts}p</span>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(175px,1fr))",gap:5}}>
-              {(sel.answers?.[k]||[]).map((ans,i)=>{
-                const ok = det[i];
-                const ca = Array.isArray(data.key?.[i]) ? data.key[i][0] : data.key?.[i];
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:5}}>
+              {ans.map((a, i) => {
+                const ok  = d[i];
+                const key = fmtKey(part, i);
+                const studentAns = fmtStudentAns(part, i, a);
                 return (
-                  <div key={i} style={{background:ok?"#e8f5e9":"#fce4e4",border:`1px solid ${ok?"#a5d6a7":"#ef9a9a"}`,borderRadius:6,padding:"5px 9px",fontSize:11}}>
-                    <span style={{fontWeight:700,color:"#555"}}>#{i+1} </span>
-                    <span style={{color:ok?C.green:C.red}}>{ans||"—"}</span>
-                    {!ok && ca && <div style={{color:C.green,fontSize:10,marginTop:1}}>✓ {ca}</div>}
+                  <div key={i} onClick={()=>toggle(pi, i)}
+                    style={{background:ok?"#f0fdf4":"#fef2f2",
+                      border:`2px solid ${ok?"#86efac":"#fca5a5"}`,
+                      borderRadius:7,padding:"7px 10px",fontSize:11,cursor:"pointer",userSelect:"none",
+                      transition:"background .1s,border-color .1s"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                      <span style={{fontWeight:700,color:"#64748b",fontSize:10}}>#{offset+i+1}</span>
+                      <span style={{fontSize:15,fontWeight:700,color:ok?C.green:C.red,lineHeight:1}}>{ok?"✓":"✗"}</span>
+                    </div>
+                    {/* Show line/sentence for ec/p4/p5 */}
+                    {(part.type==='ec'||part.type==='e1'||part.type==='e2') && (
+                      <div style={{fontSize:10,color:"#94a3b8",marginBottom:3,fontFamily:"monospace",lineHeight:1.4}}>
+                        {part.lines?.[i]||''}
+                      </div>
+                    )}
+                    {(part.type==='p5'||part.type==='p6'||part.type==='p7'||part.type==='p8'||part.type==='mc') && (
+                      <div style={{fontSize:10,color:"#94a3b8",marginBottom:3,lineHeight:1.4}}>
+                        {(part.items?.[i]?.question||'').slice(0,80)}{(part.items?.[i]?.question||'').length>80?'…':''}
+                      </div>
+                    )}
+                    <div style={{color:ok?C.green:C.red,fontWeight:600,marginBottom:ok?0:2}}>{studentAns}</div>
+                    {!ok && <div style={{color:C.green,fontSize:10}}>✓ {key}</div>}
                   </div>
                 );
               })}
             </div>
           </div>
         );
-      }) : <div className="alert alert-warn">Datele subiectului nu au fost găsite.</div>}
+      })}
+
+      <button className="btn btn-primary btn-sm" onClick={save} style={{marginBottom:20}}>
+        {saved?"✓ Corecții salvate!":"Salvează corecțiile + recalculează total"}
+      </button>
 
       {/* Writing */}
       {sel.answers?.writing ? (
-        <div style={{background:"#f8f9fa",border:"1px solid #ddd",borderRadius:8,padding:16,marginTop:4}}>
-          <div style={{fontWeight:700,color:C.dark,marginBottom:10,fontSize:14}}>S5 – Writing — Corectare manuală</div>
-          <div style={{background:"#fff",border:"1px solid #ddd",borderRadius:6,padding:12,fontSize:13,lineHeight:1.7,maxHeight:220,overflowY:"auto",marginBottom:12,fontFamily:"inherit"}}>
+        <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:16}}>
+          <div style={{fontWeight:700,color:C.dark,marginBottom:10,fontSize:14}}>Writing — Corectare manuală</div>
+          <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:6,padding:12,
+            fontSize:13,lineHeight:1.7,maxHeight:220,overflowY:"auto",marginBottom:12}}>
             {sel.answers.writing}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:10,alignItems:"start"}}>
@@ -190,9 +218,193 @@ function DetailPanel({sel, ptcp, onBack}) {
             {savedW?"✓ Salvat!":"Salvează nota Writing"}
           </button>
         </div>
-      ) : (
-        <div style={{fontSize:12,color:"#aaa",marginTop:4}}>Nicio secțiune Writing pentru această lucrare.</div>
-      )}
+      ) : null}
+    </div>
+  );
+}
+
+// ── Old-format detail panel (s1/s2/s3/s4) ────────────────────────────────────
+function OldFormatPanel({sel, v}) {
+  const [s1det,    setS1det]    = useState(sel.result?.det?.s1||[]);
+  const [savedS1,  setSavedS1]  = useState(false);
+  const [totalVal, setTotalVal] = useState(String(sel.result?.total||0));
+  const [savedTot, setSavedTot] = useState(false);
+  const [wGrade,   setWGrade]   = useState(sel.writingGrade!=null?String(sel.writingGrade):"");
+  const [wFb,      setWFb]      = useState(sel.writingFeedback||"");
+  const [savedW,   setSavedW]   = useState(false);
+
+  const recalc = (newS1) => {
+    if(!v) return parseInt(totalVal)||0;
+    const det = sel.result?.det||{};
+    return 10
+      + newS1.filter(Boolean).length         * (v.s1?.pts||0)
+      + (det.s2||[]).filter(Boolean).length  * (v.s2?.pts||0)
+      + (det.s3||[]).filter(Boolean).length  * (v.s3?.pts||0)
+      + (det.s4||[]).filter(Boolean).length  * (v.s4?.pts||0);
+  };
+
+  const toggleS1 = i => {
+    const next = s1det.map((x,j)=>j===i?!x:x);
+    setS1det(next); setTotalVal(String(recalc(next))); setSavedS1(false);
+  };
+
+  const saveS1 = () => {
+    const total = recalc(s1det);
+    CPEEN.updateSession(sel.id, {result:{...sel.result, total, det:{...sel.result?.det, s1:s1det}}});
+    setTotalVal(String(total));
+    setSavedS1(true); setTimeout(()=>setSavedS1(false), 2000);
+  };
+
+  const saveTotal = () => {
+    const t = parseInt(totalVal); if(isNaN(t)) return;
+    CPEEN.updateSession(sel.id, {result:{...sel.result, total:t}});
+    setSavedTot(true); setTimeout(()=>setSavedTot(false), 2000);
+  };
+
+  const saveWriting = () => {
+    const g = wGrade===""?null:Number(wGrade);
+    CPEEN.updateSession(sel.id, {writingGrade:g, writingFeedback:wFb});
+    setSavedW(true); setTimeout(()=>setSavedW(false), 2000);
+  };
+
+  if (!v) return <div className="alert alert-warn">Datele subiectului nu au fost găsite.</div>;
+
+  return (
+    <div>
+      {/* Score */}
+      <div style={{background:C.dark,color:"#fff",borderRadius:10,padding:"14px 24px",
+        textAlign:"center",marginBottom:20,display:"inline-block",minWidth:160}}>
+        <div style={{fontSize:42,fontWeight:700}}>{totalVal}</div>
+        <div style={{fontSize:12,opacity:.8}}>din 100 · Nota: {(parseInt(totalVal||0)/10).toFixed(2)}</div>
+        <div style={{display:"flex",gap:6,marginTop:8,justifyContent:"center"}}>
+          <input type="number" value={totalVal} min="0" max="200"
+            onChange={e=>{ setTotalVal(e.target.value); setSavedTot(false); }}
+            style={{width:58,textAlign:"center",borderRadius:5,border:"1px solid rgba(255,255,255,.4)",
+              background:"rgba(255,255,255,.15)",color:"#fff",padding:"3px 4px",fontSize:13}}/>
+          <button onClick={saveTotal}
+            style={{background:"rgba(255,255,255,.2)",color:"#fff",border:"1px solid rgba(255,255,255,.4)",
+              borderRadius:5,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:600}}>
+            {savedTot?"✓":"Set"}
+          </button>
+        </div>
+      </div>
+
+      {/* S1 */}
+      <div style={{marginBottom:16}}>
+        <div style={{background:C.mid,color:"#fff",padding:"5px 12px",borderRadius:6,fontSize:13,
+          fontWeight:600,marginBottom:6,display:"flex",justifyContent:"space-between"}}>
+          <span>S1 – KWT <span style={{fontSize:11,fontWeight:400,opacity:.85}}>(click = corecție)</span></span>
+          <span>{s1det.filter(Boolean).length*(v.s1?.pts||0)}/{s1det.length*(v.s1?.pts||0)}p</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:5,marginBottom:8}}>
+          {(sel.answers?.s1||[]).map((ans,i)=>{
+            const ok=s1det[i]; const cas=v.s1?.key?.[i]||[];
+            return (
+              <div key={i} onClick={()=>toggleS1(i)}
+                style={{background:ok?"#e8f5e9":"#fce4e4",border:`2px solid ${ok?"#a5d6a7":"#ef9a9a"}`,
+                  borderRadius:6,padding:"6px 10px",fontSize:11,cursor:"pointer",userSelect:"none"}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                  <span style={{fontWeight:700,color:"#555"}}>#{i+1}</span>
+                  <span style={{fontSize:14,fontWeight:700,color:ok?C.green:C.red}}>{ok?"✓":"✗"}</span>
+                </div>
+                <div style={{color:ok?C.green:C.red,marginBottom:ok?0:2}}>{ans||"—"}</div>
+                {!ok && cas.length>0 && <div style={{color:C.green,fontSize:10}}>✓ {cas[0]}</div>}
+              </div>
+            );
+          })}
+        </div>
+        <button className="btn btn-primary btn-sm" onClick={saveS1}>
+          {savedS1?"✓ Salvat!":"Salvează KWT + recalculează total"}
+        </button>
+      </div>
+
+      {/* S2/S3/S4 */}
+      {[{k:"s2",lbl:"S2 – Error Correction",data:v.s2},{k:"s3",lbl:"S3 – Open Cloze",data:v.s3},{k:"s4",lbl:"S4 – Word Formation",data:v.s4}]
+        .map(({k,lbl,data})=>{
+          const dt=sel.result?.det?.[k]||[]; const pts=data?.pts||0;
+          return (
+            <div key={k} style={{marginBottom:16}}>
+              <div style={{background:C.mid,color:"#fff",padding:"5px 12px",borderRadius:6,fontSize:13,
+                fontWeight:600,marginBottom:6,display:"flex",justifyContent:"space-between"}}>
+                <span>{lbl}</span><span>{dt.filter(Boolean).length*pts}/{dt.length*pts}p</span>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(175px,1fr))",gap:5}}>
+                {(sel.answers?.[k]||[]).map((ans,i)=>{
+                  const ok=dt[i]; const ca=Array.isArray(data?.key?.[i])?data.key[i][0]:data?.key?.[i];
+                  return (
+                    <div key={i} style={{background:ok?"#e8f5e9":"#fce4e4",
+                      border:`1px solid ${ok?"#a5d6a7":"#ef9a9a"}`,borderRadius:6,padding:"5px 9px",fontSize:11}}>
+                      <span style={{fontWeight:700,color:"#555"}}>#{i+1} </span>
+                      <span style={{color:ok?C.green:C.red}}>{ans||"—"}</span>
+                      {!ok && ca && <div style={{color:C.green,fontSize:10,marginTop:1}}>✓ {ca}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+      {/* Writing */}
+      {sel.answers?.writing ? (
+        <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:16}}>
+          <div style={{fontWeight:700,color:C.dark,marginBottom:10,fontSize:14}}>S5 – Writing</div>
+          <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:6,padding:12,
+            fontSize:13,lineHeight:1.7,maxHeight:220,overflowY:"auto",marginBottom:12}}>
+            {sel.answers.writing}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:10,alignItems:"start"}}>
+            <div>
+              <label style={{fontSize:12,fontWeight:600,color:C.dark,display:"block",marginBottom:4}}>Notă (0–20)</label>
+              <input type="number" className="inp inp-sm" style={{width:80}} min="0" max="20"
+                value={wGrade} onChange={e=>{ setWGrade(e.target.value); setSavedW(false); }}/>
+            </div>
+            <div>
+              <label style={{fontSize:12,fontWeight:600,color:C.dark,display:"block",marginBottom:4}}>Feedback</label>
+              <textarea className="inp inp-sm" rows={3} style={{resize:"vertical"}}
+                value={wFb} onChange={e=>{ setWFb(e.target.value); setSavedW(false); }}
+                placeholder="Comentarii și feedback pentru elev…"/>
+            </div>
+          </div>
+          <button className="btn btn-primary btn-sm" style={{marginTop:10}} onClick={saveWriting}>
+            {savedW?"✓ Salvat!":"Salvează nota Writing"}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ── DetailPanel wrapper ───────────────────────────────────────────────────────
+function DetailPanel({sel, ptcp, onBack}) {
+  const exams = CPEEN.getExams();
+  const ex = exams.find(e=>e.id===sel.examId) || exams.find(e=>e.level===sel.level&&e.stage===sel.stage);
+  const v  = ex?.variants?.find(v=>v.id===sel.variantId);
+  const isNew = !!(v?.parts?.length);
+
+  return (
+    <div style={{background:"#fff",borderRadius:10,padding:24,border:"1px solid #e2e8f0"}}>
+      <button className="btn btn-ghost btn-sm" onClick={onBack} style={{marginBottom:16}}>← Înapoi la listă</button>
+
+      {/* Student header */}
+      <div style={{marginBottom:20}}>
+        <div style={{fontSize:18,fontWeight:700,color:C.dark}}>{ptcp?.name||"—"}</div>
+        <div style={{fontSize:13,color:"#666"}}>{ptcp?.school} · {ptcp?.county}{ptcp?.grade?` · clasa ${ptcp.grade}`:""}</div>
+        {ptcp?.teacher && <div style={{fontSize:12,color:"#888"}}>Prof. {ptcp.teacher}</div>}
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6}}>
+          <span className={`badge b-${sel.level}`}>{sel.level}</span>
+          <span className="badge b-gray">{ADMIN.stageLabel[sel.stage]||sel.stage||"—"}</span>
+          <span className="badge b-gray">Var. {sel.variantId}</span>
+          {!v && <span className="badge b-err">Subiectul nu a fost găsit în baza de date</span>}
+        </div>
+        <div style={{fontSize:11,color:"#aaa",marginTop:4}}>
+          {sel.submittedAt?new Date(sel.submittedAt).toLocaleString("ro-RO"):""}
+        </div>
+      </div>
+
+      {isNew
+        ? <NewFormatPanel sel={sel} v={v} ptcp={ptcp}/>
+        : <OldFormatPanel sel={sel} v={v}/>}
     </div>
   );
 }
@@ -202,25 +414,22 @@ function ResultsPage() {
   CPEEN.seedInitialData();
 
   const participants = CPEEN.getParticipants();
-  const [sessions,   setSessions] = useState(()=>CPEEN.getSessions().filter(s=>s.status==="submitted"));
-  const [sel,        setSel]      = useState(null);
-  const [fLvl,       setFLvl]     = useState("all");
-  const [fStage,     setFStage]   = useState("all");
-  const [fMin,       setFMin]     = useState("");
-  const [sortBy,     setSortBy]   = useState("score"); // score | date
+  const [sessions, setSessions] = useState(()=>CPEEN.getSessions().filter(s=>s.status==="submitted"));
+  const [sel,      setSel]      = useState(null);
+  const [fLvl,     setFLvl]     = useState("all");
+  const [fStage,   setFStage]   = useState("all");
+  const [fMin,     setFMin]     = useState("");
+  const [sortBy,   setSortBy]   = useState("score");
 
-  const ptcpMap = useMemo(()=>{
-    const m={}; participants.forEach(p=>{ m[p.id]=p; }); return m;
-  },[participants]);
-
-  const reload = () => setSessions(CPEEN.getSessions().filter(s=>s.status==="submitted"));
+  const ptcpMap = useMemo(()=>{ const m={}; participants.forEach(p=>{m[p.id]=p;}); return m; },[participants]);
+  const reload  = () => setSessions(CPEEN.getSessions().filter(s=>s.status==="submitted"));
 
   const filtered = useMemo(()=>{
-    const minScore = fMin==="" ? 0 : Number(fMin);
+    const minScore = fMin===""?0:Number(fMin);
     const list = sessions.filter(s=>
-      (fLvl==="all"   || s.level===fLvl) &&
-      (fStage==="all" || s.stage===fStage) &&
-      ((s.result?.total||0) >= minScore)
+      (fLvl==="all"||s.level===fLvl) &&
+      (fStage==="all"||s.stage===fStage) &&
+      ((s.result?.total||0)>=minScore)
     );
     if(sortBy==="score") list.sort((a,b)=>(b.result?.total||0)-(a.result?.total||0));
     else list.sort((a,b)=>(b.submittedAt||0)-(a.submittedAt||0));
@@ -230,10 +439,10 @@ function ResultsPage() {
   const exportCSV = () => {
     const header = ["Nume","Scoala","Judet","Clasa","Profesor","Nivel","Etapa","Varianta","Punctaj","Nota","Nota Writing","Data"];
     const rows = filtered.map(s=>{
-      const p = ptcpMap[s.participantId]||{};
+      const p=ptcpMap[s.participantId]||{};
       return [p.name||"",p.school||"",p.county||"",p.grade||"",p.teacher||"",
-        s.level, ADMIN.stageLabel[s.stage]||s.stage, s.variantId,
-        s.result?.total||0, ((s.result?.total||0)/10).toFixed(2),
+        s.level,ADMIN.stageLabel[s.stage]||s.stage,s.variantId,
+        s.result?.total||0,((s.result?.total||0)/10).toFixed(2),
         s.writingGrade!=null?s.writingGrade:"",
         s.submittedAt?new Date(s.submittedAt).toLocaleString("ro-RO"):""];
     });
@@ -268,7 +477,6 @@ function ResultsPage() {
           </div>
         </div>
 
-        {/* Filters */}
         <div style={{background:"#fff",borderRadius:10,padding:"12px 16px",marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",border:"1px solid #e2e8f0"}}>
           <select className="inp inp-sm" style={{width:140}} value={fLvl} onChange={e=>setFLvl(e.target.value)}>
             <option value="all">Toate nivelurile</option>
@@ -287,10 +495,11 @@ function ResultsPage() {
           </select>
         </div>
 
-        {/* Ranking header per level when filtered */}
-        {fLvl !== "all" && filtered.length > 0 && (
+        {fLvl!=="all" && filtered.length>0 && (
           <div className="alert alert-info" style={{marginBottom:12}}>
-            <strong>Clasament {fLvl}</strong> — {filtered.length} lucrări · Scor maxim: {filtered[0]?.result?.total||0}p · Medie: {Math.round(filtered.reduce((a,s)=>a+(s.result?.total||0),0)/filtered.length)}p
+            <strong>Clasament {fLvl}</strong> — {filtered.length} lucrări ·
+            Scor maxim: {filtered[0]?.result?.total||0}p ·
+            Medie: {Math.round(filtered.reduce((a,s)=>a+(s.result?.total||0),0)/filtered.length)}p
           </div>
         )}
 
@@ -301,30 +510,18 @@ function ResultsPage() {
               <div className="tbl-wrap">
                 <table className="tbl">
                   <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Elev</th>
-                      <th>Școală</th>
-                      <th>Județ</th>
-                      <th>Nivel</th>
-                      <th>Etapă</th>
-                      <th>Var.</th>
-                      <th>Punctaj</th>
-                      <th>Notă</th>
-                      <th>Data</th>
-                      <th></th>
-                    </tr>
+                    <tr><th>#</th><th>Elev</th><th>Școală</th><th>Județ</th><th>Nivel</th><th>Etapă</th><th>Var.</th><th>Punctaj</th><th>Notă</th><th>Data</th><th></th></tr>
                   </thead>
                   <tbody>
                     {filtered.map((s,i)=>{
-                      const p = ptcpMap[s.participantId]||{};
-                      const total = s.result?.total||0;
+                      const p=ptcpMap[s.participantId]||{};
+                      const total=s.result?.total||0;
                       return (
                         <tr key={s.id}>
                           <td style={{color:"#aaa",fontSize:11,fontWeight:700}}>{i+1}</td>
                           <td>
                             <div style={{fontWeight:700,color:C.dark,fontSize:13}}>{p.name||"—"}</div>
-                            <div style={{fontSize:11,color:"#999"}}>{p.grade||""} {p.teacher?"· Prof. "+p.teacher:""}</div>
+                            <div style={{fontSize:11,color:"#999"}}>{p.grade||""}{p.teacher?" · Prof. "+p.teacher:""}</div>
                           </td>
                           <td style={{fontSize:12,maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.school||"—"}</td>
                           <td style={{fontSize:12}}>{p.county||"—"}</td>
