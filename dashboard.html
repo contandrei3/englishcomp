@@ -55,6 +55,78 @@ const PART_LABELS_DASH = {p1:"MC Cloze",p2:"Open Cloze",p3:"Word Formation",p4:"
   p5:"Multiple Choice",p6:"Gapped Text",p7:"Multiple Matching",p8:"Cross-text",
   ec:"Error Correction",mc:"Multiple Choice",e1:"Error Correction I",e2:"Error Correction II"};
 
+// Builds a self-contained HTML answer sheet for download.
+function buildAnswerSheetHtml(session, participant, variant) {
+  const date = session.submittedAt ? new Date(session.submittedAt).toLocaleString("ro-RO") : "—";
+  const total = session.result?.total ?? "—";
+  const grade = typeof total === "number" ? (total/10).toFixed(2) : "—";
+
+  const rows = (variant.parts||[]).map((part, pi) => {
+    const det = session.result?.details?.[pi] || [];
+    const partAns = session.answers?.parts?.[pi] || [];
+    const label = `Part ${pi+1} — ${PART_LABELS_DASH[part.type]||part.type}`;
+    const correct = det.filter(Boolean).length;
+    const total_p = det.length * part.pts;
+    const earned = correct * part.pts;
+
+    const items = det.map((ok, i) => {
+      const std = getStudentDisplay(part, partAns[i]);
+      const cor = getCorrectDisplay(part, i);
+      const lbl = getItemLabel(part, i);
+      const bg = ok ? "#f0fdf4" : "#fef2f2";
+      const border = ok ? "#86efac" : "#fca5a5";
+      const mark = ok ? "✓" : "✗";
+      const markColor = ok ? "#15803d" : "#dc2626";
+      const extra = !ok ? `<span style="color:#15803d;margin-left:8px">→ ${cor}</span>` : "";
+      return `
+        <tr style="background:${bg};border-bottom:1px solid ${border}">
+          <td style="padding:5px 8px;font-weight:700;color:${markColor};font-size:14px">${mark}</td>
+          <td style="padding:5px 8px;color:#374151;font-size:12px">${lbl}</td>
+          <td style="padding:5px 8px;font-family:monospace;font-weight:700;color:${markColor};font-size:12px">${std}${extra}</td>
+        </tr>`;
+    }).join('');
+
+    return `
+      <div style="margin-bottom:20px">
+        <div style="background:#1e3a5f;color:#fff;padding:7px 12px;border-radius:6px 6px 0 0;font-weight:700;font-size:13px;display:flex;justify-content:space-between">
+          <span>${label}</span><span>${earned}/${total_p} pts</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-top:none">
+          ${items}
+        </table>
+      </div>`;
+  }).join('');
+
+  const writing = session.answers?.writing ? `
+    <div style="margin-bottom:20px">
+      <div style="background:#1e3a5f;color:#fff;padding:7px 12px;border-radius:6px 6px 0 0;font-weight:700;font-size:13px">Writing</div>
+      <div style="border:1px solid #e2e8f0;border-top:none;padding:12px;white-space:pre-wrap;font-size:13px;line-height:1.7">${session.answers.writing.replace(/</g,'&lt;')}</div>
+    </div>` : '';
+
+  return `<!DOCTYPE html>
+<html lang="ro"><head><meta charset="UTF-8"/>
+<title>ECHO – Copie răspunsuri – ${participant.name}</title>
+<style>body{font-family:Inter,system-ui,sans-serif;max-width:760px;margin:32px auto;padding:0 20px;color:#0f172a}@media print{body{margin:0}}</style>
+</head><body>
+<div style="border-bottom:3px solid #1e3a5f;padding-bottom:16px;margin-bottom:24px">
+  <div style="font-size:22px;font-weight:700;color:#1e3a5f">ECHO — Copie răspunsuri</div>
+  <div style="font-size:11px;color:#64748b;letter-spacing:2px;text-transform:uppercase">englishgrammarchallenge.ro</div>
+</div>
+<table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+  <tr><td style="padding:4px 0;color:#64748b;font-size:12px;width:120px">Participant</td><td style="font-weight:700">${participant.name}</td></tr>
+  <tr><td style="padding:4px 0;color:#64748b;font-size:12px">Școală</td><td>${participant.school} · ${participant.county}${participant.grade?` · Clasa ${participant.grade}`:''}</td></tr>
+  ${participant.teacher?`<tr><td style="padding:4px 0;color:#64748b;font-size:12px">Profesor</td><td>${participant.teacher}</td></tr>`:''}
+  <tr><td style="padding:4px 0;color:#64748b;font-size:12px">Nivel / Etapă</td><td>${session.level} · ${session.stage==='finala'?'Finală':'Calificare'} · Var. ${session.variantId}</td></tr>
+  <tr><td style="padding:4px 0;color:#64748b;font-size:12px">Data</td><td>${date}</td></tr>
+  <tr><td style="padding:4px 0;color:#64748b;font-size:12px">Scor</td><td style="font-weight:700;font-size:18px">${total} / 100 &nbsp;·&nbsp; Nota: ${grade}</td></tr>
+</table>
+${rows}${writing}
+<div style="margin-top:32px;border-top:1px solid #e2e8f0;padding-top:12px;font-size:11px;color:#94a3b8;text-align:center">
+  Copie generată automat de platforma ECHO · englishgrammarchallenge.ro · ${date}
+</div>
+</body></html>`;
+}
+
 function ResultDetail({parts, answers, result}) {
   return (
     <div style={{marginTop:12,borderTop:"1px solid #e2e8f0",paddingTop:12}}>
@@ -116,7 +188,7 @@ function StatusBadge({status}) {
   return <span className="badge b-gray">Allocated</span>;
 }
 
-function SessionCard({s, exam}) {
+function SessionCard({s, exam, participant}) {
   const [showDetail, setShowDetail] = useState(false);
   const stageL = stageLabel(s.stage);
   const examTitle = exam?.title || s.examId || "—";
@@ -132,6 +204,19 @@ function SessionCard({s, exam}) {
   const within24h = s.submittedAt && (Date.now() - s.submittedAt) < 86400000;
   const variant = exam?.variants?.find(v => v.id === s.variantId);
   const canDetail = s.status === "submitted" && within24h && variant?.parts?.length && s.result;
+
+  const downloadCopy = () => {
+    if (!variant || !s.result || !participant) return;
+    const html = buildAnswerSheetHtml(s, participant, variant);
+    const blob = new Blob([html], {type:"text/html;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    const safeName = (participant.name||"elev").replace(/\s+/g,"_");
+    const dt = s.submittedAt ? new Date(s.submittedAt).toISOString().slice(0,10) : "data";
+    a.download = `ECHO_raspunsuri_${safeName}_${dt}.html`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
 
   return (
     <div style={{border:"1px solid #e2e8f0",borderRadius:8,padding:14,marginBottom:8,background:"#fff"}}>
@@ -152,9 +237,17 @@ function SessionCard({s, exam}) {
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"flex-start"}}>
           {canDetail && (
-            <button className="btn btn-ghost btn-sm" onClick={()=>setShowDetail(d=>!d)}>
-              {showDetail ? "Hide details ▲" : "View details ▼"}
-            </button>
+            <>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setShowDetail(d=>!d)}>
+                {showDetail ? "Ascunde ▲" : "Detalii ▼"}
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={downloadCopy} title="Descarcă copie răspunsuri (disponibilă 24h)">
+                ⬇ Copie
+              </button>
+            </>
+          )}
+          {s.status === "submitted" && !within24h && (
+            <span style={{fontSize:11,color:"#94a3b8",alignSelf:"center"}}>Copie expirată</span>
           )}
           <a href={link} className={btnClass} style={{whiteSpace:"nowrap"}}>{btnLabel}</a>
         </div>
@@ -236,7 +329,7 @@ function DashboardView({participant, onLogout}) {
                 Please wait for confirmation from your administrator.
               </div>
             ) : sorted.map(s => (
-              <SessionCard key={s.id} s={s} exam={examMap[s.examId]}/>
+              <SessionCard key={s.id} s={s} exam={examMap[s.examId]} participant={participant}/>
             ))}
           </div>
 
