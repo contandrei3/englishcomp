@@ -89,7 +89,14 @@ var CPEEN = (function () {
                 localExams.forEach(function(localExam) {
                   if (!localExam || !localExam.id) return;
                   var i = merged.findIndex(function(remoteExam) { return remoteExam.id === localExam.id; });
-                  if (i === -1) merged.push(localExam);
+                  if (i === -1) {
+                    merged.push(localExam);
+                    return;
+                  }
+                  var remoteExam = merged[i] || {};
+                  var localTs = localExam.updatedAt || localExam.createdAt || 0;
+                  var remoteTs = remoteExam.updatedAt || remoteExam.createdAt || 0;
+                  if (localTs >= remoteTs) merged[i] = localExam;
                 });
                 ss(KEYS.EXAMS, merged);
               } else {
@@ -353,7 +360,8 @@ var CPEEN = (function () {
 
   function addExam(data) {
     var exams = getExams();
-    var exam = Object.assign({ id: genId('exam'), createdAt: Date.now() }, data);
+    var now = Date.now();
+    var exam = Object.assign({ id: genId('exam'), createdAt: now, updatedAt: now }, data);
     exams.push(exam);
     saveExams(exams);
     return exam;
@@ -363,7 +371,7 @@ var CPEEN = (function () {
     var exams = getExams();
     var idx = exams.findIndex(function (e) { return e.id === id; });
     if (idx === -1) return null;
-    exams[idx] = Object.assign({}, exams[idx], updates);
+    exams[idx] = Object.assign({}, exams[idx], updates, { updatedAt: Date.now() });
     saveExams(exams);
     return exams[idx];
   }
