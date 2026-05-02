@@ -23,6 +23,12 @@ var CPEEN = (function () {
   var TYPE_DURATION = { FCE: 75, CAE: 90 };
 
   var DB = null;
+  // Tracks the timestamp of the last local write per Firestore docId.
+  // init() will not overwrite localStorage with Firestore data that is older
+  // than the most recent local write, preventing async-write/sync-read races.
+  var _lastLocalWrite = {};
+  // Exposed so admin pages can show a warning banner when a Firestore write fails.
+  var lastSyncError = null;
 
   function initFirebase() {
     var cfg = (typeof FIREBASE_CONFIG !== 'undefined') ? FIREBASE_CONFIG : null;
@@ -34,18 +40,20 @@ var CPEEN = (function () {
     } catch(e) {}
   }
 
+  // Returns a promise (or undefined when DB is unavailable).
+  // Includes _writtenAt so init() can compare recency with _lastLocalWrite.
   function syncToFirebase(docId, data) {
-    if (!DB) return;
-    // Firestore nu suportă nested arrays (ex: key[][] în subiecte).
-    // Serializăm items[] ca JSON string pentru a evita eroarea.
-    var payload = docId === 'config' ? data : { items_json: JSON.stringify(data) };
-    DB.collection('cpeen').doc(docId).set(payload).catch(function() {});
+    if (!DB) return Promise.resolve();
+    _lastLocalWrite[docId] = Date.now();
+    var payload = docId === 'config'
+      ? Object.assign({}, data, { _writtenAt: _lastLocalWrite[docId] })
+      : { items_json: JSON.stringify(data), _writtenAt: _lastLocalWrite[docId] };
+    return DB.collection('cpeen').doc(docId).set(payload)
+      .catch(function(e) {
+        lastSyncError = { docId: docId, error: e, ts: Date.now() };
+      });
   }
 
-  // FIX: returnăm promisiunea Firestore și așteptăm răspunsul înainte de a rezolva.
-  // Fallback la localStorage dacă Firestore e inaccesibil.
-  // Nu suprascriem localStorage cu array gol din Firestore — Firestore câștigă doar dacă
-  // are date (items.length > 0), altfel păstrăm ce e deja local (ex: seed-uri).
   function init() {
     initFirebase();
     if (!DB) return Promise.resolve();
@@ -53,10 +61,15 @@ var CPEEN = (function () {
       .then(function(snapshot) {
         snapshot.forEach(function(doc) {
           var d = doc.data();
+          // Skip this doc if we have a pending/recent local write that hasn't
+          // round-tripped yet — local data is authoritative until Firestore confirms.
+          var remoteTs = d._writtenAt || 0;
+          var localTs  = _lastLocalWrite[doc.id] || 0;
+          if (localTs > remoteTs) return;
+
           if (doc.id === 'config') {
             ss(KEYS.CONFIG, d);
           } else {
-            // Citim items_json (noul format) cu fallback la items (format vechi)
             var remote = d.items_json ? JSON.parse(d.items_json) : (d.items || []);
             var keyMap = {
               participants:   KEYS.PARTICIPANTS,
@@ -123,11 +136,11 @@ var CPEEN = (function () {
     if (!cfg.adminHash) cfg.adminHash = DEFAULT_ADMIN_HASH;
     return cfg;
   }
-  function saveConfig(cfg) { ss(KEYS.CONFIG, cfg); syncToFirebase('config', cfg); }
+  function saveConfig(cfg) { ss(KEYS.CONFIG, cfg); return syncToFirebase('config', cfg); }
 
   // ── Participants ──────────────────────────────────────────────────────────
   function getParticipants() { return sg(KEYS.PARTICIPANTS, []); }
-  function saveParticipants(ps) { ss(KEYS.PARTICIPANTS, ps); syncToFirebase('participants', ps); }
+  function saveParticipants(ps) { ss(KEYS.PARTICIPANTS, ps); return syncToFirebase('participants', ps); }
 
   function addParticipant(data) {
     var ps = getParticipants();
@@ -162,7 +175,7 @@ var CPEEN = (function () {
 
   // ── Sessions ──────────────────────────────────────────────────────────────
   function getSessions() { return sg(KEYS.SESSIONS, []); }
-  function saveSessions(ss_) { ss(KEYS.SESSIONS, ss_); syncToFirebase('sessions', ss_); }
+  function saveSessions(ss_) { ss(KEYS.SESSIONS, ss_); return syncToFirebase('sessions', ss_); }
 
   function getSessionByParticipant(pid) {
     return getSessions().find(function (s) { return s.participantId === pid; }) || null;
@@ -227,7 +240,7 @@ var CPEEN = (function () {
 
   // ── Group Sessions ────────────────────────────────────────────────────────
   function getGroupSessions() { return sg(KEYS.GROUP_SESSIONS, []); }
-  function saveGroupSessions(gs) { ss(KEYS.GROUP_SESSIONS, gs); syncToFirebase('group_sessions', gs); }
+  function saveGroupSessions(gs) { ss(KEYS.GROUP_SESSIONS, gs); return syncToFirebase('group_sessions', gs); }
 
   function addGroupSession(sessionType, examId, duration, variantStrategy) {
     var gs = getGroupSessions();
@@ -318,7 +331,7 @@ var CPEEN = (function () {
 
   // ── Exams ─────────────────────────────────────────────────────────────────
   function getExams() { return sg(KEYS.EXAMS, []); }
-  function saveExams(exams) { ss(KEYS.EXAMS, exams); syncToFirebase('exams', exams); }
+  function saveExams(exams) { ss(KEYS.EXAMS, exams); return syncToFirebase('exams', exams); }
 
   function getExamForParticipant(level, stage) {
     return getExams().find(function (e) { return e.level === level && e.stage === stage && e.variants && e.variants.length; }) || null;
@@ -543,6 +556,8 @@ var CPEEN = (function () {
 
   return {
     init,
+    get lastSyncError() { return lastSyncError; },
+    clearSyncError: function() { lastSyncError = null; },
     genId, genCode, hashPass, norm,
     getConfig, saveConfig,
     getParticipants, saveParticipants, addParticipant, findParticipantByCode, updateParticipant, deleteParticipant, isQualified,

@@ -860,9 +860,11 @@ function ExamBuilder() {
     if (!meta.title.trim()) { setMsg({type:'err',text:'Titlul este obligatoriu.'}); return; }
     if (!PARTS_META.some(p => enabled[p.id])) { setMsg({type:'err',text:'Selectați cel puțin o secțiune.'}); return; }
     const data = toDBVariant(meta, enabled, partData);
+    setMsg({type:'ok', text:'Se salvează…'});
     editId ? CPEEN.updateExam(editId, data) : CPEEN.addExam(data);
-    setMsg({type:'ok', text:'Subiect salvat!'});
-    setTimeout(()=>window.location.replace('exams.html'), 1100);
+    // localStorage write is synchronous — navigate immediately.
+    // Firestore mirrors in the background; any failure shows a banner on exams.html.
+    window.location.replace('exams.html');
   };
 
   const btnStyle = {background:C.dark,color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",fontSize:14,fontWeight:700,cursor:"pointer"};

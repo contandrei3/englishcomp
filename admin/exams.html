@@ -34,12 +34,8 @@ function ExamsPage() {
 
   const reload = () => setExams(CPEEN.getExams());
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      CPEEN.init().then(() => setExams(CPEEN.getExams()));
-    }, 20000);
-    return () => clearInterval(id);
-  }, []);
+  // Removed: auto-polling init() every 20s was racing with local writes and
+  // clobbering newly-created exams. Use the manual ↻ button instead.
 
   const downloadJSON = (exam) => {
     const blob = JSON.stringify(exam, null, 2);
@@ -114,6 +110,9 @@ function ExamsPage() {
 
         {importErr && <div className="alert alert-err">{importErr}</div>}
         {importOk  && <div className="alert alert-ok">{importOk}</div>}
+        {(()=>{ const e = CPEEN.lastSyncError; if (!e || Date.now()-e.ts > 30000) return null;
+          return <div className="alert alert-warn">⚠ Sincronizarea cu serverul a eșuat ({e.docId}). Subiectul este salvat local — reîncercați sau reîncărcați pagina.</div>;
+        })()}
 
         <div className="alert alert-info" style={{marginBottom:16}}>
           <strong>Format JSON:</strong> Fiecare subiect trebuie să aibă <code>title</code> și <code>variants[]</code>.
