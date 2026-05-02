@@ -80,7 +80,21 @@ var CPEEN = (function () {
             var key = keyMap[doc.id];
             if (!key) return;
             if (remote.length > 0) {
-              ss(key, remote);
+              // Preserve unsynced local exams when a newer page load receives
+              // a stale Firestore snapshot right after creating/importing one.
+              // This avoids "new subject disappeared" races on navigation.
+              if (doc.id === 'exams') {
+                var localExams = sg(KEYS.EXAMS, []);
+                var merged = remote.slice();
+                localExams.forEach(function(localExam) {
+                  if (!localExam || !localExam.id) return;
+                  var i = merged.findIndex(function(remoteExam) { return remoteExam.id === localExam.id; });
+                  if (i === -1) merged.push(localExam);
+                });
+                ss(KEYS.EXAMS, merged);
+              } else {
+                ss(key, remote);
+              }
             }
           }
         });
