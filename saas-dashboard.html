@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ECHO – Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ── Reset ──────────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+/* ── Design tokens ──────────────────────────────────────────────────────── */
+:root{
+  --sidebar-w:      220px;
+  --header-h:       60px;
+  --sidebar-bg:     #ffffff;
+  --sidebar-border: #e8e8ec;
+  --content-bg:     #f5f5f7;
+  --active-bg:      #f0eeff;
+  --active-color:   #6d28d9;
+  --nav-text:       #4a4a4a;
+  --nav-hover-bg:   #f5f5f7;
+  --pill-bg:        #ede9ff;
+  --pill-text:      #6d28d9;
+  --fab-bg:         #4ade80;
+  --dark:           #0f172a;
+  --muted:          #64748b;
+  --border:         #e2e8f0;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
+body{
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  background:var(--content-bg);
+  color:var(--dark);
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────────────── */
+.sidebar{
+  position:fixed;
+  top:0;left:0;
+  width:var(--sidebar-w);
+  height:100vh;
+  background:var(--sidebar-bg);
+  border-right:1px solid var(--sidebar-border);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  transition:width .25s ease;
+  z-index:200;
+}
+body.sidebar-collapsed .sidebar{width:0;}
+body.sidebar-collapsed .header{left:0;}
+body.sidebar-collapsed .main-wrapper{margin-left:0;}
+
+.sidebar-logo{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:20px 18px;
+  border-bottom:1px solid var(--sidebar-border);
+  flex-shrink:0;
+  min-width:calc(var(--sidebar-w) - 1px);
+}
+.logo-circle{
+  width:34px;height:34px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#a78bfa,#7c3aed);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.logo-name{
+  font-weight:700;
+  font-size:15px;
+  color:var(--dark);
+  white-space:nowrap;
+  letter-spacing:-.3px;
+}
+
+.sidebar-nav{
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:12px 0 20px;
+  scrollbar-width:none;
+}
+.sidebar-nav::-webkit-scrollbar{display:none;}
+
+.nav-group{margin-bottom:4px;}
+.nav-group-label{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:1.4px;
+  text-transform:uppercase;
+  color:#a0aec0;
+  padding:10px 18px 4px;
+  white-space:nowrap;
+  min-width:calc(var(--sidebar-w) - 1px);
+}
+.nav-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px 18px;
+  cursor:pointer;
+  color:var(--nav-text);
+  font-size:13.5px;
+  font-weight:500;
+  white-space:nowrap;
+  transition:background .12s,color .12s;
+  user-select:none;
+  min-width:calc(var(--sidebar-w) - 1px);
+}
+.nav-item:hover{background:var(--nav-hover-bg);}
+.nav-item.active{
+  background:var(--active-bg);
+  color:var(--active-color);
+}
+.nav-item.active .ni{stroke:var(--active-color);}
+.ni{
+  width:16px;height:16px;
+  stroke:var(--nav-text);
+  stroke-width:2;
+  fill:none;
+  flex-shrink:0;
+  transition:stroke .12s;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.nav-item.active .ni{stroke:var(--active-color);}
+.nav-item:hover:not(.active) .ni{stroke:#1a1a2e;}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.header{
+  position:fixed;
+  top:0;
+  left:var(--sidebar-w);
+  right:0;
+  height:var(--header-h);
+  background:#ffffff;
+  border-bottom:1px solid var(--sidebar-border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 28px;
+  z-index:100;
+  transition:left .25s ease;
+}
+.header-left{display:flex;align-items:center;gap:14px;}
+.hamburger{
+  background:none;
+  border:none;
+  cursor:pointer;
+  padding:7px;
+  border-radius:7px;
+  display:flex;align-items:center;
+  transition:background .12s;
+  color:var(--nav-text);
+}
+.hamburger:hover{background:var(--nav-hover-bg);}
+.hamburger svg{
+  width:18px;height:18px;
+  stroke:currentColor;
+  stroke-width:2;
+  fill:none;
+  stroke-linecap:round;
+}
+.header-tagline{
+  font-size:15px;
+  font-weight:500;
+  color:var(--dark);
+  white-space:nowrap;
+}
+.header-right{display:flex;align-items:center;gap:10px;}
+.pill-btn{
+  background:var(--pill-bg);
+  color:var(--pill-text);
+  border:none;
+  border-radius:100px;
+  padding:7px 16px;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+  font-family:inherit;
+  transition:opacity .15s,transform .12s;
+  white-space:nowrap;
+}
+.pill-btn:hover{opacity:.8;transform:translateY(-1px);}
+.avatar{
+  width:36px;height:36px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#a78bfa,#7c3aed);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;
+  font-weight:700;
+  font-size:13px;
+  cursor:pointer;
+  flex-shrink:0;
+  transition:opacity .15s;
+}
+.avatar:hover{opacity:.85;}
+
+/* ── Main wrapper ───────────────────────────────────────────────────────── */
+.main-wrapper{
+  margin-left:var(--sidebar-w);
+  margin-top:var(--header-h);
+  min-height:calc(100vh - var(--header-h));
+  transition:margin-left .25s ease;
+}
+.content-area{
+  max-width:1100px;
+  margin:0 auto;
+  padding:40px;
+}
+
+/* Page heading row */
+.page-heading-row{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  margin-bottom:28px;
+  gap:16px;
+  flex-wrap:wrap;
+}
+.page-title{
+  font-size:28px;
+  font-weight:700;
+  color:var(--dark);
+  letter-spacing:-.6px;
+  line-height:1.15;
+}
+.page-sub{
+  font-size:14px;
+  color:var(--muted);
+  margin-top:4px;
+  font-weight:400;
+  line-height:1.55;
+}
+.heading-meta{
+  font-size:13px;
+  color:var(--muted);
+  white-space:nowrap;
+}
+
+/* ── Cards + phones row ─────────────────────────────────────────────────── */
+.cards-and-phones{
+  display:flex;
+  gap:28px;
+  align-items:flex-start;
+  margin-bottom:32px;
+}
+
+/* ── Card grid ──────────────────────────────────────────────────────────── */
+.card-grid{
+  flex:1;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+}
+
+.dash-card{
+  border-radius:20px;
+  padding:24px;
+  cursor:pointer;
+  transition:transform .2s ease,opacity .15s ease;
+  box-shadow:0 1px 3px rgba(0,0,0,.07);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  min-height:170px;
+}
+.dash-card:hover{
+  transform:translateY(-3px);
+  opacity:.95;
+}
+
+.card-pink   {background:linear-gradient(135deg,#ff6ec7 0%,#ff3d9a 100%);}
+.card-purple {background:linear-gradient(135deg,#a78bfa 0%,#7c3aed 100%);}
+.card-blue   {background:linear-gradient(135deg,#60a5fa 0%,#2563eb 100%);}
+.card-indigo {background:linear-gradient(135deg,#818cf8 0%,#4f46e5 100%);}
+
+/* Card top row */
+.card-top-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.card-icon-wrap{
+  width:40px;height:40px;
+  border-radius:11px;
+  border:1.5px solid rgba(255,255,255,.45);
+  display:flex;align-items:center;justify-content:center;
+}
+.card-icon-wrap svg{
+  width:19px;height:19px;
+  stroke:#fff;
+  stroke-width:2;
+  fill:none;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+/* Progress ring */
+.ring-wrap{
+  position:relative;
+  width:44px;height:44px;
+  flex-shrink:0;
+}
+.ring-wrap>svg{
+  transform:rotate(-90deg);
+  display:block;
+}
+.ring-bg{fill:none;stroke:rgba(255,255,255,.22);stroke-width:3;}
+.ring-fg{
+  fill:none;
+  stroke:#fff;
+  stroke-width:3;
+  stroke-linecap:round;
+  stroke-dasharray:100;
+  stroke-dashoffset:100;
+}
+.ring-label{
+  position:absolute;
+  inset:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;
+  font-weight:700;
+  color:#fff;
+}
+
+/* Card meta */
+.card-meta{
+  font-size:12px;
+  color:rgba(255,255,255,.62);
+  letter-spacing:.1px;
+}
+
+/* Card bottom row */
+.card-bottom-row{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  margin-top:auto;
+}
+.card-title{
+  font-size:18px;
+  font-weight:700;
+  color:#fff;
+  line-height:1.2;
+  letter-spacing:-.2px;
+}
+.card-subtitle{
+  font-size:12.5px;
+  color:rgba(255,255,255,.72);
+  margin-top:3px;
+}
+.card-chevron svg{
+  width:20px;height:20px;
+  stroke:rgba(255,255,255,.75);
+  stroke-width:2.5;
+  fill:none;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+/* ── Phone section ──────────────────────────────────────────────────────── */
+.phone-section{
+  width:248px;
+  flex-shrink:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding-top:4px;
+}
+.phone-heading{
+  font-size:14px;
+  font-weight:700;
+  color:var(--dark);
+  text-align:center;
+  margin-bottom:22px;
+  line-height:1.5;
+  max-width:180px;
+  letter-spacing:-.1px;
+}
+.phone-frames{
+  position:relative;
+  height:300px;
+  width:210px;
+}
+.phone-frame{
+  position:absolute;
+  width:148px;
+  height:278px;
+  border-radius:36px;
+  background:#ffffff;
+  border:2px solid #d1d5db;
+  overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,.10);
+}
+.phone-frame::before{
+  content:'';
+  position:absolute;
+  top:0;left:50%;
+  transform:translateX(-50%);
+  width:58px;height:18px;
+  background:#e5e7eb;
+  border-radius:0 0 14px 14px;
+  z-index:2;
+}
+.phone-inner{
+  position:absolute;
+  inset:22px 10px 10px;
+  border-radius:26px;
+  overflow:hidden;
+}
+.phone-frame:first-child{
+  left:0;top:22px;
+  transform:rotate(-5deg);
+  z-index:1;
+}
+.phone-frame:last-child{
+  left:58px;top:0;
+  transform:rotate(4deg);
+  z-index:2;
+}
+
+/* Mini cards inside phone frames */
+.mini-card{
+  border-radius:18px;
+  padding:14px 12px;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+}
+.mini-ring{
+  width:26px;height:26px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.45);
+  display:flex;align-items:center;justify-content:center;
+  font-size:7px;font-weight:700;color:#fff;
+  align-self:flex-end;
+  flex-shrink:0;
+}
+.mini-title{
+  font-size:11px;font-weight:700;color:#fff;
+  margin-top:auto;
+  line-height:1.25;
+}
+.mini-sub{
+  font-size:9px;color:rgba(255,255,255,.7);
+  margin-top:3px;
+}
+.mini-dots{
+  display:flex;gap:4px;margin-top:8px;
+}
+.mini-dot{
+  width:5px;height:5px;border-radius:50%;
+  background:rgba(255,255,255,.4);
+}
+.mini-dot.active{background:rgba(255,255,255,.9);}
+
+/* ── Banner section ─────────────────────────────────────────────────────── */
+.banner-section{
+  background:linear-gradient(135deg,#faf7f2 0%,#ede9df 100%);
+  border-radius:20px;
+  padding:48px 52px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:32px;
+  position:relative;
+  overflow:hidden;
+}
+.banner-text{position:relative;z-index:1;}
+.banner-title{
+  font-size:26px;
+  font-weight:700;
+  color:var(--dark);
+  margin-bottom:10px;
+  line-height:1.3;
+  letter-spacing:-.4px;
+  max-width:400px;
+}
+.banner-body{
+  font-size:14px;
+  color:var(--muted);
+  line-height:1.75;
+  max-width:380px;
+}
+.banner-cta{
+  display:inline-block;
+  margin-top:20px;
+  padding:11px 26px;
+  border-radius:8px;
+  border:1.5px solid var(--dark);
+  color:var(--dark);
+  background:transparent;
+  font-size:13.5px;
+  font-weight:600;
+  cursor:pointer;
+  font-family:inherit;
+  transition:background .15s,color .15s;
+  text-decoration:none;
+  letter-spacing:-.1px;
+}
+.banner-cta:hover{background:var(--dark);color:#fff;}
+
+/* Pure-CSS decorative orbs (no images) */
+.banner-orbs{
+  position:relative;
+  width:220px;
+  height:180px;
+  flex-shrink:0;
+}
+.banner-orbs::before{
+  content:'';
+  position:absolute;
+  width:140px;height:140px;
+  border-radius:50%;
+  background:linear-gradient(135deg,rgba(167,139,250,.22),rgba(124,58,237,.12));
+  top:0;right:0;
+}
+.banner-orbs::after{
+  content:'';
+  position:absolute;
+  width:90px;height:90px;
+  border-radius:50%;
+  background:linear-gradient(135deg,rgba(96,165,250,.22),rgba(37,99,235,.12));
+  bottom:0;right:46px;
+}
+/* Third orb via child element */
+.banner-orb3{
+  position:absolute;
+  width:60px;height:60px;
+  border-radius:50%;
+  background:linear-gradient(135deg,rgba(255,110,199,.22),rgba(255,61,154,.12));
+  bottom:20px;right:130px;
+}
+
+/* ── Stats row ──────────────────────────────────────────────────────────── */
+.stats-row{
+  display:flex;
+  gap:16px;
+  margin-bottom:32px;
+  flex-wrap:wrap;
+}
+.stat-card{
+  flex:1;
+  min-width:140px;
+  background:#ffffff;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:18px 20px;
+}
+.stat-label{
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.6px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+.stat-value{
+  font-size:26px;
+  font-weight:700;
+  color:var(--dark);
+  line-height:1;
+  letter-spacing:-.5px;
+}
+.stat-delta{
+  font-size:12px;
+  color:#16a34a;
+  font-weight:500;
+  margin-top:4px;
+}
+
+/* ── FAB ────────────────────────────────────────────────────────────────── */
+.fab{
+  position:fixed;
+  bottom:32px;right:32px;
+  width:56px;height:56px;
+  border-radius:50%;
+  background:var(--fab-bg);
+  border:none;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  z-index:1000;
+  box-shadow:0 4px 16px rgba(74,222,128,.4);
+  transition:transform .2s ease,box-shadow .2s ease;
+}
+.fab:hover{
+  transform:scale(1.08);
+  box-shadow:0 6px 24px rgba(74,222,128,.52);
+}
+.fab svg{
+  width:22px;height:22px;
+  stroke:#fff;
+  stroke-width:2.5;
+  fill:none;
+  stroke-linecap:round;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media(max-width:960px){
+  .cards-and-phones{flex-direction:column;}
+  .phone-section{
+    width:100%;
+    flex-direction:row;
+    align-items:flex-start;
+    gap:28px;
+  }
+  .phone-heading{text-align:left;max-width:none;}
+}
+@media(max-width:640px){
+  :root{--sidebar-w:0px;}
+  .sidebar{width:0;}
+  body.sidebar-open .sidebar{width:220px;}
+  body.sidebar-open .sidebar-logo,
+  body.sidebar-open .nav-group-label,
+  body.sidebar-open .nav-item{min-width:220px;}
+  .main-wrapper{margin-left:0;}
+  .header{left:0;}
+  .content-area{padding:24px 16px;}
+  .card-grid{grid-template-columns:1fr;}
+  .stats-row{gap:10px;}
+  .banner-section{flex-direction:column;padding:32px 24px;}
+  .banner-orbs{display:none;}
+  .header-tagline{display:none;}
+  .page-title{font-size:22px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-circle">
+      <!-- Lightning bolt icon -->
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+           stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>
+    </div>
+    <span class="logo-name">ECHO</span>
+  </div>
+
+  <nav class="sidebar-nav">
+
+    <!-- MAIN -->
+    <div class="nav-group">
+      <div class="nav-group-label">Main</div>
+
+      <div class="nav-item active" data-nav>
+        <!-- Grid / dashboard icon -->
+        <svg class="ni" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+        Dashboard
+      </div>
+
+      <div class="nav-item" data-nav>
+        <!-- Bar chart icon -->
+        <svg class="ni" viewBox="0 0 24 24">
+          <path d="M3 3v18h18"/>
+          <rect x="7" y="10" width="3" height="8" rx="1"/>
+          <rect x="12" y="6" width="3" height="12" rx="1"/>
+          <rect x="17" y="13" width="3" height="5" rx="1"/>
+        </svg>
+        Analytics
+      </div>
+
+      <div class="nav-item" data-nav>
+        <!-- Folder icon -->
+        <svg class="ni" viewBox="0 0 24 24">
+          <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+        </svg>
+        Projects
+      </div>
+
+      <div class="nav-item" data-nav>
+        <!-- Check-square icon -->
+        <svg class="ni" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+        Tasks
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="nav-group">
+      <div class="nav-group-label">Content</div>
+
+      <div class="nav-item" data-nav>
+        <!-- Open book icon -->
+        <svg class="ni" viewBox="0 0 24 24">
+          <path d="M2 3h9v18l-4.5-2.5L2 21V3z"/>
+          <path d="M22 3h-9v18l4.5-2.5L22 21V3z"/>
+        </svg>
+        Courses
+      </div>
+
+      <div class="nav-item" data-nav>
+        <!-- Archive/library icon -->
+        <svg class="ni" viewBox="0 0 24 24">
+          <rect x="2" y="4" width="20" height="5" rx="1"/>
+          <path d="M4 9v10a1 1 0 001 1h14a1 1 0 001-1V9"/>
+          <path d="M10 13h4"/>
+        </svg>
+        Library
+      </div>
+
+      <div class="nav-item" data-nav>
+        <!-- Calendar icon -->
+        <svg class="ni" viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <path d="M16 2v4M8 2v4M3 10h18"/>
+        </svg>
+        Schedule
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="nav-group">
+      <div class="nav-group-label">Settings</div>
+
+      <div class="nav-item" data-nav>
+        <!-- User icon -->
+        <svg class="ni" viewBox="0 0 24 24">
+          <circle cx="12" cy="8" r="4"/>
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+        </svg>
+        Profile
+      </div>
+
+      <div class="nav-item" data-nav>
+        <!-- Settings / cog icon -->
+        <svg class="ni" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+        Settings
+      </div>
+
+      <div class="nav-item" data-nav>
+        <!-- Help circle -->
+        <svg class="ni" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+          <circle cx="12" cy="17" r=".5" fill="currentColor" stroke="none"/>
+        </svg>
+        Help
+      </div>
+    </div>
+
+  </nav>
+</aside>
+
+
+<!-- ══════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════ -->
+<header class="header">
+  <div class="header-left">
+    <button class="hamburger" id="hamburger" aria-label="Toggle sidebar">
+      <svg viewBox="0 0 24 24">
+        <line x1="3" y1="6"  x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+    <span class="header-tagline">Learning made simple.</span>
+  </div>
+  <div class="header-right">
+    <button class="pill-btn">Upgrade</button>
+    <button class="pill-btn">New Course</button>
+    <div class="avatar" title="Your profile">E</div>
+  </div>
+</header>
+
+
+<!-- ══════════════════════════════════════════
+     MAIN CONTENT
+═══════════════════════════════════════════ -->
+<div class="main-wrapper">
+  <div class="content-area">
+
+    <!-- Page heading -->
+    <div class="page-heading-row">
+      <div>
+        <div class="page-title">My Dashboard</div>
+        <div class="page-sub">Welcome back — here's what's happening today.</div>
+      </div>
+      <div class="heading-meta">Monday, 5 May 2026</div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Courses</div>
+        <div class="stat-value">4</div>
+        <div class="stat-delta">↑ 1 this week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Hours studied</div>
+        <div class="stat-value">11.1</div>
+        <div class="stat-delta">↑ 2.4h vs last week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg. score</div>
+        <div class="stat-value">84%</div>
+        <div class="stat-delta">↑ 6pts this month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Streak</div>
+        <div class="stat-value">7d</div>
+        <div class="stat-delta">Personal best 🔥</div>
+      </div>
+    </div>
+
+    <!-- Cards + phone mockups -->
+    <div class="cards-and-phones">
+
+      <!-- 2×2 Card grid -->
+      <div class="card-grid">
+
+        <!-- Card 1 — Pink: Grammar Pro -->
+        <div class="dash-card card-pink">
+          <div class="card-top-row">
+            <div class="card-icon-wrap">
+              <!-- Star / award icon -->
+              <svg viewBox="0 0 24 24">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </div>
+            <div class="ring-wrap">
+              <svg width="44" height="44" viewBox="0 0 44 44">
+                <circle class="ring-bg" cx="22" cy="22" r="15.9155"/>
+                <circle class="ring-fg" cx="22" cy="22" r="15.9155"/>
+              </svg>
+              <span class="ring-label">0%</span>
+            </div>
+          </div>
+          <div class="card-meta">12 lessons · 3h 20m total</div>
+          <div class="card-bottom-row">
+            <div>
+              <div class="card-title">Grammar Pro</div>
+              <div class="card-subtitle">Advanced level · B2</div>
+            </div>
+            <div class="card-chevron">
+              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2 — Purple: Vocabulary -->
+        <div class="dash-card card-purple">
+          <div class="card-top-row">
+            <div class="card-icon-wrap">
+              <!-- Book open icon -->
+              <svg viewBox="0 0 24 24">
+                <path d="M2 3h9v18l-4.5-2.5L2 21V3z"/>
+                <path d="M22 3h-9v18l4.5-2.5L22 21V3z"/>
+              </svg>
+            </div>
+            <div class="ring-wrap">
+              <svg width="44" height="44" viewBox="0 0 44 44">
+                <circle class="ring-bg" cx="22" cy="22" r="15.9155"/>
+                <circle class="ring-fg" cx="22" cy="22" r="15.9155"/>
+              </svg>
+              <span class="ring-label">0%</span>
+            </div>
+          </div>
+          <div class="card-meta">8 lessons · 2h 10m total</div>
+          <div class="card-bottom-row">
+            <div>
+              <div class="card-title">Vocabulary</div>
+              <div class="card-subtitle">Upper-Intermediate · B2+</div>
+            </div>
+            <div class="card-chevron">
+              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3 — Blue: Listening -->
+        <div class="dash-card card-blue">
+          <div class="card-top-row">
+            <div class="card-icon-wrap">
+              <!-- Headphones icon -->
+              <svg viewBox="0 0 24 24">
+                <path d="M3 18v-6a9 9 0 0118 0v6"/>
+                <path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3z"/>
+                <path d="M3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/>
+              </svg>
+            </div>
+            <div class="ring-wrap">
+              <svg width="44" height="44" viewBox="0 0 44 44">
+                <circle class="ring-bg" cx="22" cy="22" r="15.9155"/>
+                <circle class="ring-fg" cx="22" cy="22" r="15.9155"/>
+              </svg>
+              <span class="ring-label">0%</span>
+            </div>
+          </div>
+          <div class="card-meta">10 lessons · 4h 05m total</div>
+          <div class="card-bottom-row">
+            <div>
+              <div class="card-title">Listening</div>
+              <div class="card-subtitle">Cambridge · C1</div>
+            </div>
+            <div class="card-chevron">
+              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4 — Indigo: Writing -->
+        <div class="dash-card card-indigo">
+          <div class="card-top-row">
+            <div class="card-icon-wrap">
+              <!-- Edit / pen icon -->
+              <svg viewBox="0 0 24 24">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </div>
+            <div class="ring-wrap">
+              <svg width="44" height="44" viewBox="0 0 44 44">
+                <circle class="ring-bg" cx="22" cy="22" r="15.9155"/>
+                <circle class="ring-fg" cx="22" cy="22" r="15.9155"/>
+              </svg>
+              <span class="ring-label">0%</span>
+            </div>
+          </div>
+          <div class="card-meta">6 lessons · 1h 45m total</div>
+          <div class="card-bottom-row">
+            <div>
+              <div class="card-title">Writing</div>
+              <div class="card-subtitle">FCE Practice · B2</div>
+            </div>
+            <div class="card-chevron">
+              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /card-grid -->
+
+      <!-- Phone mockup section -->
+      <div class="phone-section">
+        <div class="phone-heading">Enjoy ECHO anytime, anywhere.</div>
+        <div class="phone-frames">
+
+          <!-- Phone 1 — pink card -->
+          <div class="phone-frame">
+            <div class="phone-inner">
+              <div class="mini-card card-pink">
+                <div class="mini-ring">0%</div>
+                <div class="mini-title">Grammar Pro</div>
+                <div class="mini-sub">12 lessons · B2</div>
+                <div class="mini-dots">
+                  <div class="mini-dot active"></div>
+                  <div class="mini-dot"></div>
+                  <div class="mini-dot"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Phone 2 — purple card -->
+          <div class="phone-frame">
+            <div class="phone-inner">
+              <div class="mini-card card-purple">
+                <div class="mini-ring">0%</div>
+                <div class="mini-title">Vocabulary</div>
+                <div class="mini-sub">8 lessons · B2+</div>
+                <div class="mini-dots">
+                  <div class="mini-dot active"></div>
+                  <div class="mini-dot"></div>
+                  <div class="mini-dot"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /phone-frames -->
+      </div><!-- /phone-section -->
+
+    </div><!-- /cards-and-phones -->
+
+    <!-- Banner section -->
+    <section class="banner-section">
+      <div class="banner-text">
+        <div class="banner-title">Start your English journey today.</div>
+        <div class="banner-body">
+          Access hundreds of practice tests, vocabulary drills, and exam simulations —
+          built for Cambridge B2, C1, FCE, CAE and beyond.
+        </div>
+        <a href="index.html" class="banner-cta">Browse All Courses</a>
+      </div>
+      <div class="banner-orbs">
+        <div class="banner-orb3"></div>
+      </div>
+    </section>
+
+  </div><!-- /content-area -->
+</div><!-- /main-wrapper -->
+
+
+<!-- ══════════════════════════════════════════
+     FLOATING ACTION BUTTON
+═══════════════════════════════════════════ -->
+<button class="fab" aria-label="New item">
+  <svg viewBox="0 0 24 24">
+    <line x1="12" y1="5" x2="12" y2="19"/>
+    <line x1="5"  y1="12" x2="19" y2="12"/>
+  </svg>
+</button>
+
+
+<script>
+(function() {
+  var hamburger = document.getElementById('hamburger');
+  var isMobile = window.innerWidth <= 640;
+
+  hamburger.addEventListener('click', function() {
+    if (isMobile) {
+      document.body.classList.toggle('sidebar-open');
+    } else {
+      document.body.classList.toggle('sidebar-collapsed');
+    }
+  });
+
+  window.addEventListener('resize', function() {
+    isMobile = window.innerWidth <= 640;
+  });
+
+  // Nav active state
+  var navItems = document.querySelectorAll('[data-nav]');
+  navItems.forEach(function(item) {
+    item.addEventListener('click', function() {
+      navItems.forEach(function(n) { n.classList.remove('active'); });
+      item.classList.add('active');
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
