@@ -773,9 +773,11 @@ function ExamApp() {
     return sid ? "loading" : "code";
   })();
 
-  const [view,    setView]    = useState(initialView);
-  const [code,    setCode]    = useState("");
-  const [codeErr, setCodeErr] = useState("");
+  const [view,      setView]      = useState(initialView);
+  const [loginUser, setLoginUser] = useState("");
+  const [loginPass, setLoginPass] = useState("");
+  const [loginErr,  setLoginErr]  = useState("");
+  const [loginBusy, setLoginBusy] = useState(false);
   const [ptcp,    setPtcp]    = useState(null);
   const [sess,    setSess]    = useState(null);
   const [exam,    setExam]    = useState(null);
@@ -907,62 +909,66 @@ function ExamApp() {
     loadSession(p, s);
   }, []);
 
-  const enterCode = () => {
-    setCodeErr("");
-    const p = CPEEN.findParticipantByCode(code);
-    if(!p) { setCodeErr("Invalid access code. Please check and try again."); return; }
+  const enterCredentials = () => {
+    setLoginErr("");
+    if(!loginUser.trim() || !loginPass) { setLoginErr("Introduceți username-ul și parola."); return; }
+    setLoginBusy(true);
+    CPEEN.loginParticipant(loginUser, loginPass).then(p => {
+      setLoginBusy(false);
+      if(!p) { setLoginErr("Username sau parolă incorectă."); return; }
 
-    const allSess = CPEEN.getSessionsByParticipant(p.id);
-    const groups  = CPEEN.getGroupSessions();
+      const allSess = CPEEN.getSessionsByParticipant(p.id);
+      const groups  = CPEEN.getGroupSessions();
 
-    // 1. Already started — always resume
-    let s = allSess.find(x => x.status === "in_progress");
+      // 1. Already started — always resume
+      let s = allSess.find(x => x.status === "in_progress");
 
-    // 2. Pending session whose group is active right now
-    if (!s) {
-      s = allSess.find(x => {
-        if (x.status !== "pending") return false;
-        if (x.groupId) {
-          const grp = groups.find(g => g.id === x.groupId);
-          return grp?.status === "active";
-        }
-        const cfg = CPEEN.getConfig();
-        return !!(cfg.activeExams?.[x.level]?.[x.stage]);
-      });
-    }
+      // 2. Pending session whose group is active right now
+      if (!s) {
+        s = allSess.find(x => {
+          if (x.status !== "pending") return false;
+          if (x.groupId) {
+            const grp = groups.find(g => g.id === x.groupId);
+            return grp?.status === "active";
+          }
+          const cfg = CPEEN.getConfig();
+          return !!(cfg.activeExams?.[x.level]?.[x.stage]);
+        });
+      }
 
-    // 3. Latest submitted — show result
-    if (!s) {
-      const submitted = allSess.filter(x => x.status === "submitted")
-        .sort((a,b) => (b.submittedAt||0) - (a.submittedAt||0));
-      s = submitted[0] || null;
-    }
+      // 3. Latest submitted — show result
+      if (!s) {
+        const submitted = allSess.filter(x => x.status === "submitted")
+          .sort((a,b) => (b.submittedAt||0) - (a.submittedAt||0));
+        s = submitted[0] || null;
+      }
 
-    if(s) { loadSession(p, s); return; }
+      if(s) { loadSession(p, s); return; }
 
-    // 4. Allocated to a group session but group hasn't started (or is finished)
-    const pendingGroupSess = allSess.find(x => x.status === "pending" && x.groupId);
-    if (pendingGroupSess) {
-      const grp = groups.find(g => g.id === pendingGroupSess.groupId);
-      noExamSessRef.current = pendingGroupSess;
-      noExamPtcpRef.current = p;
-      setPtcp(p);
-      setNoExamReason(grp?.status === "finished" ? "group_finished" : "group_pending");
-      setView("noExam");
-      return;
-    }
+      // 4. Allocated to a group session but group hasn't started (or is finished)
+      const pendingGroupSess = allSess.find(x => x.status === "pending" && x.groupId);
+      if (pendingGroupSess) {
+        const grp = groups.find(g => g.id === pendingGroupSess.groupId);
+        noExamSessRef.current = pendingGroupSess;
+        noExamPtcpRef.current = p;
+        setPtcp(p);
+        setNoExamReason(grp?.status === "finished" ? "group_finished" : "group_pending");
+        setView("noExam");
+        return;
+      }
 
-    // 5. Legacy no-group fallback
-    const stage = CPEEN.isQualified(p) ? "finala" : "calificare";
-    const cfg = CPEEN.getConfig();
-    if(!cfg.activeExams?.[p.level]?.[stage]) {
-      setNoExamReason(""); setPtcp(p); setView("noExam"); return;
-    }
-    const ex = CPEEN.getExamForParticipant(p.level, stage);
-    if(!ex) { setNoExamReason(""); setPtcp(p); setView("noExam"); return; }
-    const vIdx = Math.floor(Math.random() * ex.variants.length);
-    s = CPEEN.createSession(p.id, ex, ex.variants[vIdx].id);
-    loadSession(p, s);
+      // 5. Legacy no-group fallback
+      const stage = CPEEN.isQualified(p) ? "finala" : "calificare";
+      const cfg = CPEEN.getConfig();
+      if(!cfg.activeExams?.[p.level]?.[stage]) {
+        setNoExamReason(""); setPtcp(p); setView("noExam"); return;
+      }
+      const ex = CPEEN.getExamForParticipant(p.level, stage);
+      if(!ex) { setNoExamReason(""); setPtcp(p); setView("noExam"); return; }
+      const vIdx = Math.floor(Math.random() * ex.variants.length);
+      s = CPEEN.createSession(p.id, ex, ex.variants[vIdx].id);
+      loadSession(p, s);
+    });
   };
 
   // Auto-check: when waiting for a group session to start, poll Firestore every 5s
@@ -1034,7 +1040,7 @@ function ExamApp() {
     </>
   );
 
-  // ── Code entry view ─────────────────────────────────────────────────────
+  // ── Login view ───────────────────────────────────────────────────────────
   if(view === "code") return (
     <>
       <Navbar/>
@@ -1043,23 +1049,29 @@ function ExamApp() {
           <div className="card">
             <div className="card-head" style={{textAlign:"center"}}>
               <h2>Exam Access</h2>
-              <p>ECHO · Enter your access code</p>
+              <p>ECHO · Autentificare</p>
             </div>
             <div className="card-body">
+              {loginErr && <div className="alert alert-err">{loginErr}</div>}
               <div className="fg">
-                <label>Access code<span className="req">*</span></label>
-                <input className={`inp${codeErr?" err":""}`}
-                  value={code} onChange={e=>setCode(e.target.value.toUpperCase())}
-                  onKeyDown={e=>e.key==="Enter"&&enterCode()}
-                  placeholder="e.g. ABC12345" maxLength={8}
-                  style={{letterSpacing:4,fontSize:20,fontFamily:"monospace",textAlign:"center"}}/>
-                {codeErr && <div className="ferr">{codeErr}</div>}
+                <label>Username<span className="req">*</span></label>
+                <input className="inp" value={loginUser}
+                  onChange={e=>{ setLoginUser(e.target.value); setLoginErr(""); }}
+                  onKeyDown={e=>e.key==="Enter"&&enterCredentials()}
+                  placeholder="username-ul tău" autoComplete="username"/>
               </div>
-              <button className="btn btn-primary btn-lg btn-block" onClick={enterCode}>
-                Enter exam →
+              <div className="fg">
+                <label>Parolă<span className="req">*</span></label>
+                <input type="password" className="inp" value={loginPass}
+                  onChange={e=>{ setLoginPass(e.target.value); setLoginErr(""); }}
+                  onKeyDown={e=>e.key==="Enter"&&enterCredentials()}
+                  placeholder="parola ta" autoComplete="current-password"/>
+              </div>
+              <button className="btn btn-primary btn-lg btn-block" onClick={enterCredentials} disabled={loginBusy}>
+                {loginBusy ? "Se verifică…" : "Intră la examen →"}
               </button>
               <div style={{textAlign:"center",marginTop:14}}>
-                <a href="register.html" style={{fontSize:13}}>No code? Register →</a>
+                <a href="register.html" style={{fontSize:13}}>Nu ai cont? Înregistrează-te →</a>
               </div>
             </div>
           </div>

@@ -35,31 +35,37 @@ const { useState } = React;
 const COUNTIES = ["Alba","Arad","Argeș","Bacău","Bihor","Bistrița-Năsăud","Botoșani","Brăila","Brașov","București","Buzău","Călărași","Caraș-Severin","Cluj","Constanța","Covasna","Dâmbovița","Dolj","Galați","Giurgiu","Gorj","Harghita","Hunedoara","Ialomița","Iași","Ilfov","Maramureș","Mehedinți","Mureș","Neamț","Olt","Prahova","Sălaj","Satu Mare","Sibiu","Suceava","Teleorman","Timiș","Tulcea","Vâlcea","Vaslui","Vrancea"];
 const LEVELS  = [{v:"A2",l:"A2 – Elementar"},{v:"B1",l:"B1 – Intermediar"},{v:"B2",l:"B2 – Avansat"},{v:"C1",l:"C1 – Performanță"},{v:"FCE",l:"FCE – First Certificate"},{v:"CAE",l:"CAE – Certificate in Advanced English"}];
 const BLOCKED = /[<>"'&;\\{}[\]/]/;
+const USERNAME_RE = /^[a-zA-Z0-9_.%-]+$/;
 
-function validate(f) {
+function validateStep1(f) {
   const e = {}, c = s => (s||"").trim();
-  if(!c(f.name))          e.name    = "Numele este obligatoriu.";
-  else if(c(f.name).length < 4)     e.name    = "Introduceți numele complet (minim 4 caractere).";
-  else if(BLOCKED.test(f.name))     e.name    = "Caractere speciale nepermise.";
-
-  if(!c(f.school))        e.school  = "Școala este obligatorie.";
-  else if(BLOCKED.test(f.school))   e.school  = "Caractere speciale nepermise.";
-
-  if(!f.county)           e.county  = "Selectați județul.";
-
-  if(!c(f.teacher))       e.teacher = "Profesorul coordonator este obligatoriu.";
-  else if(BLOCKED.test(f.teacher))  e.teacher = "Caractere speciale nepermise.";
-
-  if(!f.level)            e.level   = "Selectați nivelul.";
-
-  if(!c(f.email))         e.email   = "Email-ul este obligatoriu.";
-  else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email.trim())) e.email = "Format email invalid.";
-
+  if(!c(f.name))         e.name    = "Numele este obligatoriu.";
+  else if(c(f.name).length < 4)    e.name    = "Introduceți numele complet (minim 4 caractere).";
+  else if(BLOCKED.test(f.name))    e.name    = "Caractere speciale nepermise.";
+  if(!c(f.school))       e.school  = "Școala este obligatorie.";
+  else if(BLOCKED.test(f.school))  e.school  = "Caractere speciale nepermise.";
+  if(!f.county)          e.county  = "Selectați județul.";
+  if(!c(f.teacher))      e.teacher = "Profesorul coordonator este obligatoriu.";
+  else if(BLOCKED.test(f.teacher)) e.teacher = "Caractere speciale nepermise.";
+  if(!f.level)           e.level   = "Selectați nivelul.";
   if(f.grade && BLOCKED.test(f.grade)) e.grade = "Caractere speciale nepermise.";
   return e;
 }
 
-function FG({label, name, req, hint, err, children}) {
+function validateStep2(f) {
+  const e = {}, c = s => (s||"").trim();
+  if(!c(f.username))          e.username = "Username-ul este obligatoriu.";
+  else if(c(f.username).length < 3)  e.username = "Minim 3 caractere.";
+  else if(c(f.username).length > 20) e.username = "Maxim 20 de caractere.";
+  else if(!USERNAME_RE.test(f.username)) e.username = "Doar litere, cifre, '.', '_', '%', '-'.";
+  if(!f.password)             e.password = "Parola este obligatorie.";
+  else if(f.password.length < 6)    e.password = "Minim 6 caractere.";
+  if(!c(f.email))             e.email    = "Email-ul este obligatoriu.";
+  else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email.trim())) e.email = "Format email invalid.";
+  return e;
+}
+
+function FG({label, req, hint, err, children}) {
   return (
     <div className="fg">
       <label>{label}{req && <span className="req">*</span>}</label>
@@ -73,35 +79,51 @@ function FG({label, name, req, hint, err, children}) {
 function RegisterApp() {
   CPEEN.seedInitialData();
 
-  const [f,  setF]  = useState({name:"",school:"",county:"",teacher:"",level:"",email:"",grade:""});
+  const [step, setStep] = useState(1);
+  const [f,  setF]  = useState({name:"",school:"",county:"",teacher:"",level:"",grade:"",username:"",password:"",email:""});
   const [e,  setE]  = useState({});
   const [sub, setSub] = useState(null);
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const set = (k, v) => { setF(p=>({...p,[k]:v})); setE(p=>({...p,[k]:""})); };
+  const set = (k, v) => { setF(p=>({...p,[k]:v})); setE(p=>({...p,[k]:""})); setErr(""); };
+
+  const goNext = () => {
+    const errs = validateStep1(f);
+    if(Object.keys(errs).length) { setE(errs); return; }
+    setStep(2); setE({});
+  };
+
+  const goBack = () => { setStep(1); setE({}); setErr(""); };
 
   const submit = () => {
-    const errs = validate(f);
+    const errs = validateStep2(f);
     if(Object.keys(errs).length) { setE(errs); return; }
-
+    if(CPEEN.findParticipantByUsername(f.username)) {
+      setE(p=>({...p, username:"Acest username este deja folosit."})); return;
+    }
     const cfg = CPEEN.getConfig();
     if(cfg.maxPerSchoolPerLevel > 0) {
       const dupes = CPEEN.getParticipants().filter(p =>
-        p.school.trim().toLowerCase() === f.school.trim().toLowerCase() &&
-        p.level === f.level
+        p.school.trim().toLowerCase() === f.school.trim().toLowerCase() && p.level === f.level
       );
       if(dupes.length >= cfg.maxPerSchoolPerLevel) {
         setErr(`Limita de ${cfg.maxPerSchoolPerLevel} participanți per școală per nivel a fost atinsă.`);
         return;
       }
     }
-
-    const p = CPEEN.addParticipant({
-      name: f.name.trim(), school: f.school.trim(), county: f.county,
-      teacher: f.teacher.trim(), level: f.level,
-      email: f.email.trim().toLowerCase(), grade: f.grade.trim()
+    setBusy(true);
+    CPEEN.hashPass(f.password).then(hash => {
+      const p = CPEEN.addParticipant({
+        name: f.name.trim(), school: f.school.trim(), county: f.county,
+        teacher: f.teacher.trim(), level: f.level,
+        email: f.email.trim().toLowerCase(), grade: f.grade.trim(),
+        username: f.username.trim().toLowerCase(),
+        passwordHash: hash
+      });
+      setSub(p);
+      setBusy(false);
     });
-    setSub(p);
   };
 
   if(sub) return (
@@ -110,16 +132,16 @@ function RegisterApp() {
         <div className="card">
           <div className="card-head" style={{textAlign:"center",padding:"32px 28px"}}>
             <div style={{fontSize:44,marginBottom:8}}>✅</div>
-            <h2>Înregistrare confirmată!</h2>
-            <p>Datele tale au fost salvate cu succes.</p>
+            <h2>Cont creat cu succes!</h2>
+            <p>Te-ai înregistrat la ECHO.</p>
           </div>
           <div className="card-body" style={{textAlign:"center"}}>
             <p style={{marginBottom:6,fontSize:14,color:"#555"}}><strong>{sub.name}</strong></p>
             <p style={{fontSize:13,color:"#777",marginBottom:20}}>{sub.school} · {sub.county} · <span className={`badge b-${sub.level}`}>{sub.level}</span></p>
-            <p style={{fontSize:13,color:"#555",marginBottom:10,fontWeight:600}}>Codul tău de acces:</p>
-            <div className="code-box">{sub.accessCode}</div>
+            <p style={{fontSize:13,color:"#555",marginBottom:6,fontWeight:600}}>Username-ul tău:</p>
+            <div className="code-box" style={{letterSpacing:1}}>{sub.username}</div>
             <div className="alert alert-warn" style={{marginTop:18,textAlign:"left"}}>
-              <strong>Notează codul!</strong> Este necesar pentru a accesa dashboard-ul tău și examenul. Nu poate fi recuperat ulterior.
+              Folosește <strong>{sub.username}</strong> și parola aleasă pentru a accesa dashboard-ul și examenul.
             </div>
             <a href="dashboard.html" className="btn btn-primary btn-lg btn-block mt16">Mergi la dashboard →</a>
             <a href="index.html" className="btn btn-ghost btn-block mt8" style={{color:"var(--mid)"}}>← Pagina principală</a>
@@ -146,46 +168,57 @@ function RegisterApp() {
         <div className="card">
           <div className="card-head">
             <h2>Înregistrare participanți</h2>
-            <p>ECHO · Completați toate câmpurile obligatorii marcate cu *</p>
+            <p>ECHO · Pasul {step} din 2 — {step===1?"Informații personale":"Date cont"}</p>
           </div>
           <div className="card-body">
             {err && <div className="alert alert-err">{err}</div>}
 
-            <FG label="Numele și prenumele" name="name" req err={e.name}>
-              {inp("name","text","ex: Ionescu Maria")}
-            </FG>
-
-            <FG label="Școala" name="school" req err={e.school}>
-              {inp("school","text","ex: CN Mihai Viteazul Ploiești")}
-            </FG>
-
-            <div className="grid2">
-              <FG label="Județul" name="county" req err={e.county}>
-                {sel("county", COUNTIES, "Selectează județul")}
+            {step === 1 && <>
+              <FG label="Numele și prenumele" req err={e.name}>
+                {inp("name","text","ex: Ionescu Maria")}
               </FG>
-              <FG label="Clasa" name="grade" hint="ex: X A" err={e.grade}>
-                {inp("grade","text","ex: X A")}
+              <FG label="Școala" req err={e.school}>
+                {inp("school","text","ex: CN Mihai Viteazul Ploiești")}
               </FG>
-            </div>
+              <div className="grid2">
+                <FG label="Județul" req err={e.county}>
+                  {sel("county", COUNTIES, "Selectează județul")}
+                </FG>
+                <FG label="Clasa" hint="ex: X A" err={e.grade}>
+                  {inp("grade","text","ex: X A")}
+                </FG>
+              </div>
+              <FG label="Profesor coordonator" req err={e.teacher}>
+                {inp("teacher","text","ex: Prof. Popescu Ion")}
+              </FG>
+              <FG label="Nivel" req err={e.level}>
+                {sel("level", LEVELS, "Selectează nivelul")}
+              </FG>
+              <button className="btn btn-primary btn-lg btn-block mt8" onClick={goNext}>
+                Pasul următor →
+              </button>
+              <div style={{textAlign:"center",marginTop:12}}>
+                <a href="dashboard.html" style={{fontSize:13}}>Am deja un cont →</a>
+              </div>
+            </>}
 
-            <FG label="Profesor coordonator" name="teacher" req err={e.teacher}>
-              {inp("teacher","text","ex: Prof. Popescu Ion")}
-            </FG>
-
-            <FG label="Email" name="email" req hint="Adresă de email validă" err={e.email}>
-              {inp("email","email","ex: maria.ionescu@scoala.ro")}
-            </FG>
-
-            <FG label="Nivel" name="level" req err={e.level}>
-              {sel("level", LEVELS, "Selectează nivelul")}
-            </FG>
-
-            <button className="btn btn-primary btn-lg btn-block mt8" onClick={submit}>
-              Înregistrează-te →
-            </button>
-            <div style={{textAlign:"center",marginTop:12}}>
-              <a href="dashboard.html" style={{fontSize:13}}>Am deja un cod de acces →</a>
-            </div>
+            {step === 2 && <>
+              <FG label="Username" req hint="3–20 caractere: litere, cifre, '.', '_', '-'" err={e.username}>
+                {inp("username","text","ex: ionescu.maria")}
+              </FG>
+              <FG label="Parolă" req hint="Minim 6 caractere" err={e.password}>
+                {inp("password","password","••••••")}
+              </FG>
+              <FG label="Email" req hint="Adresă de email validă" err={e.email}>
+                {inp("email","email","ex: maria.ionescu@scoala.ro")}
+              </FG>
+              <button className="btn btn-primary btn-lg btn-block mt8" onClick={submit} disabled={busy}>
+                {busy ? "Se înregistrează…" : "Înregistrează-te →"}
+              </button>
+              <button className="btn btn-ghost btn-block mt8" onClick={goBack}>
+                ← Înapoi
+              </button>
+            </>}
           </div>
         </div>
         <div className="text-center text-muted" style={{marginTop:14}}>ECHO · englishgrammarchallenge.ro</div>

@@ -19,7 +19,7 @@
 <script type="text/babel">
 const { useState, useEffect } = React;
 const C = {dark:"#0f172a",mid:"#2563eb",light:"#e2e8f0",green:"#15803d",amber:"#b45309"};
-const STORE_KEY = "cpeen_student_code";
+const STORE_KEY = "cpeen_student_id";
 const LETTERS = ['A','B','C','D','E','F'];
 
 function getCorrectDisplay(part, i) {
@@ -297,7 +297,7 @@ function DashboardView({participant, onLogout}) {
             <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:12,color:"#64748b"}}>
               <span className={`badge b-${participant.level}`}>{participant.level}</span>
               {participant.teacher && <span>Teacher: {participant.teacher}</span>}
-              <span>· Code: <span style={{fontFamily:"monospace",background:"#f8fafc",padding:"2px 7px",borderRadius:4,letterSpacing:2,border:"1px solid #e2e8f0"}}>{participant.accessCode}</span></span>
+              {participant.username && <span>· Username: <strong>{participant.username}</strong></span>}
             </div>
           </div>
 
@@ -340,17 +340,21 @@ function DashboardView({participant, onLogout}) {
   );
 }
 
-function CodeEntry({onLogin, presetCode, presetErr}) {
-  const [code, setCode] = useState(presetCode || "");
-  const [err,  setErr]  = useState(presetErr  || "");
+function LoginEntry({onLogin}) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [err,  setErr]  = useState("");
+  const [busy, setBusy] = useState(false);
 
   const submit = () => {
     setErr("");
-    const c = (code||"").toUpperCase().trim();
-    if(c.length < 4) { setErr("Invalid access code."); return; }
-    const p = CPEEN.findParticipantByCode(c);
-    if(!p) { setErr("Invalid access code. Please check and try again."); return; }
-    onLogin(p);
+    if(!username.trim() || !password) { setErr("Introduceți username-ul și parola."); return; }
+    setBusy(true);
+    CPEEN.loginParticipant(username, password).then(p => {
+      setBusy(false);
+      if(!p) { setErr("Username sau parolă incorectă."); return; }
+      onLogin(p);
+    });
   };
 
   return (
@@ -361,23 +365,29 @@ function CodeEntry({onLogin, presetCode, presetErr}) {
           <div className="card">
             <div className="card-head" style={{textAlign:"center"}}>
               <h2>Student Dashboard</h2>
-              <p>ECHO · Enter your access code</p>
+              <p>ECHO · Autentificare</p>
             </div>
             <div className="card-body">
+              {err && <div className="alert alert-err">{err}</div>}
               <div className="fg">
-                <label>Access code<span className="req">*</span></label>
-                <input className={`inp${err?" err":""}`}
-                  value={code} onChange={e=>setCode(e.target.value.toUpperCase())}
+                <label>Username<span className="req">*</span></label>
+                <input className="inp" value={username}
+                  onChange={e=>{ setUsername(e.target.value); setErr(""); }}
                   onKeyDown={e=>e.key==="Enter"&&submit()}
-                  placeholder="e.g. ABC12345" maxLength={8}
-                  style={{letterSpacing:4,fontSize:20,fontFamily:"monospace",textAlign:"center"}}/>
-                {err && <div className="ferr">{err}</div>}
+                  placeholder="username-ul tău" autoComplete="username"/>
               </div>
-              <button className="btn btn-primary btn-lg btn-block" onClick={submit}>
-                Access dashboard →
+              <div className="fg">
+                <label>Parolă<span className="req">*</span></label>
+                <input type="password" className="inp" value={password}
+                  onChange={e=>{ setPassword(e.target.value); setErr(""); }}
+                  onKeyDown={e=>e.key==="Enter"&&submit()}
+                  placeholder="parola ta" autoComplete="current-password"/>
+              </div>
+              <button className="btn btn-primary btn-lg btn-block" onClick={submit} disabled={busy}>
+                {busy ? "Se verifică…" : "Autentificare →"}
               </button>
               <div style={{textAlign:"center",marginTop:14}}>
-                <a href="register.html" style={{fontSize:13}}>No code? Register →</a>
+                <a href="register.html" style={{fontSize:13}}>Nu ai cont? Înregistrează-te →</a>
               </div>
             </div>
           </div>
@@ -391,41 +401,27 @@ function CodeEntry({onLogin, presetCode, presetErr}) {
 function App() {
   CPEEN.seedInitialData();
   const [participant, setParticipant] = useState(null);
-  const [autoErr, setAutoErr] = useState("");
-  const [autoCode, setAutoCode] = useState("");
 
-  // Auto-login: ?code=XXX in URL, or saved sessionStorage
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlCode = (params.get("code") || "").toUpperCase().trim();
-    const stored  = sessionStorage.getItem(STORE_KEY) || "";
-    const tryCode = urlCode || stored;
-    if(tryCode) {
-      const p = CPEEN.findParticipantByCode(tryCode);
-      if(p) {
-        sessionStorage.setItem(STORE_KEY, tryCode);
-        setParticipant(p);
-      } else if(urlCode) {
-        setAutoCode(urlCode);
-        setAutoErr("Invalid access code. Please check and try again.");
-      }
+    const storedId = sessionStorage.getItem(STORE_KEY);
+    if(storedId) {
+      const p = CPEEN.getParticipants().find(x => x.id === storedId);
+      if(p) setParticipant(p);
     }
   }, []);
 
   const onLogin = (p) => {
-    sessionStorage.setItem(STORE_KEY, p.accessCode);
+    sessionStorage.setItem(STORE_KEY, p.id);
     setParticipant(p);
   };
 
   const onLogout = () => {
     sessionStorage.removeItem(STORE_KEY);
     setParticipant(null);
-    setAutoCode("");
-    setAutoErr("");
   };
 
   if(participant) return <DashboardView participant={participant} onLogout={onLogout}/>;
-  return <CodeEntry onLogin={onLogin} presetCode={autoCode} presetErr={autoErr}/>;
+  return <LoginEntry onLogin={onLogin}/>;
 }
 
 document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#2563eb;font-size:14px;">Se încarcă…</div>';

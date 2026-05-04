@@ -180,6 +180,19 @@ var CPEEN = (function () {
     return getParticipants().find(function (p) { return p.accessCode === c; }) || null;
   }
 
+  function findParticipantByUsername(username) {
+    var u = (username || '').toLowerCase().trim();
+    return getParticipants().find(function (p) { return (p.username || '').toLowerCase() === u; }) || null;
+  }
+
+  function loginParticipant(username, password) {
+    var p = findParticipantByUsername(username);
+    if (!p) return Promise.resolve(null);
+    return hashPass(password).then(function (hash) {
+      return hash === p.passwordHash ? p : null;
+    });
+  }
+
   function updateParticipant(id, updates) {
     var ps = getParticipants();
     var idx = ps.findIndex(function (p) { return p.id === id; });
@@ -582,7 +595,7 @@ var CPEEN = (function () {
     clearSyncError: function() { lastSyncError = null; },
     genId, genCode, hashPass, norm,
     getConfig, saveConfig,
-    getParticipants, saveParticipants, addParticipant, findParticipantByCode, updateParticipant, deleteParticipant, isQualified,
+    getParticipants, saveParticipants, addParticipant, findParticipantByCode, findParticipantByUsername, loginParticipant, updateParticipant, deleteParticipant, isQualified,
     getSessions, saveSessions, getSessionByParticipant, getSessionsByParticipant, createSession, updateSession,
     getGroupSessions, saveGroupSessions, addGroupSession, updateGroupSession, deleteGroupSession,
     addParticipantsToGroup, removeParticipantFromGroup, startGroupSession, finishGroupSession,
