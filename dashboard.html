@@ -164,39 +164,107 @@ function ResultDetail({parts, answers, result}) {
   );
 }
 
-function Sidebar({participant, onLogout}) {
+const SB = {
+  sidebar:{position:"fixed",top:0,left:0,width:240,height:"100vh",background:"#fff",
+    borderRight:"1px solid #e8e8ec",display:"flex",flexDirection:"column",zIndex:300,overflow:"hidden"},
+  brand:{padding:"20px 18px",borderBottom:"1px solid #f1f5f9",flexShrink:0,display:"flex",alignItems:"center",gap:10},
+  logoCircle:{width:34,height:34,borderRadius:"50%",background:"linear-gradient(135deg,#a78bfa,#7c3aed)",
+    display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:13,flexShrink:0},
+  brandText:{flex:1,minWidth:0},
+  brandName:{fontWeight:700,fontSize:14,color:"#0f172a",letterSpacing:"-.2px"},
+  brandDomain:{fontSize:9,color:"#9ca3af",letterSpacing:"1.5px",textTransform:"uppercase"},
+  profile:{padding:"14px 18px",borderBottom:"1px solid #f1f5f9",flexShrink:0,display:"flex",alignItems:"center",gap:10},
+  avatar:{width:34,height:34,borderRadius:"50%",background:"linear-gradient(135deg,#7c3aed,#4c1d95)",
+    display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:700,fontSize:12,flexShrink:0},
+  profileText:{flex:1,minWidth:0},
+  profileName:{fontWeight:700,fontSize:12,color:"#0f172a",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"},
+  nav:{flex:1,padding:"10px 10px",overflowY:"auto"},
+  footer:{padding:"12px 10px",borderTop:"1px solid #f1f5f9",flexShrink:0},
+};
+
+const LVLBG = {A2:{background:"#dcfce7",color:"#15803d"},B1:{background:"#fef3c7",color:"#b45309"},
+  B2:{background:"#f3e8ff",color:"#7c3aed"},C1:{background:"#dbeafe",color:"#1d4ed8"},
+  FCE:{background:"#fef9c3",color:"#854d0e"},CAE:{background:"#e0e7ff",color:"#3730a3"}};
+
+function SvgDash() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+    <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+  </svg>;
+}
+function SvgExam() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/>
+  </svg>;
+}
+function SvgReg() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+  </svg>;
+}
+function SvgLogout() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+    <polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/>
+  </svg>;
+}
+
+function NavLink({href, active, icon, label}) {
+  const base = {display:"flex",alignItems:"center",gap:10,padding:"9px 10px",borderRadius:7,
+    textDecoration:"none",fontSize:13.5,fontWeight:active?600:500,marginBottom:2,cursor:"pointer",
+    transition:"background .12s,color .12s"};
+  const style = active
+    ? {...base,background:"#f5f3ff",color:"#7c3aed"}
+    : {...base,background:"none",color:"#4a4a4a"};
   return (
-    <aside className="app-sidebar">
-      <div className="app-sidebar-brand">
-        <div className="app-sidebar-logo">E</div>
-        <div className="app-sidebar-domain">englishgrammarchallenge.ro</div>
-        <div className="app-sidebar-title">ECHO</div>
+    <a href={href} style={style}
+      onMouseEnter={e=>{ if(!active){ e.currentTarget.style.background="#f5f5f7"; e.currentTarget.style.color="#1a1a2e"; }}}
+      onMouseLeave={e=>{ if(!active){ e.currentTarget.style.background="none"; e.currentTarget.style.color="#4a4a4a"; }}}>
+      <span style={{opacity: active ? 1 : 0.6, display:"flex"}}>{icon}</span>
+      {label}
+    </a>
+  );
+}
+
+function Sidebar({participant, onLogout}) {
+  const initials = participant ? participant.name.trim().split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase() : "E";
+  return (
+    <div style={SB.sidebar}>
+      <div style={SB.brand}>
+        <div style={SB.logoCircle}>E</div>
+        <div style={SB.brandText}>
+          <div style={SB.brandName}>ECHO</div>
+          <div style={SB.brandDomain}>englishgrammarchallenge.ro</div>
+        </div>
       </div>
       {participant && (
-        <div className="app-sidebar-profile">
-          <div className="app-sidebar-name">{participant.name}</div>
-          <span className={`badge b-${participant.level}`}>{participant.level}</span>
+        <div style={SB.profile}>
+          <div style={SB.avatar}>{initials}</div>
+          <div style={SB.profileText}>
+            <div style={SB.profileName}>{participant.name}</div>
+            <span style={{display:"inline-block",padding:"1px 7px",borderRadius:4,fontSize:10,fontWeight:700,...(LVLBG[participant.level]||{})}}>{participant.level}</span>
+          </div>
         </div>
       )}
-      <nav className="app-sidebar-nav">
-        <a href="dashboard.html" className="app-sidebar-link active">
-          <span className="s-icon">📊</span> Dashboard
-        </a>
-        <a href="exam.html" className="app-sidebar-link">
-          <span className="s-icon">✏️</span> Examen
-        </a>
-        <a href="register.html" className="app-sidebar-link">
-          <span className="s-icon">➕</span> Înregistrare
-        </a>
+      <nav style={SB.nav}>
+        <NavLink href="dashboard.html" active icon={<SvgDash/>} label="Dashboard"/>
+        <NavLink href="exam.html" icon={<SvgExam/>} label="Examen"/>
+        <NavLink href="register.html" icon={<SvgReg/>} label="Înregistrare"/>
       </nav>
       {onLogout && (
-        <div className="app-sidebar-footer">
-          <button className="btn btn-ghost btn-sm btn-block" style={{justifyContent:"flex-start",gap:8}} onClick={onLogout}>
-            <span>⬅</span> Deconectare
+        <div style={SB.footer}>
+          <button onClick={onLogout} style={{width:"100%",display:"flex",alignItems:"center",gap:10,
+            padding:"9px 10px",borderRadius:7,border:"none",background:"none",cursor:"pointer",
+            fontSize:13,color:"#64748b",fontFamily:"inherit",fontWeight:500}}
+            onMouseEnter={e=>e.currentTarget.style.background="#f1f5f9"}
+            onMouseLeave={e=>e.currentTarget.style.background="none"}>
+            <SvgLogout/> Deconectare
           </button>
         </div>
       )}
-    </aside>
+    </div>
   );
 }
 
@@ -238,56 +306,93 @@ function SessionCard({s, exam, participant}) {
     URL.revokeObjectURL(a.href);
   };
 
-  const isGrad = s.status !== "submitted";
-  const cardStyle = isGrad
-    ? {borderRadius:10,padding:18,marginBottom:10,overflow:"hidden",position:"relative"}
-    : {border:"1px solid #e2e8f0",borderRadius:10,padding:18,marginBottom:10,background:"#fff"};
+  const GRADIENTS = {
+    A2:"linear-gradient(135deg,#34d399,#059669)",
+    B1:"linear-gradient(135deg,#fbbf24,#d97706)",
+    B2:"linear-gradient(135deg,#a78bfa,#7c3aed)",
+    C1:"linear-gradient(135deg,#60a5fa,#2563eb)",
+    FCE:"linear-gradient(135deg,#f472b6,#db2777)",
+    CAE:"linear-gradient(135deg,#818cf8,#4338ca)"
+  };
+  const isPending = s.status !== "submitted";
+  const grad = GRADIENTS[s.level] || GRADIENTS.B2;
 
   return (
-    <div className={isGrad ? `card-${s.level}` : ""} style={cardStyle}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
-        <div style={{flex:1,minWidth:200}}>
-          <div style={{fontWeight:700,color:isGrad?"#fff":C.dark,fontSize:14,marginBottom:5}}>{examTitle}</div>
-          <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-            {isGrad
-              ? <span style={{background:"rgba(255,255,255,.25)",color:"#fff",borderRadius:5,padding:"2px 8px",fontSize:11,fontWeight:700}}>{s.level}</span>
-              : <span className={`badge b-${s.level}`}>{s.level}</span>
-            }
-            <span style={{fontSize:12,color:isGrad?"rgba(255,255,255,.75)":"#64748b"}}>{stageL}</span>
-            <span style={{fontSize:11,color:isGrad?"rgba(255,255,255,.55)":"#94a3b8",fontFamily:"monospace"}}>· var. {variantId}</span>
-            <StatusBadge status={s.status}/>
-          </div>
-          {s.status === "submitted" && typeof score === "number" && (
-            <div style={{marginTop:8,fontSize:13,color:C.green,fontWeight:700}}>
-              Score: {score}/100{s.submittedAt && <span style={{color:"#94a3b8",fontWeight:400,marginLeft:8,fontSize:12}}>· {new Date(s.submittedAt).toLocaleString("en-GB")}</span>}
+    <div style={{borderRadius:12,marginBottom:10,overflow:"hidden",
+      border:"1px solid #e8e8ec",background:"#fff"}}>
+      {/* Gradient top strip */}
+      {isPending && <div style={{height:4,background:grad}}/>}
+      <div style={{padding:"14px 16px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+          <div style={{flex:1,minWidth:180}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+              {isPending && <div style={{width:8,height:8,borderRadius:"50%",background:grad,flexShrink:0}}/>}
+              <div style={{fontWeight:700,color:C.dark,fontSize:14}}>{examTitle}</div>
             </div>
-          )}
+            <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+              <span style={{...LVLBG[s.level],borderRadius:4,padding:"1px 7px",fontSize:11,fontWeight:700}}>{s.level}</span>
+              <span style={{fontSize:12,color:"#64748b"}}>{stageL}</span>
+              <span style={{fontSize:11,color:"#94a3b8",fontFamily:"monospace"}}>var. {variantId}</span>
+              <StatusBadge status={s.status}/>
+            </div>
+            {s.status === "submitted" && typeof score === "number" && (
+              <div style={{marginTop:8,fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+                <span style={{color:score>=75?"#15803d":score>=50?"#d97706":"#dc2626"}}>
+                  {score}/100
+                </span>
+                <span style={{fontSize:11,color:"#94a3b8",fontWeight:400}}>
+                  nota: {(score/10).toFixed(2)}
+                </span>
+                {s.submittedAt && <span style={{color:"#94a3b8",fontWeight:400,fontSize:11}}>
+                  · {new Date(s.submittedAt).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}
+                </span>}
+              </div>
+            )}
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"flex-start"}}>
+            {canDetail && (
+              <>
+                <button style={{padding:"6px 12px",borderRadius:7,border:"1px solid #e8e8ec",
+                  background:"#fff",cursor:"pointer",fontSize:12,fontWeight:600,color:"#64748b",fontFamily:"inherit"}}
+                  onClick={()=>setShowDetail(d=>!d)}>
+                  {showDetail ? "Ascunde ▲" : "Detalii ▼"}
+                </button>
+                <button style={{padding:"6px 12px",borderRadius:7,border:"1px solid #e8e8ec",
+                  background:"#fff",cursor:"pointer",fontSize:12,fontWeight:600,color:"#64748b",fontFamily:"inherit"}}
+                  onClick={downloadCopy}>⬇ Copie</button>
+              </>
+            )}
+            {s.status === "submitted" && !within24h && (
+              <span style={{fontSize:11,color:"#94a3b8",alignSelf:"center"}}>Copie expirată</span>
+            )}
+            <a href={link} style={{
+              display:"inline-flex",alignItems:"center",padding:"7px 14px",borderRadius:8,
+              background:isPending?grad:"#7c3aed",color:"#fff",fontWeight:700,fontSize:13,
+              textDecoration:"none",whiteSpace:"nowrap",
+              boxShadow:isPending?"0 2px 8px rgba(0,0,0,.15)":"0 2px 8px rgba(124,58,237,.25)"}}>
+              {btnLabel}
+            </a>
+          </div>
         </div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"flex-start"}}>
-          {canDetail && (
-            <>
-              <button className="btn btn-ghost btn-sm" style={isGrad?{background:"rgba(255,255,255,.15)",color:"#fff",border:"none"}:{}}
-                onClick={()=>setShowDetail(d=>!d)}>
-                {showDetail ? "Ascunde ▲" : "Detalii ▼"}
-              </button>
-              <button className="btn btn-ghost btn-sm" style={isGrad?{background:"rgba(255,255,255,.15)",color:"#fff",border:"none"}:{}}
-                onClick={downloadCopy} title="Descarcă copie răspunsuri (disponibilă 24h)">
-                ⬇ Copie
-              </button>
-            </>
-          )}
-          {s.status === "submitted" && !within24h && (
-            <span style={{fontSize:11,color:"#94a3b8",alignSelf:"center"}}>Copie expirată</span>
-          )}
-          <a href={link} className={btnClass}
-            style={isGrad?{background:"rgba(255,255,255,.9)",color:C.mid,whiteSpace:"nowrap"}:{whiteSpace:"nowrap"}}>
-            {btnLabel}
-          </a>
-        </div>
+        {showDetail && canDetail && (
+          <ResultDetail parts={variant.parts} answers={s.answers} result={s.result}/>
+        )}
       </div>
-      {showDetail && canDetail && (
-        <ResultDetail parts={variant.parts} answers={s.answers} result={s.result}/>
-      )}
+    </div>
+  );
+}
+
+function StatCard({gradient, label, value, sub, icon}) {
+  return (
+    <div style={{borderRadius:16,padding:20,background:gradient,boxShadow:"0 2px 8px rgba(0,0,0,.10)",
+      display:"flex",flexDirection:"column",gap:8,minWidth:0}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{width:38,height:38,borderRadius:10,border:"1.5px solid rgba(255,255,255,.4)",
+          display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:17}}>{icon}</div>
+      </div>
+      <div style={{color:"rgba(255,255,255,.75)",fontSize:11,fontWeight:700,letterSpacing:.8,textTransform:"uppercase"}}>{label}</div>
+      <div style={{color:"#fff",fontSize:28,fontWeight:700,lineHeight:1,letterSpacing:"-.5px"}}>{value}</div>
+      {sub && <div style={{color:"rgba(255,255,255,.65)",fontSize:12}}>{sub}</div>}
     </div>
   );
 }
@@ -301,68 +406,106 @@ function DashboardView({participant, onLogout}) {
 
   const order = {in_progress: 0, pending: 1, submitted: 2};
   const sorted = [...sessions].sort((a,b) => (order[a.status]??9) - (order[b.status]??9));
-
   const qualified = CPEEN.isQualified(participant);
 
+  const submitted = sessions.filter(s=>s.status==="submitted");
+  const bestScore = submitted.length ? Math.max(...submitted.map(s=>s.result?.total||0)) : null;
+  const avgScore  = submitted.length ? Math.round(submitted.reduce((a,s)=>a+(s.result?.total||0),0)/submitted.length) : null;
+  const active    = sessions.filter(s=>s.status==="in_progress").length;
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Bună dimineața" : hour < 18 ? "Bună ziua" : "Bună seara";
+
   return (
-    <div className="app-main" style={{background:"var(--bg)"}}>
-      <div className="page">
-        <div className="container" style={{maxWidth:780}}>
+    <div style={{marginLeft:240,minHeight:"100vh",background:"#f5f5f7",display:"flex",flexDirection:"column"}}>
+      {/* Top header */}
+      <div style={{position:"sticky",top:0,zIndex:100,background:"#fff",borderBottom:"1px solid #e8e8ec",
+        height:60,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 32px",flexShrink:0}}>
+        <div>
+          <span style={{fontSize:15,fontWeight:600,color:"#0f172a"}}>{greeting}, {participant.name.split(" ")[0]} 👋</span>
+          <span style={{fontSize:12,color:"#94a3b8",marginLeft:10}}>
+            {participant.school} · {participant.county}
+          </span>
+        </div>
+        <button onClick={()=>setRefreshKey(k=>k+1)} style={{
+          display:"flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:8,
+          border:"1px solid #e8e8ec",background:"#fff",cursor:"pointer",
+          fontSize:13,fontWeight:600,color:"#64748b",fontFamily:"inherit"}}
+          onMouseEnter={e=>e.currentTarget.style.background="#f5f5f7"}
+          onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+          ↻ Refresh
+        </button>
+      </div>
 
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:8}}>
-            <h2 style={{color:C.dark,fontSize:19,fontWeight:700}}>Dashboard</h2>
-            <button className="btn btn-mid btn-sm" onClick={()=>setRefreshKey(k=>k+1)}>↻ Refresh</button>
+      <div style={{flex:1,padding:"32px 32px 48px",maxWidth:1000,width:"100%",margin:"0 auto",boxSizing:"border-box"}}>
+
+        {/* Stats row */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:28}}>
+          <StatCard gradient="linear-gradient(135deg,#a78bfa,#7c3aed)" label="Sesiuni" value={sessions.length}
+            sub={`${active > 0 ? active+" active" : "nicio sesiune activă"}`} icon="📋"/>
+          <StatCard gradient="linear-gradient(135deg,#60a5fa,#2563eb)" label="Finalizate" value={submitted.length}
+            sub={submitted.length===sessions.length&&sessions.length>0?"toate completate":"din "+sessions.length} icon="✅"/>
+          <StatCard gradient="linear-gradient(135deg,#34d399,#059669)" label="Cel mai bun scor" value={bestScore!==null?bestScore+"/100":"—"}
+            sub={avgScore!==null?"medie: "+avgScore:"niciun scor"} icon="🏆"/>
+          <StatCard
+            gradient={qualified?"linear-gradient(135deg,#34d399,#059669)":"linear-gradient(135deg,#fbbf24,#d97706)"}
+            label="Calificare" value={qualified?"Calificat":"Calificare"}
+            sub={qualified?"Acces la Finală":"Etapa de calificare"} icon={qualified?"🎯":"⏳"}/>
+        </div>
+
+        {/* Profile + sessions */}
+        <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:20,alignItems:"start"}}>
+
+          {/* Left: profile card */}
+          <div style={{background:"#fff",borderRadius:16,border:"1px solid #e8e8ec",overflow:"hidden"}}>
+            <div style={{height:70,background:"linear-gradient(135deg,#4c1d95,#7c3aed)"}}/>
+            <div style={{padding:"0 20px 20px",marginTop:-28}}>
+              <div style={{width:56,height:56,borderRadius:"50%",background:"linear-gradient(135deg,#7c3aed,#a78bfa)",
+                border:"3px solid #fff",display:"flex",alignItems:"center",justifyContent:"center",
+                color:"#fff",fontWeight:700,fontSize:18,marginBottom:10}}>
+                {participant.name.trim().split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase()}
+              </div>
+              <div style={{fontWeight:700,fontSize:15,color:"#0f172a",marginBottom:2}}>{participant.name}</div>
+              <div style={{fontSize:12,color:"#64748b",marginBottom:10}}>
+                {participant.school}<br/>{participant.county}{participant.grade && ` · Clasa ${participant.grade}`}
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
+                <span style={{...LVLBG[participant.level],borderRadius:5,padding:"2px 8px",fontSize:11,fontWeight:700}}>{participant.level}</span>
+              </div>
+              {participant.teacher && (
+                <div style={{fontSize:12,color:"#64748b",borderTop:"1px solid #f1f5f9",paddingTop:10,marginTop:4}}>
+                  <span style={{color:"#94a3b8",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.8}}>Profesor</span>
+                  <div style={{fontWeight:600,color:"#374151",marginTop:2}}>{participant.teacher}</div>
+                </div>
+              )}
+              {participant.username && (
+                <div style={{fontSize:12,color:"#64748b",borderTop:"1px solid #f1f5f9",paddingTop:10,marginTop:8}}>
+                  <span style={{color:"#94a3b8",fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.8}}>Username</span>
+                  <div style={{fontWeight:700,color:"#7c3aed",fontFamily:"monospace",fontSize:13,marginTop:2}}>@{participant.username}</div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Profile */}
-          <div style={{background:"#fff",borderRadius:10,padding:20,border:"1px solid #e8e8ec",marginBottom:14}}>
-            <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:10,fontWeight:700}}>Profil</div>
-            <div style={{fontSize:17,fontWeight:700,color:C.dark,marginBottom:4}}>{participant.name}</div>
-            <div style={{fontSize:13,color:"#64748b",marginBottom:10}}>
-              {participant.school} · {participant.county}
-              {participant.grade && <> · Clasa {participant.grade}</>}
-            </div>
-            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:12,color:"#64748b"}}>
-              <span className={`badge b-${participant.level}`}>{participant.level}</span>
-              {participant.teacher && <span>Prof: {participant.teacher}</span>}
-              {participant.username && <span>· @<strong>{participant.username}</strong></span>}
-            </div>
-          </div>
-
-          {/* Qualification */}
-          <div style={{
-            background: qualified ? "#f0fdf4" : "#fffbeb",
-            border: `1px solid ${qualified ? "#86efac" : "#fde68a"}`,
-            borderRadius:10, padding:18, marginBottom:14
-          }}>
-            <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:6,fontWeight:700}}>Status calificare</div>
-            <div style={{fontSize:16,fontWeight:700,color: qualified ? C.green : C.amber}}>
-              {qualified ? "Calificat pentru Finală" : "Etapa de calificare"}
-            </div>
-            <div style={{fontSize:12,color:"#64748b",marginTop:4}}>
-              {qualified
-                ? "Felicitări! Ești calificat pentru etapa finală."
-                : "Pentru a accesa finala, trebuie să fii calificat de un administrator."}
-            </div>
-          </div>
-
-          {/* Sessions */}
-          <div style={{background:"#fff",borderRadius:10,padding:20,border:"1px solid #e8e8ec",marginBottom:16}}>
-            <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:12,fontWeight:700}}>
-              Sesiunile mele ({sessions.length})
+          {/* Right: sessions */}
+          <div style={{background:"#fff",borderRadius:16,border:"1px solid #e8e8ec",padding:22}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>Sesiunile mele</div>
+              <span style={{fontSize:12,color:"#94a3b8",background:"#f5f5f7",borderRadius:20,padding:"2px 10px"}}>{sessions.length}</span>
             </div>
             {sessions.length === 0 ? (
-              <div style={{padding:"20px 0",textAlign:"center",color:"#999",fontSize:13}}>
-                Nicio sesiune alocată încă.<br/>
-                Așteaptă confirmarea din partea administratorului.
+              <div style={{padding:"32px 0",textAlign:"center"}}>
+                <div style={{fontSize:32,marginBottom:10}}>📭</div>
+                <div style={{fontWeight:600,color:"#374151",marginBottom:4}}>Nicio sesiune alocată</div>
+                <div style={{fontSize:12,color:"#94a3b8"}}>Profesorul tău îți va aloca o sesiune în curând.</div>
               </div>
             ) : sorted.map(s => (
               <SessionCard key={s.id} s={s} exam={examMap[s.examId]} participant={participant}/>
             ))}
           </div>
-
-          <div className="text-center text-muted" style={{marginTop:14}}>ECHO · englishgrammarchallenge.ro</div>
         </div>
+
+        <div style={{textAlign:"center",marginTop:28,fontSize:11,color:"#94a3b8"}}>ECHO · englishgrammarchallenge.ro</div>
       </div>
     </div>
   );
@@ -385,49 +528,99 @@ function LoginEntry({onLogin}) {
     });
   };
 
+  const inpStyle = (hasErr) => ({
+    width:"100%",border:`1px solid ${hasErr?"#fca5a5":"#e2e8f0"}`,borderRadius:8,padding:"11px 14px",
+    fontSize:14,outline:"none",background:"#fff",color:"#0f172a",fontFamily:"inherit",
+    transition:"border-color .15s,box-shadow .15s"
+  });
+  const [uFocus,setUFocus]=useState(false);
+  const [pFocus,setPFocus]=useState(false);
+
   return (
-    <div className="page-center" style={{background:"var(--bg)"}}>
-      <div className="wrap-sm">
-        <div style={{textAlign:"center",marginBottom:24}}>
-          <div style={{
-            width:48,height:48,borderRadius:14,
-            background:"linear-gradient(135deg,#7c3aed,#4c1d95)",
+    <div style={{minHeight:"100vh",display:"flex",background:"#f5f5f7"}}>
+      {/* Left panel – branding */}
+      <div style={{flex:"0 0 45%",background:"linear-gradient(150deg,#0f0524 0%,#2d1068 60%,#1e1b4b 100%)",
+        display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+        padding:"60px 48px",position:"relative",overflow:"hidden"}}>
+        {/* decorative circles */}
+        <div style={{position:"absolute",top:-80,right:-80,width:300,height:300,borderRadius:"50%",
+          background:"rgba(124,58,237,.18)",pointerEvents:"none"}}/>
+        <div style={{position:"absolute",bottom:-60,left:-60,width:220,height:220,borderRadius:"50%",
+          background:"rgba(167,139,250,.12)",pointerEvents:"none"}}/>
+        <div style={{position:"relative",zIndex:1,textAlign:"center",maxWidth:320}}>
+          <div style={{width:64,height:64,borderRadius:20,background:"linear-gradient(135deg,#a78bfa,#7c3aed)",
             display:"inline-flex",alignItems:"center",justifyContent:"center",
-            color:"#fff",fontWeight:800,fontSize:20,marginBottom:10
-          }}>E</div>
-          <div style={{fontSize:10,color:"#9ca3af",letterSpacing:2.5,textTransform:"uppercase",marginBottom:2}}>englishgrammarchallenge.ro</div>
-          <div style={{fontWeight:700,fontSize:17,color:"#0f172a"}}>ECHO</div>
-        </div>
-        <div className="card">
-          <div className="card-head" style={{textAlign:"center"}}>
-            <h2>Autentificare</h2>
-            <p>Intră în dashboard-ul tău</p>
+            color:"#fff",fontWeight:800,fontSize:26,marginBottom:28,
+            boxShadow:"0 8px 32px rgba(124,58,237,.45)"}}>E</div>
+          <div style={{fontSize:11,color:"rgba(196,181,253,.6)",letterSpacing:3,textTransform:"uppercase",marginBottom:10}}>englishgrammarchallenge.ro</div>
+          <div style={{fontSize:32,fontWeight:800,color:"#fff",lineHeight:1.2,marginBottom:16,letterSpacing:"-.5px"}}>
+            English Challenge<br/>Hub Online
           </div>
-          <div className="card-body">
-            {err && <div className="alert alert-err">{err}</div>}
-            <div className="fg">
-              <label>Username<span className="req">*</span></label>
-              <input className="inp" value={username}
-                onChange={e=>{ setUsername(e.target.value); setErr(""); }}
-                onKeyDown={e=>e.key==="Enter"&&submit()}
-                placeholder="username-ul tău" autoComplete="username"/>
-            </div>
-            <div className="fg">
-              <label>Parolă<span className="req">*</span></label>
-              <input type="password" className="inp" value={password}
-                onChange={e=>{ setPassword(e.target.value); setErr(""); }}
-                onKeyDown={e=>e.key==="Enter"&&submit()}
-                placeholder="parola ta" autoComplete="current-password"/>
-            </div>
-            <button className="btn btn-primary btn-lg btn-block" onClick={submit} disabled={busy}>
-              {busy ? "Se verifică…" : "Autentificare →"}
-            </button>
-            <div style={{textAlign:"center",marginTop:14}}>
-              <a href="register.html" style={{fontSize:13}}>Nu ai cont? Înregistrează-te →</a>
-            </div>
+          <p style={{fontSize:14,color:"rgba(196,181,253,.75)",lineHeight:1.8,marginBottom:32}}>
+            Concurs de performanță în limba engleză, desfășurat online, pe niveluri Cambridge.
+          </p>
+          <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+            {["A2","B1","B2","C1","FCE","CAE"].map(l=>(
+              <span key={l} style={{...LVLBG[l],borderRadius:5,padding:"3px 10px",fontSize:11,fontWeight:700}}>{l}</span>
+            ))}
           </div>
         </div>
-        <div className="text-center text-muted" style={{marginTop:14}}>ECHO · englishgrammarchallenge.ro</div>
+      </div>
+
+      {/* Right panel – form */}
+      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 32px"}}>
+        <div style={{width:"100%",maxWidth:380}}>
+          <div style={{marginBottom:32}}>
+            <div style={{fontSize:26,fontWeight:800,color:"#0f172a",letterSpacing:"-.4px",marginBottom:6}}>Bun venit</div>
+            <div style={{fontSize:14,color:"#64748b"}}>Autentifică-te în contul tău ECHO.</div>
+          </div>
+
+          {err && (
+            <div style={{background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:8,
+              padding:"11px 14px",marginBottom:16,fontSize:13,color:"#991b1b"}}>
+              {err}
+            </div>
+          )}
+
+          <div style={{marginBottom:16}}>
+            <label style={{display:"block",fontSize:13,fontWeight:600,color:"#374151",marginBottom:6}}>
+              Username
+            </label>
+            <input value={username} style={{...inpStyle(false),boxShadow:uFocus?"0 0 0 3px rgba(124,58,237,.12)":"none",
+              borderColor:uFocus?"#7c3aed":"#e2e8f0"}}
+              onFocus={()=>setUFocus(true)} onBlur={()=>setUFocus(false)}
+              onChange={e=>{ setUsername(e.target.value); setErr(""); }}
+              onKeyDown={e=>e.key==="Enter"&&submit()}
+              placeholder="username-ul tău" autoComplete="username"/>
+          </div>
+          <div style={{marginBottom:24}}>
+            <label style={{display:"block",fontSize:13,fontWeight:600,color:"#374151",marginBottom:6}}>
+              Parolă
+            </label>
+            <input type="password" value={password} style={{...inpStyle(false),boxShadow:pFocus?"0 0 0 3px rgba(124,58,237,.12)":"none",
+              borderColor:pFocus?"#7c3aed":"#e2e8f0"}}
+              onFocus={()=>setPFocus(true)} onBlur={()=>setPFocus(false)}
+              onChange={e=>{ setPassword(e.target.value); setErr(""); }}
+              onKeyDown={e=>e.key==="Enter"&&submit()}
+              placeholder="parola ta" autoComplete="current-password"/>
+          </div>
+          <button onClick={submit} disabled={busy} style={{
+            width:"100%",padding:"13px",borderRadius:9,border:"none",
+            background:busy?"#a78bfa":"#7c3aed",color:"#fff",fontSize:15,fontWeight:700,
+            cursor:busy?"not-allowed":"pointer",fontFamily:"inherit",
+            boxShadow:"0 4px 14px rgba(124,58,237,.35)",transition:"background .12s,transform .1s"}}
+            onMouseEnter={e=>{ if(!busy) e.currentTarget.style.background="#6d28d9"; }}
+            onMouseLeave={e=>{ if(!busy) e.currentTarget.style.background="#7c3aed"; }}>
+            {busy ? "Se verifică…" : "Autentificare →"}
+          </button>
+          <div style={{textAlign:"center",marginTop:20,fontSize:13,color:"#64748b"}}>
+            Nu ai cont?{" "}
+            <a href="register.html" style={{color:"#7c3aed",fontWeight:600,textDecoration:"none"}}>Înregistrează-te →</a>
+          </div>
+          <div style={{textAlign:"center",marginTop:12}}>
+            <a href="index.html" style={{fontSize:12,color:"#94a3b8",textDecoration:"none"}}>← Pagina principală</a>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -456,10 +649,10 @@ function App() {
   };
 
   if(participant) return (
-    <div className="app-layout">
+    <>
       <Sidebar participant={participant} onLogout={onLogout}/>
       <DashboardView participant={participant} onLogout={onLogout}/>
-    </div>
+    </>
   );
   return <LoginEntry onLogin={onLogin}/>;
 }
