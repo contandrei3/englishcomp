@@ -989,7 +989,12 @@ function ExamApp() {
       let next;
       if (typeof sec === 'number') {
         // new parts[] format: sec = partIndex, i = itemIndex
-        const parts = (prev.parts||[]).map((p,pi)=>pi===sec?p.map((x,j)=>j===i?v:x):p);
+        const parts = (prev.parts||[]).map((p,pi)=>{
+          if(pi !== sec) return p;
+          const newP = [...p];
+          newP[i] = v;
+          return newP;
+        });
         next = {...prev, parts};
       } else if (sec === 'writing') {
         next = {...prev, writing: v};
@@ -1392,7 +1397,7 @@ function ExamApp() {
       </>
     );
 
-    const isNew = !!(variant.parts && variant.parts.length);
+    const isNew = !!(variant.parts && (variant.parts.length || variant.writing));
     const secs = isNew
       ? variant.parts.map((part,pi) => {
           const count = getPartCount(part);
@@ -1461,7 +1466,7 @@ function ExamApp() {
   if(view === "exam" && variant) {
     const urgent = timeLeft < 300;
     const hasWriting = !!variant.writing;
-    const isNewFormat = !!(variant.parts && variant.parts.length);
+    const isNewFormat = !!(variant.parts && (variant.parts.length || variant.writing));
     return (
       <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
         {/* Sticky header */}
