@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Simulări – ECHO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="css/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<style>
+/* ── Simulări page ─────────────────────────────────────────────────────── */
+
+/* Hero */
+.sim-hero {
+  background: linear-gradient(135deg, #1a0533 0%, #3b0764 50%, #1e1b4b 100%);
+  color: #fff;
+  padding: 72px 24px 64px;
+  text-align: center;
+}
+.sim-hero-title {
+  font-size: clamp(24px, 4.5vw, 40px);
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 14px;
+  letter-spacing: -.3px;
+}
+.sim-hero-sub {
+  color: rgba(196,181,253,.85);
+  font-size: clamp(14px, 2vw, 15px);
+  max-width: 520px;
+  margin: 0 auto 28px;
+  line-height: 1.75;
+}
+.sim-hero-chips {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.sim-hero-chip {
+  display: inline-block;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(167,139,250,.3);
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #c4b5fd;
+  letter-spacing: .3px;
+}
+
+/* Section titles */
+.sim-section {
+  padding: 56px 24px;
+}
+.sim-section-alt {
+  background: #f8fafc;
+}
+.sim-section-title {
+  font-size: clamp(18px, 3vw, 24px);
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+.sim-section-sub {
+  color: #64748b;
+  font-size: 14px;
+  margin-bottom: 32px;
+}
+
+/* Info cards (3-col) */
+.sim-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.sim-info-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 24px 22px;
+  text-align: left;
+}
+.sim-info-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #f5f3ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  font-size: 20px;
+}
+.sim-info-card h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+.sim-info-card p {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.75;
+}
+
+/* Timeline / simulation cards */
+.sim-timeline {
+  max-width: 780px;
+  margin: 0 auto;
+}
+.sim-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 22px 24px;
+  margin-bottom: 14px;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+.sim-card-num {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #7c3aed, #4c1d95);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sim-card-body {
+  flex: 1;
+  min-width: 0;
+}
+.sim-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.sim-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.sim-card-meta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.sim-card-meta-item {
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.sim-card-meta-item strong {
+  color: #0f172a;
+  font-weight: 600;
+}
+.sim-note {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+/* Registration form */
+.sim-form-wrap {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+/* Success card */
+.sim-success {
+  text-align: center;
+  padding: 32px 24px;
+}
+.sim-success-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #dcfce7;
+  border: 2px solid #86efac;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  font-size: 26px;
+  color: #15803d;
+  font-weight: 700;
+}
+.sim-success h3 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #15803d;
+  margin-bottom: 8px;
+}
+.sim-success p {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.7;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+/* FAQ accordion */
+.sim-faq {
+  max-width: 680px;
+  margin: 0 auto;
+}
+.faq-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+.faq-question {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  transition: background .12s;
+}
+.faq-question:hover {
+  background: #faf8ff;
+}
+.faq-question.open {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+.faq-chevron {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #64748b;
+  transition: transform .2s, background .12s;
+}
+.faq-question.open .faq-chevron {
+  background: #ede9fe;
+  color: #7c3aed;
+  transform: rotate(180deg);
+}
+.faq-answer {
+  padding: 12px 20px 16px;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.75;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Badge variants for simulation status */
+.badge-open {
+  background: #dcfce7;
+  color: #15803d;
+  border-radius: 5px;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.badge-upcoming {
+  background: #f1f5f9;
+  color: #475569;
+  border-radius: 5px;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Footer */
+.sim-footer {
+  background: #0a0118;
+  padding: 36px 24px;
+  text-align: center;
+}
+.sim-footer-brand { color: #e2e8f0; font-weight: 700; font-size: 14px; margin-bottom: 3px; }
+.sim-footer-domain { color: #334155; font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 16px; }
+.sim-footer-links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+.sim-footer-links a { color: #334155; font-size: 12px; text-decoration: none; transition: color .12s; }
+.sim-footer-links a:hover { color: #64748b; }
+.sim-footer-copy { color: #1e293b; font-size: 11px; }
+
+@media(max-width: 768px) {
+  .sim-info-grid { grid-template-columns: 1fr; }
+  .sim-card { flex-direction: column; gap: 12px; }
+}
+@media(max-width: 640px) {
+  .sim-hero { padding: 56px 20px 52px; }
+  .sim-section { padding: 40px 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Static nav -->
+<nav class="nav">
+  <a href="index.html" class="nav-brand">
+    <span class="nav-domain">englishgrammarchallenge.ro</span>
+    <span class="nav-title">ECHO</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Acasă</a>
+    <a href="news.html" class="nav-link">Noutăți</a>
+    <a href="simulari.html" class="nav-link active">Simulări</a>
+    <a href="register.html" class="nav-link">Înregistrare</a>
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+  </div>
+</nav>
+
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState } = React;
+
+const SIMULATIONS = [
+  {
+    id: 'sim1',
+    label: 'Simulare 1',
+    date: '28 Februarie 2026',
+    mode: 'Online',
+    levels: ['B1', 'B2', 'C1'],
+    status: 'open',
+    statusLabel: 'Deschis',
+  },
+  {
+    id: 'sim2',
+    label: 'Simulare 2',
+    date: '10 Martie 2026',
+    mode: 'Online',
+    levels: ['B1', 'B2', 'C1'],
+    status: 'upcoming',
+    statusLabel: 'Upcoming',
+  },
+];
+
+const LEVEL_OPTIONS = [
+  { v: 'B1', l: 'B1 – Intermediar' },
+  { v: 'B2', l: 'B2 – Upper-Intermediate' },
+  { v: 'C1', l: 'C1 – Avansat' },
+];
+
+const SIM_OPTIONS = [
+  { v: 'sim1', l: 'Simulare 1 – 28 Februarie 2026' },
+  { v: 'sim2', l: 'Simulare 2 – 10 Martie 2026' },
+];
+
+const FAQ_ITEMS = [
+  {
+    q: 'Simulările sunt gratuite?',
+    a: 'Da, simulările sunt complet gratuite pentru toți participanții din județul Prahova.',
+  },
+  {
+    q: 'Ce materiale am nevoie?',
+    a: 'Doar un calculator/laptop cu conexiune la internet și un browser modern. Nu sunt necesare materiale suplimentare.',
+  },
+  {
+    q: 'Cum primesc rezultatele?',
+    a: 'Imediat după finalizarea simulării, pe platforma ECHO. Vei vedea scorul, răspunsurile corecte și greșelile.',
+  },
+  {
+    q: 'Pot participa la ambele simulări?',
+    a: 'Da! Poți participa la toate simulările disponibile. Fiecare simulare folosește un set diferit de întrebări.',
+  },
+];
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+function Hero() {
+  return (
+    <div className="sim-hero">
+      <h1 className="sim-hero-title">Simulări de Concurs</h1>
+      <p className="sim-hero-sub">
+        Pregătește-te pentru English Grammar Challenge cu sesiuni de practică supervizate
+      </p>
+      <div className="sim-hero-chips">
+        <span className="sim-hero-chip">Online • Supervizat</span>
+        <span className="sim-hero-chip">40 minute • 50 întrebări</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── Info cards ──────────────────────────────────────────────────────────── */
+function InfoCards() {
+  const cards = [
+    {
+      icon: '🎯',
+      title: 'Practică reală',
+      text: 'Aceleași condiții ca la etapa de calificare online: 40 minute, 50 întrebări multiple choice.',
+    },
+    {
+      icon: '⚡',
+      title: 'Feedback instant',
+      text: 'Rezultatele și corectarea apar imediat după finalizare, cu explicații pe fiecare întrebare.',
+    },
+    {
+      icon: '🛡️',
+      title: 'Fără presiune',
+      text: 'Simulările nu afectează clasamentul oficial. Este un exercițiu pur de pregătire.',
+    },
+  ];
+
+  return (
+    <section className="sim-section">
+      <div className="container" style={{ textAlign: 'center' }}>
+        <h2 className="sim-section-title">Ce sunt simulările?</h2>
+        <p className="sim-section-sub">Tot ce trebuie să știi înainte să te înscrii</p>
+        <div className="sim-info-grid">
+          {cards.map((c) => (
+            <div className="sim-info-card" key={c.title}>
+              <div className="sim-info-icon">{c.icon}</div>
+              <h3>{c.title}</h3>
+              <p>{c.text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Upcoming simulations ────────────────────────────────────────────────── */
+function UpcomingSimulations() {
+  return (
+    <section className="sim-section sim-section-alt">
+      <div className="container">
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <h2 className="sim-section-title">Simulări programate</h2>
+          <p className="sim-section-sub">Alege sesiunea care ți se potrivește și înscrie-te mai jos</p>
+        </div>
+        <div className="sim-timeline">
+          {SIMULATIONS.map((sim, idx) => (
+            <div className="sim-card" key={sim.id}>
+              <div className="sim-card-num">{idx + 1}</div>
+              <div className="sim-card-body">
+                <div className="sim-card-header">
+                  <span className="sim-card-title">{sim.label}</span>
+                  {sim.status === 'open'
+                    ? <span className="badge-open">{sim.statusLabel}</span>
+                    : <span className="badge-upcoming">{sim.statusLabel}</span>
+                  }
+                </div>
+                <div className="sim-card-meta">
+                  <div className="sim-card-meta-item">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <strong>{sim.date}</strong>
+                  </div>
+                  <div className="sim-card-meta-item">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    <span>40 minute</span>
+                  </div>
+                  <div className="sim-card-meta-item">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                    <span>{sim.mode}</span>
+                  </div>
+                  <div className="sim-card-meta-item">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>
+                    </svg>
+                    <span>Niveluri: <strong>{sim.levels.join(', ')}</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+          <div className="sim-note">
+            <div className="alert alert-info" style={{ marginTop: 4 }}>
+              <strong>Notă:</strong> Înscrierea se face la simulare o singură dată. Nu poți participa la aceeași simulare de mai multe ori.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Registration form ───────────────────────────────────────────────────── */
+function RegistrationForm() {
+  const [form, setForm] = useState({
+    name: '', school: '', county: 'Prahova', grade: '',
+    email: '', level: '', simulation: '',
+  });
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [serverErr, setServerErr] = useState('');
+
+  function set(field, val) {
+    setForm(f => ({ ...f, [field]: val }));
+    if (errors[field]) setErrors(e => ({ ...e, [field]: '' }));
+  }
+
+  function validate() {
+    const e = {};
+    const t = s => (s || '').trim();
+    if (!t(form.name))    e.name       = 'Numele complet este obligatoriu.';
+    if (!t(form.school))  e.school     = 'Școala este obligatorie.';
+    if (!t(form.county))  e.county     = 'Județul este obligatoriu.';
+    if (!t(form.email))   e.email      = 'Adresa de email este obligatorie.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+                          e.email      = 'Adresă de email invalidă.';
+    if (!form.level)      e.level      = 'Selectați nivelul.';
+    if (!form.simulation) e.simulation = 'Selectați simularea.';
+    return e;
+  }
+
+  function handleSubmit(ev) {
+    ev.preventDefault();
+    setServerErr('');
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+    setSubmitting(true);
+    try {
+      CPEEN.addSimReg({
+        name:         form.name.trim(),
+        school:       form.school.trim(),
+        county:       form.county.trim(),
+        grade:        form.grade.trim(),
+        email:        form.email.trim(),
+        level:        form.level,
+        simulation:   form.simulation,
+        registeredAt: Date.now(),
+      });
+      setSuccess(true);
+    } catch (err) {
+      setServerErr('A apărut o eroare. Vă rugăm să încercați din nou.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (success) {
+    return (
+      <div className="sim-success">
+        <div className="sim-success-icon">✓</div>
+        <h3>Înregistrare confirmată!</h3>
+        <p>Vei primi detalii pe email cu 48 de ore înainte de simulare.</p>
+        <button
+          className="btn btn-primary"
+          style={{ marginTop: 20 }}
+          onClick={() => {
+            setSuccess(false);
+            setForm({ name: '', school: '', county: 'Prahova', grade: '', email: '', level: '', simulation: '' });
+          }}
+        >
+          Înregistrare nouă
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} noValidate>
+      {serverErr && <div className="alert alert-err">{serverErr}</div>}
+
+      <div className="grid2">
+        <div className="fg">
+          <label>Nume complet <span className="req">*</span></label>
+          <input
+            className={'inp' + (errors.name ? ' err' : '')}
+            type="text"
+            value={form.name}
+            onChange={ev => set('name', ev.target.value)}
+            placeholder="ex: Popescu Ion"
+          />
+          {errors.name && <div className="ferr">{errors.name}</div>}
+        </div>
+        <div className="fg">
+          <label>Clasa</label>
+          <input
+            className="inp"
+            type="text"
+            value={form.grade}
+            onChange={ev => set('grade', ev.target.value)}
+            placeholder="ex: X A"
+          />
+        </div>
+      </div>
+
+      <div className="fg">
+        <label>Școala <span className="req">*</span></label>
+        <input
+          className={'inp' + (errors.school ? ' err' : '')}
+          type="text"
+          value={form.school}
+          onChange={ev => set('school', ev.target.value)}
+          placeholder="ex: Colegiul Național „I.L. Caragiale" Ploiești"
+        />
+        {errors.school && <div className="ferr">{errors.school}</div>}
+      </div>
+
+      <div className="fg">
+        <label>Județul <span className="req">*</span></label>
+        <input
+          className={'inp' + (errors.county ? ' err' : '')}
+          type="text"
+          value={form.county}
+          onChange={ev => set('county', ev.target.value)}
+        />
+        {errors.county && <div className="ferr">{errors.county}</div>}
+      </div>
+
+      <div className="fg">
+        <label>Email <span className="req">*</span></label>
+        <input
+          className={'inp' + (errors.email ? ' err' : '')}
+          type="email"
+          value={form.email}
+          onChange={ev => set('email', ev.target.value)}
+          placeholder="ex: ion.popescu@email.com"
+        />
+        {errors.email && <div className="ferr">{errors.email}</div>}
+      </div>
+
+      <div className="grid2">
+        <div className="fg">
+          <label>Nivel <span className="req">*</span></label>
+          <select
+            className={'inp' + (errors.level ? ' err' : '')}
+            value={form.level}
+            onChange={ev => set('level', ev.target.value)}
+          >
+            <option value="">Selectează nivelul…</option>
+            {LEVEL_OPTIONS.map(o => (
+              <option key={o.v} value={o.v}>{o.l}</option>
+            ))}
+          </select>
+          {errors.level && <div className="ferr">{errors.level}</div>}
+        </div>
+        <div className="fg">
+          <label>Simulare <span className="req">*</span></label>
+          <select
+            className={'inp' + (errors.simulation ? ' err' : '')}
+            value={form.simulation}
+            onChange={ev => set('simulation', ev.target.value)}
+          >
+            <option value="">Selectează simularea…</option>
+            {SIM_OPTIONS.map(o => (
+              <option key={o.v} value={o.v}>{o.l}</option>
+            ))}
+          </select>
+          {errors.simulation && <div className="ferr">{errors.simulation}</div>}
+        </div>
+      </div>
+
+      <div className="fg" style={{ marginTop: 4, marginBottom: 0 }}>
+        <button
+          type="submit"
+          className="btn btn-primary btn-lg btn-block"
+          disabled={submitting}
+        >
+          {submitting ? 'Se înregistrează…' : 'Înscrie-te la simulare →'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/* ── FAQ accordion ───────────────────────────────────────────────────────── */
+function FAQ() {
+  const [openIdx, setOpenIdx] = useState(null);
+
+  function toggle(idx) {
+    setOpenIdx(prev => prev === idx ? null : idx);
+  }
+
+  return (
+    <section className="sim-section">
+      <div className="container">
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <h2 className="sim-section-title">Întrebări frecvente</h2>
+          <p className="sim-section-sub">Răspunsuri la cele mai comune întrebări despre simulări</p>
+        </div>
+        <div className="sim-faq">
+          {FAQ_ITEMS.map((item, idx) => (
+            <div className="faq-item" key={idx}>
+              <button
+                className={'faq-question' + (openIdx === idx ? ' open' : '')}
+                onClick={() => toggle(idx)}
+                type="button"
+                aria-expanded={openIdx === idx}
+              >
+                <span>{item.q}</span>
+                <span className="faq-chevron">&#9660;</span>
+              </button>
+              {openIdx === idx && (
+                <div className="faq-answer">{item.a}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Root app ────────────────────────────────────────────────────────────── */
+function SimulariApp() {
+  return (
+    <div>
+      <Hero />
+      <InfoCards />
+      <UpcomingSimulations />
+
+      <section className="sim-section sim-section-alt">
+        <div className="container">
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <h2 className="sim-section-title">Înscrie-te la o simulare</h2>
+            <p className="sim-section-sub">Completează formularul de mai jos pentru a rezerva locul tău</p>
+          </div>
+          <div className="sim-form-wrap">
+            <div className="card">
+              <div className="card-head">
+                <h2>Formular de înscriere</h2>
+                <p>Câmpurile marcate cu * sunt obligatorii</p>
+              </div>
+              <div className="card-body">
+                <RegistrationForm />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <FAQ />
+
+      <footer className="sim-footer">
+        <div className="sim-footer-brand">ECHO</div>
+        <div className="sim-footer-domain">englishgrammarchallenge.ro</div>
+        <div className="sim-footer-links">
+          <a href="index.html">Acasă</a>
+          <a href="news.html">Noutăți</a>
+          <a href="simulari.html">Simulări</a>
+          <a href="register.html">Înregistrare</a>
+          <a href="dashboard.html">Dashboard</a>
+        </div>
+        <div className="sim-footer-copy">© 2026 ECHO — English Grammar Challenge · Prahova</div>
+      </footer>
+    </div>
+  );
+}
+
+CPEEN.init().then(() => {
+  ReactDOM.createRoot(document.getElementById('root')).render(<SimulariApp />);
+});
+</script>
+</body>
+</html>

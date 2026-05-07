@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Noutăți – Admin ECHO</title>
+<link rel="stylesheet" href="../css/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/admin.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const CAT_LABELS = {
+  general:   'General',
+  important: 'Important',
+  rezultate: 'Rezultate',
+  concurs:   'Concurs',
+};
+
+const CAT_BADGE = {
+  general:   { background: '#64748b', color: '#fff' },
+  important: { background: '#dc2626', color: '#fff' },
+  rezultate: { background: '#15803d', color: '#fff' },
+  concurs:   { background: '#7c3aed', color: '#fff' },
+};
+
+function fmtDate(ts) {
+  if (!ts) return '—';
+  try {
+    return new Date(ts).toLocaleDateString('ro-RO', {
+      day: '2-digit', month: '2-digit', year: 'numeric'
+    });
+  } catch(e) { return '—'; }
+}
+
+const EMPTY_FORM = { title: '', content: '', author: '', category: 'general', pinned: false };
+
+function NewsPage() {
+  if (!ADMIN.isAuthed()) { window.location.replace('index.html'); return null; }
+
+  const [posts,      setPosts]    = useState([]);
+  const [loading,    setLoading]  = useState(true);
+  const [showForm,   setShowForm] = useState(false);
+  const [editPost,   setEditPost] = useState(null);
+  const [form,       setForm]     = useState(EMPTY_FORM);
+  const [saving,     setSaving]   = useState(false);
+  const [alert,      setAlert]    = useState(null); // {type:'ok'|'err', text}
+
+  function loadPosts() {
+    setPosts(CPEEN.getNews());
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    CPEEN.init().then(loadPosts);
+  }, []);
+
+  function openCreate() {
+    setEditPost(null);
+    setForm(EMPTY_FORM);
+    setShowForm(true);
+  }
+
+  function openEdit(post) {
+    setEditPost(post);
+    setForm({
+      title:    post.title    || '',
+      content:  post.content  || '',
+      author:   post.author   || '',
+      category: post.category || 'general',
+      pinned:   !!post.pinned,
+    });
+    setShowForm(true);
+  }
+
+  function closeModal() {
+    setShowForm(false);
+    setEditPost(null);
+    setForm(EMPTY_FORM);
+  }
+
+  function setField(key, val) {
+    setForm(f => ({ ...f, [key]: val }));
+  }
+
+  function flashAlert(type, text) {
+    setAlert({ type, text });
+    setTimeout(() => setAlert(null), 3500);
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!form.title.trim() || !form.content.trim()) return;
+    setSaving(true);
+    try {
+      const payload = {
+        title:    form.title.trim(),
+        content:  form.content.trim(),
+        author:   form.author.trim(),
+        category: form.category,
+        pinned:   form.pinned,
+      };
+      if (editPost) {
+        await CPEEN.updateNewsPost(editPost.id, payload);
+        flashAlert('ok', 'Anunțul a fost actualizat.');
+      } else {
+        await CPEEN.addNewsPost(payload);
+        flashAlert('ok', 'Anunțul a fost adăugat.');
+      }
+      loadPosts();
+      closeModal();
+    } catch(err) {
+      flashAlert('err', 'Eroare la salvare. Încercați din nou.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(post) {
+    if (!window.confirm(`Ștergeți anunțul „${post.title}"?`)) return;
+    try {
+      await CPEEN.deleteNewsPost(post.id);
+      loadPosts();
+      flashAlert('ok', 'Anunțul a fost șters.');
+    } catch(err) {
+      flashAlert('err', 'Eroare la ștergere.');
+    }
+  }
+
+  async function togglePin(post) {
+    try {
+      await CPEEN.updateNewsPost(post.id, { pinned: !post.pinned });
+      loadPosts();
+    } catch(err) {
+      flashAlert('err', 'Eroare la actualizare.');
+    }
+  }
+
+  // Pinned first, then by date desc
+  const sorted = [...posts].sort((a, b) => {
+    if (!!b.pinned !== !!a.pinned) return b.pinned ? 1 : -1;
+    return (b.createdAt || 0) - (a.createdAt || 0);
+  });
+
+  return (
+    <>
+      <ADMIN.Nav active="news" />
+
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 20px' }}>
+
+        {alert && (
+          <div className={`alert ${alert.type === 'ok' ? 'alert-ok' : 'alert-err'}`}
+               style={{ marginBottom: 18 }}>
+            {alert.text}
+          </div>
+        )}
+
+        <div className="panel">
+          <div className="panel-head-mid" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>Administrare Noutăți</span>
+            <button className="btn btn-primary btn-sm" onClick={openCreate}>
+              + Adaugă anunț
+            </button>
+          </div>
+
+          <div className="panel-body">
+            {loading ? (
+              <p style={{ color: '#64748b', textAlign: 'center', padding: '32px 0' }}>Se încarcă…</p>
+            ) : sorted.length === 0 ? (
+              <p style={{ color: '#64748b', textAlign: 'center', padding: '40px 0', fontSize: 15 }}>
+                Niciun anunț publicat încă. Adaugă primul anunț!
+              </p>
+            ) : (
+              <div className="tbl-wrap">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>Titlu</th>
+                      <th>Categorie</th>
+                      <th>Autor</th>
+                      <th>Dată</th>
+                      <th style={{ textAlign: 'center' }}>Fixat</th>
+                      <th style={{ textAlign: 'right' }}>Acțiuni</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map(post => (
+                      <tr key={post.id}>
+                        <td style={{ fontWeight: 600, maxWidth: 280 }}>
+                          <span title={post.title} style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {post.title}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="badge" style={{
+                            ...CAT_BADGE[post.category] || CAT_BADGE.general,
+                            borderRadius: 5, padding: '2px 9px', fontSize: 12, fontWeight: 600
+                          }}>
+                            {CAT_LABELS[post.category] || post.category || 'General'}
+                          </span>
+                        </td>
+                        <td style={{ color: '#475569', fontSize: 13 }}>
+                          {post.author || <span style={{ color: '#94a3b8' }}>—</span>}
+                        </td>
+                        <td style={{ color: '#475569', fontSize: 13, whiteSpace: 'nowrap' }}>
+                          {fmtDate(post.createdAt)}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            title={post.pinned ? 'Dezancorează' : 'Ancorează'}
+                            onClick={() => togglePin(post)}
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              fontSize: 18, opacity: post.pinned ? 1 : 0.25,
+                              transition: 'opacity .15s'
+                            }}
+                          >
+                            📌
+                          </button>
+                        </td>
+                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            style={{ marginRight: 6 }}
+                            onClick={() => openEdit(post)}
+                          >
+                            Editează
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleDelete(post)}
+                          >
+                            Șterge
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Create / Edit Modal */}
+      {showForm && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) closeModal(); }}>
+          <div className="modal-box modal-box-sm">
+            <div className="modal-head modal-head-mid">
+              <span style={{ fontWeight: 700 }}>
+                {editPost ? 'Editează anunț' : 'Anunț nou'}
+              </span>
+              <button className="modal-close" onClick={closeModal} aria-label="Închide">×</button>
+            </div>
+
+            <div className="modal-body">
+              <form onSubmit={handleSubmit}>
+
+                <div className="fg">
+                  <label>Titlu <span style={{ color: '#dc2626' }}>*</span></label>
+                  <input
+                    className="inp"
+                    type="text"
+                    value={form.title}
+                    onChange={e => setField('title', e.target.value)}
+                    required
+                    placeholder="Titlul anunțului"
+                  />
+                </div>
+
+                <div className="fg">
+                  <label>Categorie</label>
+                  <select
+                    className="inp"
+                    value={form.category}
+                    onChange={e => setField('category', e.target.value)}
+                  >
+                    <option value="general">General</option>
+                    <option value="important">Important</option>
+                    <option value="rezultate">Rezultate</option>
+                    <option value="concurs">Concurs</option>
+                  </select>
+                </div>
+
+                <div className="fg">
+                  <label>Autor</label>
+                  <input
+                    className="inp"
+                    type="text"
+                    value={form.author}
+                    onChange={e => setField('author', e.target.value)}
+                    placeholder="Prof. Dorobanțu Andreea"
+                  />
+                </div>
+
+                <div className="fg">
+                  <label>Conținut <span style={{ color: '#dc2626' }}>*</span></label>
+                  <textarea
+                    className="inp"
+                    rows={8}
+                    value={form.content}
+                    onChange={e => setField('content', e.target.value)}
+                    required
+                    placeholder="Textul anunțului…"
+                    style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                  />
+                </div>
+
+                <div className="fg" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input
+                    id="chk-pinned"
+                    type="checkbox"
+                    checked={form.pinned}
+                    onChange={e => setField('pinned', e.target.checked)}
+                    style={{ width: 16, height: 16, cursor: 'pointer' }}
+                  />
+                  <label htmlFor="chk-pinned" style={{ marginBottom: 0, cursor: 'pointer', userSelect: 'none' }}>
+                    Fixat (apare în top)
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+                  <button type="button" className="btn btn-ghost" onClick={closeModal}>
+                    Anulează
+                  </button>
+                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                    {saving ? 'Se salvează…' : 'Salvează'}
+                  </button>
+                </div>
+
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Inject "news" into ADMIN nav links so the active state works
+ADMIN.Nav = (function(OrigNav) {
+  const NEWS_LINK = { href: 'news.html', key: 'news', label: 'Noutăți' };
+  return function PatchedNav(props) {
+    // Temporarily patch LINKS inside ADMIN — we rebuild via createElement
+    const R = React;
+    const active = props.active;
+    const links = [
+      { href: 'index.html',        key: 'dashboard',    label: 'Dashboard' },
+      { href: 'participants.html', key: 'participants', label: 'Participanți' },
+      { href: 'sessions.html',     key: 'sessions',     label: 'Sesiuni' },
+      { href: 'results.html',      key: 'results',      label: 'Rezultate' },
+      { href: 'exams.html',        key: 'exams',        label: 'Subiecte' },
+      { href: 'news.html',         key: 'news',         label: 'Noutăți' },
+      { href: 'settings.html',     key: 'settings',     label: 'Setări' },
+    ];
+    return R.createElement('nav', { className: 'nav' },
+      R.createElement('div', { style: { display: 'flex', flexDirection: 'column' } },
+        R.createElement('span', { className: 'nav-domain' }, 'englishgrammarchallenge.ro'),
+        R.createElement('a', { href: '../index.html', className: 'nav-title', style: { color: '#fff', textDecoration: 'none' } }, 'ECHO')
+      ),
+      R.createElement('div', { className: 'nav-links' },
+        ...links.map(l =>
+          R.createElement('a', {
+            key: l.key,
+            href: l.href,
+            className: 'nav-link' + (active === l.key ? ' active' : '')
+          }, l.label)
+        ),
+        R.createElement('button', {
+          key: 'logout',
+          onClick: ADMIN.logout,
+          style: {
+            background: 'rgba(255,255,255,.15)', color: '#fff',
+            border: '1px solid rgba(255,255,255,.3)', borderRadius: 6,
+            padding: '4px 12px', cursor: 'pointer', fontSize: 13, marginLeft: 8
+          }
+        }, 'Ieși')
+      )
+    );
+  };
+})(ADMIN.Nav);
+
+ReactDOM.createRoot(document.getElementById('root')).render(<NewsPage />);
+</script>
+</body>
+</html>

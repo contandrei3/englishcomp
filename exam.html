@@ -765,6 +765,47 @@ function S3Text({segments}) {
   )}</span>;
 }
 
+function ExamLoginFields({inpS, loginUser, setLoginUser, loginPass, setLoginPass, setLoginErr, enterCredentials, loginBusy}) {
+  const [uF, setUF] = useState(false);
+  const [pF, setPF] = useState(false);
+  return (
+    <>
+      <div style={{marginBottom:16}}>
+        <label style={{display:"block",fontSize:13,fontWeight:600,color:"#374151",marginBottom:6}}>Username</label>
+        <input value={loginUser} style={inpS(uF)}
+          onFocus={()=>setUF(true)} onBlur={()=>setUF(false)}
+          onChange={e=>{ setLoginUser(e.target.value); setLoginErr(""); }}
+          onKeyDown={e=>e.key==="Enter"&&enterCredentials()}
+          placeholder="username-ul tău" autoComplete="username"/>
+      </div>
+      <div style={{marginBottom:24}}>
+        <label style={{display:"block",fontSize:13,fontWeight:600,color:"#374151",marginBottom:6}}>Parolă</label>
+        <input type="password" value={loginPass} style={inpS(pF)}
+          onFocus={()=>setPF(true)} onBlur={()=>setPF(false)}
+          onChange={e=>{ setLoginPass(e.target.value); setLoginErr(""); }}
+          onKeyDown={e=>e.key==="Enter"&&enterCredentials()}
+          placeholder="parola ta" autoComplete="current-password"/>
+      </div>
+      <button onClick={enterCredentials} disabled={loginBusy} style={{
+        width:"100%",padding:"13px",borderRadius:9,border:"none",
+        background:loginBusy?"#a78bfa":"#7c3aed",color:"#fff",fontSize:15,fontWeight:700,
+        cursor:loginBusy?"not-allowed":"pointer",fontFamily:"inherit",
+        boxShadow:"0 4px 14px rgba(124,58,237,.35)",transition:"background .12s"}}
+        onMouseEnter={e=>{ if(!loginBusy) e.currentTarget.style.background="#6d28d9"; }}
+        onMouseLeave={e=>{ if(!loginBusy) e.currentTarget.style.background="#7c3aed"; }}>
+        {loginBusy ? "Se verifică…" : "Intră la examen →"}
+      </button>
+      <div style={{textAlign:"center",marginTop:18,fontSize:13,color:"#64748b"}}>
+        Nu ai cont?{" "}
+        <a href="register.html" style={{color:"#7c3aed",fontWeight:600,textDecoration:"none"}}>Înregistrează-te →</a>
+      </div>
+      <div style={{textAlign:"center",marginTop:10}}>
+        <a href="dashboard.html" style={{fontSize:12,color:"#94a3b8",textDecoration:"none"}}>← Dashboard</a>
+      </div>
+    </>
+  );
+}
+
 function ExamApp() {
   CPEEN.seedInitialData();
 
@@ -1041,45 +1082,63 @@ function ExamApp() {
   );
 
   // ── Login view ───────────────────────────────────────────────────────────
-  if(view === "code") return (
-    <>
-      <Navbar/>
-      <div className="page-center">
-        <div className="wrap-sm">
-          <div className="card">
-            <div className="card-head" style={{textAlign:"center"}}>
-              <h2>Exam Access</h2>
-              <p>ECHO · Autentificare</p>
+  if(view === "code") {
+    const inpS = (focus) => ({
+      width:"100%",border:`1px solid ${focus?"#7c3aed":"#e2e8f0"}`,borderRadius:8,
+      padding:"11px 14px",fontSize:14,outline:"none",background:"#fff",color:"#0f172a",
+      fontFamily:"inherit",boxShadow:focus?"0 0 0 3px rgba(124,58,237,.12)":"none",
+      transition:"border-color .15s,box-shadow .15s"
+    });
+    return (
+      <div style={{minHeight:"100vh",display:"flex",background:"#f5f5f7"}}>
+        {/* Left branding panel */}
+        <div style={{flex:"0 0 44%",background:"linear-gradient(150deg,#0f0524 0%,#2d1068 60%,#1e1b4b 100%)",
+          display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+          padding:"60px 48px",position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",top:-80,right:-80,width:300,height:300,borderRadius:"50%",
+            background:"rgba(124,58,237,.15)",pointerEvents:"none"}}/>
+          <div style={{position:"absolute",bottom:-60,left:-60,width:220,height:220,borderRadius:"50%",
+            background:"rgba(167,139,250,.1)",pointerEvents:"none"}}/>
+          <div style={{position:"relative",zIndex:1,textAlign:"center",maxWidth:300}}>
+            <div style={{width:64,height:64,borderRadius:20,
+              background:"linear-gradient(135deg,#a78bfa,#7c3aed)",
+              display:"inline-flex",alignItems:"center",justifyContent:"center",
+              color:"#fff",fontWeight:800,fontSize:26,marginBottom:28,
+              boxShadow:"0 8px 32px rgba(124,58,237,.45)"}}>E</div>
+            <div style={{fontSize:11,color:"rgba(196,181,253,.6)",letterSpacing:3,textTransform:"uppercase",marginBottom:8}}>englishgrammarchallenge.ro</div>
+            <div style={{fontSize:30,fontWeight:800,color:"#fff",lineHeight:1.2,marginBottom:14,letterSpacing:"-.5px"}}>
+              English Grammar<br/>Challenge
             </div>
-            <div className="card-body">
-              {loginErr && <div className="alert alert-err">{loginErr}</div>}
-              <div className="fg">
-                <label>Username<span className="req">*</span></label>
-                <input className="inp" value={loginUser}
-                  onChange={e=>{ setLoginUser(e.target.value); setLoginErr(""); }}
-                  onKeyDown={e=>e.key==="Enter"&&enterCredentials()}
-                  placeholder="username-ul tău" autoComplete="username"/>
-              </div>
-              <div className="fg">
-                <label>Parolă<span className="req">*</span></label>
-                <input type="password" className="inp" value={loginPass}
-                  onChange={e=>{ setLoginPass(e.target.value); setLoginErr(""); }}
-                  onKeyDown={e=>e.key==="Enter"&&enterCredentials()}
-                  placeholder="parola ta" autoComplete="current-password"/>
-              </div>
-              <button className="btn btn-primary btn-lg btn-block" onClick={enterCredentials} disabled={loginBusy}>
-                {loginBusy ? "Se verifică…" : "Intră la examen →"}
-              </button>
-              <div style={{textAlign:"center",marginTop:14}}>
-                <a href="register.html" style={{fontSize:13}}>Nu ai cont? Înregistrează-te →</a>
-              </div>
+            <p style={{fontSize:13,color:"rgba(196,181,253,.7)",lineHeight:1.8,marginBottom:28}}>
+              Prahova County 2026 · Ediția I<br/>Platformă online de examinare Cambridge.
+            </p>
+            <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+              {["B1","B2","C1"].map(l=>(
+                <span key={l} style={{background:"rgba(167,139,250,.2)",border:"1px solid rgba(167,139,250,.35)",
+                  borderRadius:5,padding:"3px 10px",fontSize:11,fontWeight:700,color:"#a78bfa"}}>{l}</span>
+              ))}
             </div>
           </div>
-          <div className="text-center text-muted" style={{marginTop:14}}>ECHO · englishgrammarchallenge.ro</div>
+        </div>
+        {/* Right form panel */}
+        <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 32px"}}>
+          <div style={{width:"100%",maxWidth:380}}>
+            <div style={{marginBottom:28}}>
+              <div style={{fontSize:24,fontWeight:800,color:"#0f172a",letterSpacing:"-.3px",marginBottom:6}}>Acces Examen</div>
+              <div style={{fontSize:14,color:"#64748b"}}>Autentifică-te pentru a susține examenul alocat.</div>
+            </div>
+            {loginErr && (
+              <div style={{background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:8,
+                padding:"11px 14px",marginBottom:16,fontSize:13,color:"#991b1b"}}>{loginErr}</div>
+            )}
+            <ExamLoginFields inpS={inpS} loginUser={loginUser} setLoginUser={setLoginUser}
+              loginPass={loginPass} setLoginPass={setLoginPass} setLoginErr={setLoginErr}
+              enterCredentials={enterCredentials} loginBusy={loginBusy}/>
+          </div>
         </div>
       </div>
-    </>
-  );
+    );
+  }
 
   // ── No exam available ───────────────────────────────────────────────────
   if(view === "noExam") {

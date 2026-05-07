@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Noutăți & Anunțuri – ECHO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<style>
+.news-hero {
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  border-bottom: 1px solid #ddd6fe;
+  padding: 48px 24px 40px;
+  text-align: center;
+}
+.news-hero-title {
+  font-size: clamp(22px, 4vw, 32px);
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 8px;
+  letter-spacing: -0.3px;
+}
+.news-hero-sub {
+  color: #64748b;
+  font-size: 15px;
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.filter-btn {
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color .12s, background .12s, color .12s;
+  line-height: 1.5;
+}
+.filter-btn:hover {
+  border-color: #7c3aed;
+  color: #7c3aed;
+  background: #f5f3ff;
+}
+.filter-btn.active {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: #fff;
+}
+
+.news-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 14px;
+  margin-top: 8px;
+}
+.news-section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.news-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  transition: box-shadow .15s, border-color .15s;
+}
+.news-card:hover {
+  box-shadow: 0 4px 20px rgba(124,58,237,.08);
+  border-color: #c4b5fd;
+}
+.news-card.pinned-card {
+  border-color: #c4b5fd;
+  box-shadow: 0 2px 12px rgba(124,58,237,.07);
+}
+
+.pin-banner {
+  background: linear-gradient(90deg, #7c3aed 0%, #6d28d9 100%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  padding: 5px 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.news-card-body {
+  padding: 22px 24px;
+}
+
+.news-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.cat-badge {
+  display: inline-block;
+  border-radius: 5px;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+.cat-general   { background: #f1f5f9; color: #475569; }
+.cat-important { background: #fee2e2; color: #991b1b; }
+.cat-rezultate { background: #dcfce7; color: #15803d; }
+.cat-concurs   { background: #ede9ff; color: #6d28d9; }
+
+.news-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 10px;
+  line-height: 1.35;
+}
+
+.news-card-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+.news-card-info .dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  display: inline-block;
+}
+
+.news-card-content {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.pinned-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f5f3ff;
+  border: 1px solid #c4b5fd;
+  border-radius: 5px;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7c3aed;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 72px 24px;
+  color: #94a3b8;
+}
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  display: block;
+}
+.empty-state-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 6px;
+}
+.empty-state-sub {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+.spinner-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 52px);
+}
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #7c3aed;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 640px) {
+  .news-hero { padding: 36px 20px 32px; }
+  .news-card-body { padding: 18px 18px; }
+  .news-card-title { font-size: 16px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html" class="nav-brand">
+    <span class="nav-domain">englishgrammarchallenge.ro</span>
+    <span class="nav-title">ECHO</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Acasă</a>
+    <a href="news.html" class="nav-link active">Noutăți</a>
+    <a href="simulari.html" class="nav-link">Simulări</a>
+    <a href="register.html" class="nav-link">Înregistrare</a>
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+  </div>
+</nav>
+
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo } = React;
+
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+const MONTH_RO = [
+  'ianuarie','februarie','martie','aprilie','mai','iunie',
+  'iulie','august','septembrie','octombrie','noiembrie','decembrie'
+];
+
+function fmtDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return `${d.getDate()} ${MONTH_RO[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+const CAT_LABELS = {
+  general:   'General',
+  important: 'Important',
+  rezultate: 'Rezultate',
+  concurs:   'Concurs',
+};
+
+const FILTERS = [
+  { key: 'all',       label: 'Toate' },
+  { key: 'general',   label: 'General' },
+  { key: 'important', label: 'Important' },
+  { key: 'rezultate', label: 'Rezultate' },
+  { key: 'concurs',   label: 'Concurs' },
+];
+
+/* ── Sub-components ──────────────────────────────────────────────────────── */
+function CategoryBadge({ category }) {
+  const cls = `cat-badge cat-${category || 'general'}`;
+  const label = CAT_LABELS[category] || category || 'General';
+  return <span className={cls}>{label}</span>;
+}
+
+function NewsCard({ post, showPinBanner }) {
+  return (
+    <div className={`news-card${post.pinned ? ' pinned-card' : ''}`}>
+      {showPinBanner && post.pinned && (
+        <div className="pin-banner">
+          <span>📌</span>
+          <span>Anunț fixat</span>
+        </div>
+      )}
+      <div className="news-card-body">
+        <div className="news-card-meta">
+          <CategoryBadge category={post.category} />
+          {post.pinned && (
+            <span className="pinned-chip">📌 Anunț important</span>
+          )}
+        </div>
+        <div className="news-card-title">{post.title}</div>
+        <div className="news-card-info">
+          <span>{fmtDate(post.createdAt)}</span>
+          {post.author && (
+            <>
+              <span className="dot"></span>
+              <span>{post.author}</span>
+            </>
+          )}
+        </div>
+        <div className="news-card-content">{post.content}</div>
+      </div>
+    </div>
+  );
+}
+
+function FilterBar({ active, onChange }) {
+  return (
+    <div className="filter-bar">
+      {FILTERS.map(f => (
+        <button
+          key={f.key}
+          className={`filter-btn${active === f.key ? ' active' : ''}`}
+          onClick={() => onChange(f.key)}
+        >
+          {f.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ── Main App ────────────────────────────────────────────────────────────── */
+function NewsApp() {
+  const [filter, setFilter] = useState('all');
+
+  const allPosts = CPEEN.getNews();
+
+  const filtered = useMemo(() => {
+    if (filter === 'all') return allPosts;
+    return allPosts.filter(p => (p.category || 'general') === filter);
+  }, [allPosts, filter]);
+
+  const pinned = filtered.filter(p => p.pinned);
+  const regular = filtered.filter(p => !p.pinned);
+  const isEmpty = filtered.length === 0;
+
+  return (
+    <div>
+      {/* Hero */}
+      <div className="news-hero">
+        <div className="news-hero-title">Noutăți &amp; Anunțuri</div>
+        <p className="news-hero-sub">
+          Informații actualizate despre concurs, rezultate și activitățile platformei ECHO.
+        </p>
+      </div>
+
+      {/* Content */}
+      <div className="page">
+        <div className="container" style={{maxWidth: 760}}>
+
+          <FilterBar active={filter} onChange={setFilter} />
+
+          {isEmpty ? (
+            <div className="empty-state">
+              <span className="empty-state-icon">📢</span>
+              <div className="empty-state-title">Niciun anunț publicat încă</div>
+              <p className="empty-state-sub">
+                Revino în curând pentru noutăți despre concurs și activitățile ECHO.
+              </p>
+            </div>
+          ) : (
+            <>
+              {pinned.length > 0 && (
+                <div>
+                  <div className="news-section-label">Anunțuri fixate</div>
+                  {pinned.map(post => (
+                    <NewsCard key={post.id} post={post} showPinBanner={true} />
+                  ))}
+                </div>
+              )}
+
+              {regular.length > 0 && (
+                <div style={pinned.length > 0 ? {marginTop: 28} : {}}>
+                  {pinned.length > 0 && (
+                    <div className="news-section-label">Toate anunțurile</div>
+                  )}
+                  {regular.map(post => (
+                    <NewsCard key={post.id} post={post} showPinBanner={false} />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Loading spinner ─────────────────────────────────────────────────────── */
+function Spinner() {
+  return (
+    <div className="spinner-wrap">
+      <div className="spinner"></div>
+    </div>
+  );
+}
+
+/* ── Boot ────────────────────────────────────────────────────────────────── */
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<Spinner />);
+
+CPEEN.init().then(() => {
+  root.render(<NewsApp />);
+}).catch(err => {
+  root.render(
+    <div className="page">
+      <div className="container" style={{maxWidth: 760}}>
+        <div className="alert alert-err" style={{marginTop: 32}}>
+          <strong>Eroare la încărcare.</strong> Verifică conexiunea și reîncearcă.
+        </div>
+      </div>
+    </div>
+  );
+});
+</script>
+</body>
+</html>

@@ -3,124 +3,212 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>ECHO – English Challenge Hub Online</title>
+<title>English Grammar Challenge – Prahova County 2026</title>
 <link rel="stylesheet" href="css/style.css"/>
 <style>
-/* ── Landing page ─────────────────────────────────────────────────────── */
 body{background:#fff;}
 
-.lp-hero{
-  background:linear-gradient(135deg,#0f0524 0%,#2d1068 55%,#1e1b4b 100%);
-  color:#fff;
-  padding:88px 24px 76px;
-  text-align:center;
-}
-.lp-eyebrow{
-  display:inline-block;
-  font-size:10px;letter-spacing:3px;text-transform:uppercase;
-  color:rgba(196,181,253,.75);
-  margin-bottom:26px;
-}
-.lp-title{
-  font-size:clamp(26px,5vw,46px);
-  font-weight:700;line-height:1.15;
-  max-width:680px;margin:0 auto 16px;
-}
-.lp-sub{
-  color:rgba(196,181,253,.85);font-size:clamp(14px,2vw,16px);
-  max-width:500px;margin:0 auto 36px;line-height:1.8;
-}
-.lp-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:44px;}
-.lp-cta-primary{
-  display:inline-block;padding:12px 28px;border-radius:7px;
-  background:#7c3aed;color:#fff;font-weight:600;font-size:14px;
-  text-decoration:none;transition:background .12s;
-}
-.lp-cta-primary:hover{background:#6d28d9;}
-.lp-cta-outline{
-  display:inline-block;padding:12px 28px;border-radius:7px;
-  background:transparent;color:rgba(196,181,253,.8);font-weight:600;font-size:14px;
-  border:1px solid rgba(167,139,250,.35);text-decoration:none;
-  transition:background .12s,color .12s;
-}
-.lp-cta-outline:hover{background:rgba(124,58,237,.12);color:#fff;}
-.lp-levels{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
-.lp-badge{
-  display:inline-block;padding:4px 12px;border-radius:20px;
-  font-size:11px;font-weight:700;
-}
+/* ── Nav override for landing ── */
+.nav-link{font-size:12.5px;}
 
-/* About */
-.lp-about{padding:88px 24px;background:#fff;}
-.lp-about-inner{max-width:1040px;margin:0 auto;}
-.lp-about-grid{display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:start;}
-.lp-about h2{font-size:clamp(20px,3vw,27px);color:#0f172a;margin-bottom:18px;line-height:1.3;font-weight:700;}
-.lp-about p{font-size:14px;color:#475569;line-height:1.85;margin-bottom:14px;}
-.about-list{list-style:none;padding:0;margin-top:8px;}
-.about-list li{
-  font-size:14px;color:#374151;padding:11px 0 11px 26px;
-  border-bottom:1px solid #f1f5f9;position:relative;line-height:1.55;
+/* ── Hero ── */
+.hero{
+  background:linear-gradient(150deg,#0f0524 0%,#2d1068 55%,#1e1b4b 100%);
+  color:#fff;padding:80px 24px 70px;text-align:center;position:relative;overflow:hidden;
 }
-.about-list li::before{
-  content:"";position:absolute;left:0;top:19px;
-  width:7px;height:7px;border-radius:50%;
-  background:#7c3aed;
-}
-.about-list li:last-child{border-bottom:none;}
+.hero::before{content:"";position:absolute;top:-120px;right:-120px;width:500px;height:500px;
+  border-radius:50%;background:rgba(124,58,237,.12);pointer-events:none;}
+.hero::after{content:"";position:absolute;bottom:-80px;left:-80px;width:360px;height:360px;
+  border-radius:50%;background:rgba(167,139,250,.08);pointer-events:none;}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;
+  background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.3);
+  border-radius:20px;padding:5px 14px;font-size:11px;letter-spacing:2px;
+  text-transform:uppercase;color:rgba(196,181,253,.85);margin-bottom:24px;}
+.hero h1{font-size:clamp(26px,5vw,50px);font-weight:800;line-height:1.12;
+  max-width:700px;margin:0 auto 8px;letter-spacing:-.5px;}
+.hero-sub1{font-size:clamp(13px,2vw,16px);color:rgba(196,181,253,.8);
+  margin:10px auto 28px;max-width:520px;line-height:1.75;}
+.hero-cta{display:inline-flex;align-items:center;gap:8px;padding:13px 30px;
+  border-radius:9px;background:#7c3aed;color:#fff;font-weight:700;font-size:15px;
+  text-decoration:none;box-shadow:0 4px 20px rgba(124,58,237,.45);transition:background .12s,transform .12s;}
+.hero-cta:hover{background:#6d28d9;transform:translateY(-1px);}
+.hero-note{font-size:11px;color:rgba(196,181,253,.5);margin-top:10px;}
 
-/* How it works */
-.lp-steps-wrap{background:#f8fafc;padding:88px 24px;}
-.lp-steps{max-width:1040px;margin:0 auto;}
-.lp-steps-head{text-align:center;margin-bottom:56px;}
-.lp-steps-head h2{font-size:clamp(20px,3vw,27px);color:#0f172a;font-weight:700;margin-bottom:8px;}
-.lp-steps-sub{color:#64748b;font-size:14px;}
-.steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;}
-.step-num{font-size:11px;font-weight:700;color:#7c3aed;font-family:monospace;letter-spacing:2px;margin-bottom:16px;}
-.step h3{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px;}
-.step p{font-size:13px;color:#64748b;line-height:1.8;}
+/* ── Countdown ── */
+.countdown-wrap{margin:36px auto 0;display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
+.countdown-label{font-size:10px;color:rgba(196,181,253,.55);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+.countdown-block{text-align:center;min-width:70px;}
+.countdown-num{font-size:36px;font-weight:800;color:#fff;line-height:1;letter-spacing:-1px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;padding:10px 16px;display:block;}
+.countdown-sep{font-size:30px;font-weight:300;color:rgba(196,181,253,.3);align-self:center;padding-bottom:18px;}
+.countdown-title{font-size:11px;color:rgba(196,181,253,.45);margin-top:10px;letter-spacing:2px;text-transform:uppercase;}
 
-/* Levels */
-.lp-levels-wrap{background:linear-gradient(135deg,#1a0533 0%,#2d1068 100%);padding:88px 24px;}
-.lp-levels-inner{max-width:1040px;margin:0 auto;}
-.lp-levels-head{text-align:center;margin-bottom:52px;}
-.lp-levels-head h2{font-size:clamp(20px,3vw,27px);color:#fff;font-weight:700;margin-bottom:8px;}
-.lp-levels-sub{color:#64748b;font-size:14px;}
-.levels-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
-.level-card{
-  background:rgba(255,255,255,.05);
-  border:1px solid rgba(255,255,255,.09);
-  border-radius:9px;padding:22px 20px;
-}
-.level-badge{display:inline-block;border-radius:5px;padding:3px 10px;font-size:11px;font-weight:700;margin-bottom:12px;}
-.level-card h3{font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:8px;}
-.level-card p{font-size:13px;color:#64748b;line-height:1.75;}
+/* ── Section commons ── */
+.section{padding:80px 24px;}
+.section-inner{max-width:1060px;margin:0 auto;}
+.sec-eyebrow{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+  color:#7c3aed;margin-bottom:10px;}
+.sec-title{font-size:clamp(20px,3vw,28px);font-weight:800;color:#0f172a;margin-bottom:14px;line-height:1.25;letter-spacing:-.3px;}
+.sec-sub{font-size:14px;color:#64748b;line-height:1.8;max-width:600px;}
 
-/* CTA */
-.lp-cta-wrap{background:#0f0524;padding:80px 24px;text-align:center;}
-.lp-cta-wrap h2{font-size:clamp(20px,3vw,26px);color:#fff;font-weight:700;margin-bottom:10px;}
-.lp-cta-wrap p{
-  color:#64748b;font-size:14px;
-  max-width:440px;margin:0 auto 28px;line-height:1.75;
-}
+/* ── Infographic banner ── */
+.infobanner{background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 100%);padding:60px 24px;}
+.infobanner-inner{max-width:1060px;margin:0 auto;}
+.infobanner-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;}
+.infobanner-text{color:#fff;}
+.infobanner-text h2{font-size:clamp(18px,2.5vw,24px);font-weight:800;margin-bottom:14px;line-height:1.3;}
+.infobanner-text p{font-size:14px;color:rgba(255,255,255,.75);line-height:1.8;margin-bottom:20px;}
+.info-req-list{list-style:none;padding:0;}
+.info-req-list li{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:rgba(255,255,255,.85);padding:7px 0;border-bottom:1px solid rgba(255,255,255,.1);}
+.info-req-list li:last-child{border-bottom:none;}
+.info-req-list li::before{content:"✓";color:#a78bfa;font-weight:700;flex-shrink:0;margin-top:1px;}
+.gallery-card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+  border-radius:14px;padding:28px;text-align:center;color:#fff;}
+.gallery-card .icon{font-size:44px;margin-bottom:14px;}
+.gallery-card h3{font-size:16px;font-weight:700;margin-bottom:10px;}
+.gallery-card p{font-size:13px;color:rgba(255,255,255,.7);line-height:1.7;}
+.gallery-score{display:flex;gap:10px;justify-content:center;margin-top:16px;}
+.score-pill{background:rgba(255,255,255,.12);border-radius:20px;padding:6px 16px;font-size:12px;font-weight:700;}
 
-/* Footer */
-.lp-footer{background:#0a0118;padding:40px 24px;text-align:center;}
-.lp-footer-brand{color:#e2e8f0;font-weight:700;font-size:14px;margin-bottom:3px;letter-spacing:.3px;}
-.lp-footer-domain{color:#334155;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:20px;}
-.lp-footer-links{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-bottom:18px;}
-.lp-footer-links a{color:#334155;font-size:12px;text-decoration:none;transition:color .12s;}
-.lp-footer-links a:hover{color:#64748b;}
-.lp-footer-copy{color:#1e293b;font-size:11px;}
+/* ── About ── */
+.about-section{background:#fff;}
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start;}
+.about-text p{font-size:14px;color:#475569;line-height:1.85;margin-bottom:14px;}
+.about-chip{display:inline-block;background:#f5f3ff;color:#7c3aed;border-radius:5px;
+  padding:3px 10px;font-size:11px;font-weight:700;margin-bottom:18px;}
+.level-table{width:100%;border-collapse:collapse;font-size:13px;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;}
+.level-table th{background:#f8fafc;color:#64748b;font-size:10px;font-weight:700;
+  letter-spacing:.8px;text-transform:uppercase;padding:10px 14px;text-align:left;border-bottom:1px solid #e2e8f0;}
+.level-table td{padding:11px 14px;border-bottom:1px solid #f1f5f9;color:#374151;vertical-align:top;}
+.level-table tr:last-child td{border-bottom:none;}
+.limit-box{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-top:16px;font-size:13px;color:#92400e;line-height:1.7;}
+.free-badge{background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;border-radius:10px;
+  padding:18px 20px;text-align:center;margin-top:16px;}
+.free-badge .free-word{font-size:28px;font-weight:800;letter-spacing:1px;}
+.free-badge p{font-size:12px;color:rgba(255,255,255,.75);margin-top:4px;}
 
-/* Responsive */
-@media(max-width:860px){
-  .lp-about-grid{grid-template-columns:1fr;gap:40px;}
-  .steps-grid{grid-template-columns:1fr;gap:32px;}
-  .levels-grid{grid-template-columns:1fr 1fr;}
+/* ── Structure ── */
+.structure-section{background:#f8fafc;}
+.stage-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:40px;}
+.stage-card{background:#fff;border-radius:14px;border:1px solid #e2e8f0;overflow:hidden;}
+.stage-head{padding:20px 24px;border-bottom:1px solid #e2e8f0;}
+.stage-head.online{background:linear-gradient(135deg,#7c3aed,#4c1d95);}
+.stage-head.finala{background:linear-gradient(135deg,#059669,#047857);}
+.stage-head h3{color:#fff;font-size:16px;font-weight:800;margin-bottom:4px;}
+.stage-head p{color:rgba(255,255,255,.7);font-size:12px;}
+.stage-body{padding:22px 24px;}
+.stage-meta{display:flex;flex-direction:column;gap:9px;margin-bottom:18px;}
+.stage-row{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#374151;}
+.stage-row .s-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+.stage-row strong{color:#0f172a;}
+.prog-list{list-style:none;padding:0;font-size:13px;}
+.prog-list li{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #f8fafc;color:#374151;}
+.prog-list li:last-child{border-bottom:none;}
+.prog-list .time{font-family:monospace;font-weight:700;color:#7c3aed;min-width:50px;flex-shrink:0;}
+.content-pct{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.pct-chip{background:#f5f3ff;border:1px solid #e9d5ff;border-radius:5px;padding:3px 9px;font-size:11px;color:#7c3aed;font-weight:600;}
+.part-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;}
+.part-item{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:7px 10px;font-size:12px;color:#15803d;}
+.part-item strong{display:block;font-weight:700;font-size:11px;color:#166534;}
+
+/* ── Prizes ── */
+.prizes-section{background:#fff;}
+.podium-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:36px;}
+.prize-card{border-radius:12px;padding:22px;text-align:center;}
+.prize-card.gold{background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;}
+.prize-card.silver{background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border:1px solid #cbd5e1;}
+.prize-card.bronze{background:linear-gradient(135deg,#fff7ed,#fed7aa);border:1px solid #fb923c;}
+.prize-card.mention{background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1px solid #c4b5fd;}
+.prize-icon{font-size:36px;margin-bottom:10px;}
+.prize-title{font-size:14px;font-weight:800;color:#0f172a;margin-bottom:6px;}
+.prize-sub{font-size:12px;color:#64748b;line-height:1.6;}
+.prize-count{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin-top:8px;}
+.infographic-prizes{background:#f5f3ff;border:1px solid #e9d5ff;border-radius:12px;padding:22px;margin-top:20px;text-align:center;}
+.infographic-prizes h4{font-size:14px;font-weight:800;color:#4c1d95;margin-bottom:6px;}
+.infographic-prizes p{font-size:13px;color:#6d28d9;line-height:1.7;}
+.diplomas-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px;}
+.diploma-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;
+  display:flex;gap:12px;align-items:flex-start;}
+.diploma-icon{font-size:22px;flex-shrink:0;}
+.diploma-text{font-size:13px;color:#374151;line-height:1.6;}
+.diploma-text strong{display:block;font-size:12px;color:#0f172a;font-weight:700;margin-bottom:3px;}
+
+/* ── Registration / Docs ── */
+.reg-section{background:linear-gradient(150deg,#0f0524 0%,#2d1068 60%,#1e1b4b 100%);padding:80px 24px;}
+.reg-inner{max-width:1060px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start;}
+.reg-text h2{font-size:clamp(20px,3vw,28px);font-weight:800;color:#fff;margin-bottom:10px;line-height:1.3;}
+.reg-text .date-range{font-size:22px;font-weight:800;color:#a78bfa;margin-bottom:6px;}
+.reg-text .date-note{font-size:12px;color:rgba(196,181,253,.6);margin-bottom:24px;}
+.doc-list{list-style:none;padding:0;}
+.doc-list li{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:13px;color:rgba(255,255,255,.8);line-height:1.55;}
+.doc-list li:last-child{border-bottom:none;}
+.doc-list li .doc-num{width:22px;height:22px;border-radius:50%;background:#7c3aed;color:#fff;
+  font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.reg-cta{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:28px;}
+.reg-cta h3{color:#fff;font-size:16px;font-weight:700;margin-bottom:6px;}
+.reg-cta p{color:rgba(196,181,253,.7);font-size:13px;line-height:1.7;margin-bottom:20px;}
+
+/* ── Team ── */
+.team-section{background:#f8fafc;}
+.team-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-top:36px;}
+.team-card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:20px;text-align:center;}
+.team-avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4c1d95);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px;
+  margin:0 auto 12px;}
+.team-name{font-size:13px;font-weight:700;color:#0f172a;margin-bottom:3px;}
+.team-role{font-size:11px;color:#64748b;line-height:1.4;}
+
+/* ── Partners ── */
+.partners-section{background:#fff;padding:60px 24px;}
+.partners-inner{max-width:1060px;margin:0 auto;text-align:center;}
+.partners-label{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#94a3b8;margin-bottom:28px;}
+.partners-row{display:flex;gap:32px;justify-content:center;align-items:center;flex-wrap:wrap;}
+.partner-pill{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 24px;
+  font-size:14px;font-weight:700;color:#374151;letter-spacing:.2px;}
+.partner-pill span{color:#7c3aed;}
+
+/* ── Contact ── */
+.contact-section{background:#0f0524;padding:72px 24px;}
+.contact-inner{max-width:1060px;margin:0 auto;}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;}
+.contact-text h2{font-size:clamp(18px,2.5vw,24px);font-weight:800;color:#fff;margin-bottom:20px;}
+.contact-items{display:flex;flex-direction:column;gap:14px;}
+.contact-item{display:flex;gap:14px;align-items:flex-start;}
+.contact-icon{width:38px;height:38px;border-radius:9px;background:rgba(124,58,237,.25);
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.contact-detail strong{display:block;font-size:11px;font-weight:700;letter-spacing:1px;
+  text-transform:uppercase;color:rgba(196,181,253,.55);margin-bottom:3px;}
+.contact-detail span{font-size:14px;color:rgba(255,255,255,.85);}
+.contact-org{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:12px;padding:24px;}
+.contact-org h3{color:#fff;font-size:14px;font-weight:700;margin-bottom:4px;}
+.contact-org p{color:rgba(196,181,253,.6);font-size:13px;line-height:1.7;margin-bottom:18px;}
+.org-tags{display:flex;gap:8px;flex-wrap:wrap;}
+.org-tag{background:rgba(124,58,237,.2);border:1px solid rgba(167,139,250,.3);
+  border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;color:#a78bfa;}
+
+/* ── Footer ── */
+.footer{background:#080012;padding:40px 24px;text-align:center;border-top:1px solid rgba(255,255,255,.05);}
+.footer-brand{color:#e2e8f0;font-weight:800;font-size:15px;margin-bottom:3px;}
+.footer-domain{color:#334155;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:18px;}
+.footer-links{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;}
+.footer-links a{color:#334155;font-size:12px;text-decoration:none;transition:color .12s;}
+.footer-links a:hover{color:#7c3aed;}
+.footer-copy{color:#1e293b;font-size:11px;}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+  .about-grid,.stage-grid,.reg-inner,.contact-grid,.infobanner-grid{grid-template-columns:1fr;gap:32px;}
+  .team-grid{grid-template-columns:repeat(3,1fr);}
+  .podium-grid{grid-template-columns:1fr 1fr;}
+  .diplomas-grid{grid-template-columns:1fr;}
 }
 @media(max-width:640px){
-  .levels-grid{grid-template-columns:1fr;}
-  .lp-hero{padding:64px 20px 60px;}
+  .team-grid{grid-template-columns:1fr 1fr;}
+  .podium-grid{grid-template-columns:1fr 1fr;}
+  .part-grid{grid-template-columns:1fr;}
+  .hero{padding:60px 20px 56px;}
 }
 </style>
 </head>
@@ -132,172 +220,429 @@ body{background:#fff;}
     <span class="nav-title">ECHO</span>
   </a>
   <div class="nav-links">
+    <a href="index.html" class="nav-link active">Acasă</a>
+    <a href="news.html" class="nav-link">Noutăți</a>
+    <a href="simulari.html" class="nav-link">Simulări</a>
     <a href="register.html" class="nav-link">Înregistrare</a>
-    <a href="exam.html" class="nav-link">Acces Examen</a>
     <a href="dashboard.html" class="nav-link">Dashboard</a>
   </div>
 </nav>
 
-<!-- Hero -->
-<div class="lp-hero">
-  <div class="lp-eyebrow">ECHO · English Challenge Hub Online</div>
-  <h1 class="lp-title">Performanță în limba engleză,<br/>dovedită online.</h1>
-  <p class="lp-sub">
-    Concursul de Performanță în Limba Engleză testează competențe reale de gramatică
-    și vocabular, pe patru niveluri Cambridge, într-un format digital complet.
-  </p>
-  <div class="lp-btns">
-    <a href="register.html" class="lp-cta-primary">Înregistrează-te →</a>
-    <a href="exam.html" class="lp-cta-outline">Am deja cont</a>
-  </div>
-  <div class="lp-levels">
-    <span class="lp-badge b-A2">A2 Elementar</span>
-    <span class="lp-badge b-B1">B1 Intermediar</span>
-    <span class="lp-badge b-B2">B2 Avansat</span>
-    <span class="lp-badge b-C1">C1 Performanță</span>
-    <span class="lp-badge b-FCE">FCE</span>
-    <span class="lp-badge b-CAE">CAE</span>
-  </div>
-</div>
+<!-- ── HERO ─────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-eyebrow">PRAHOVA COUNTY 2026 · Ediția I</div>
+  <h1>English Grammar<br/>Challenge</h1>
+  <p class="hero-sub1">Primul Concurs Județean de Gramatică Engleză din Prahova, conform standardelor Cambridge. Organizat de CN „Mihai Viteazul" Ploiești în parteneriat cu ISJ Prahova.</p>
+  <a href="register.html" class="hero-cta">Înscrie-te acum →</a>
+  <div class="hero-note">Înscrierea se face exclusiv de către profesorul coordonator</div>
 
-<!-- About -->
-<section class="lp-about">
-  <div class="lp-about-inner">
-    <div class="lp-about-grid">
-      <div>
-        <h2>Un concurs serios,<br/>accesibil oricând și oriunde.</h2>
-        <p>
-          ECHO este un concurs de gramatică și vocabular engleză, organizat în format
-          online și supervizat. Subiectele sunt construite după modelul certificărilor
-          Cambridge — cu secțiuni de completare, transformare, cloze și formare de cuvinte.
-        </p>
-        <p>
-          Fiecare participant își creează un cont cu username și parolă, care îi permite să susțină
-          examenul în mod securizat. Corectarea este automată și imediată.
-        </p>
-        <p>
-          Concursul se desfășoară în două etape: o etapă de calificare online și o
-          finală supervizată, deschisă celor mai buni participanți din fiecare nivel.
-        </p>
-      </div>
-      <div>
-        <ul class="about-list">
-          <li>Format digital complet — fără tipărit, fără scanat</li>
-          <li>Subiecte pe model Cambridge, adaptate pentru fiecare nivel</li>
-          <li>Corectare automată cu normalizare inteligentă a răspunsurilor</li>
-          <li>Cont cu username și parolă per participant, valabil pe toată perioada concursului</li>
-          <li>Calificare și finală — două etape cu subiecte diferite</li>
-          <li>Rezultate și clasamente disponibile imediat după finalizare</li>
-          <li>Administrare completă din panoul de profesor</li>
+  <div class="countdown-wrap">
+    <div class="countdown-block">
+      <span class="countdown-num" id="cd-days">00</span>
+      <div class="countdown-label">Zile</div>
+    </div>
+    <span class="countdown-sep">:</span>
+    <div class="countdown-block">
+      <span class="countdown-num" id="cd-hours">00</span>
+      <div class="countdown-label">Ore</div>
+    </div>
+    <span class="countdown-sep">:</span>
+    <div class="countdown-block">
+      <span class="countdown-num" id="cd-mins">00</span>
+      <div class="countdown-label">Minute</div>
+    </div>
+    <span class="countdown-sep">:</span>
+    <div class="countdown-block">
+      <span class="countdown-num" id="cd-secs">00</span>
+      <div class="countdown-label">Secunde</div>
+    </div>
+  </div>
+  <div class="countdown-title" style="margin-top:18px;">Timp rămas până la închiderea înscrierilor · 15 Martie 2026</div>
+</section>
+
+<!-- ── INFOGRAPHIC BANNER ─────────────────────────────────────────────── -->
+<section class="infobanner">
+  <div class="infobanner-inner">
+    <div class="infobanner-grid">
+      <div class="infobanner-text">
+        <div style="font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(167,139,250,.7);margin-bottom:12px;">Componentă interdisciplinară</div>
+        <h2>Infografic / Poster<br/>Obligatoriu la Înscriere</h2>
+        <p>La momentul înscrierii, fiecare participant trebuie să trimită un infografic/poster educațional care explică vizual o regulă gramaticală Cambridge.</p>
+        <ul class="info-req-list">
+          <li>Include exemple vizuale, diagrame sau ilustrații</li>
+          <li>Format A4 — digital sau scanat în PDF/JPG, max 5 MB</li>
+          <li>Explică o regulă gramaticală Cambridge (B1, B2 sau C1)</li>
+          <li>Realizat personal, în limba engleză</li>
         </ul>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- How it works -->
-<section class="lp-steps-wrap">
-  <div class="lp-steps">
-    <div class="lp-steps-head">
-      <h2>Cum funcționează?</h2>
-      <p class="lp-steps-sub">Trei pași simpli, de la înregistrare până la rezultat.</p>
-    </div>
-    <div class="steps-grid">
-      <div class="step">
-        <div class="step-num">01</div>
-        <h3>Înregistrare</h3>
-        <p>
-          Profesorul coordonator sau elevul completează formularul de înregistrare cu
-          datele școlii și ale participantului, selectând nivelul de competență.
-          Imediat după, contul este creat cu <strong>username și parolă</strong>.
-        </p>
-      </div>
-      <div class="step">
-        <div class="step-num">02</div>
-        <h3>Susținerea examenului</h3>
-        <p>
-          La data stabilită, elevul intră pe platformă cu codul de acces și susține
-          examenul alocat de profesor. Fiecare examen are un timp limitat și se
-          trimite automat la final.
-        </p>
-      </div>
-      <div class="step">
-        <div class="step-num">03</div>
-        <h3>Rezultate</h3>
-        <p>
-          Corectarea este instantanee. Profesorul vede rezultatele în timp real
-          din panoul de administrare, poate exporta datele și identifică participanții
-          calificați pentru etapa următoare.
-        </p>
+      <div class="gallery-card">
+        <div class="icon">🖼️</div>
+        <h3>Grammar Art Gallery</h3>
+        <p>Toate infograficele vor forma o expoziție virtuală pe site-ul competiției! Mențiunile speciale se acordă la festivitatea de premiere.</p>
+        <div class="gallery-score">
+          <div class="score-pill">60% Corectitudine gramaticală</div>
+          <div class="score-pill">40% Creativitate vizuală</div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Levels -->
-<section class="lp-levels-wrap">
-  <div class="lp-levels-inner">
-    <div class="lp-levels-head">
-      <h2>Patru niveluri de competență</h2>
-      <p class="lp-levels-sub">Fiecare nivel are subiecte dedicate, calibrate după descriptori Cambridge.</p>
-    </div>
-    <div class="levels-grid">
-      <div class="level-card">
-        <span class="level-badge b-A2">A2</span>
-        <h3>Elementar</h3>
-        <p>Gramatică de bază, vocabular frecvent, structuri simple. Ideal pentru elevi la început de drum cu limba engleză formală.</p>
+<!-- ── ABOUT ──────────────────────────────────────────────────────────── -->
+<section class="section about-section">
+  <div class="section-inner">
+    <div class="about-grid">
+      <div class="about-text">
+        <div class="sec-eyebrow">Despre Concurs</div>
+        <h2 class="sec-title">Primul concurs județean dedicat exclusiv gramaticii engleze</h2>
+        <p>English Grammar Challenge – Prahova County 2026 este primul concurs județean dedicat exclusiv evaluării competențelor gramaticale în limba engleză, conform standardelor Cambridge.</p>
+        <p>Concursul este organizat de <strong>Colegiul Național „Mihai Viteazul" Ploiești</strong> în parteneriat cu <strong>Inspectoratul Școlar Județean Prahova</strong>.</p>
+        <p>Concursul este deschis elevilor din clasele VII–XI din colegiile naționale și liceele din județul Prahova. Înscrierea se face pe unul din cele trei niveluri Cambridge, conform restricțiilor de clasă.</p>
+        <div class="free-badge">
+          <div class="free-word">GRATUIT</div>
+          <p>Participarea este complet gratuită pentru toți elevii din județul Prahova.</p>
+        </div>
       </div>
-      <div class="level-card">
-        <span class="level-badge b-B1">B1</span>
-        <h3>Intermediar</h3>
-        <p>Timp și aspect verbal, condiționale, vocabular tematic. Subiecte construite pentru elevi cu o pregătire solidă de bază.</p>
-      </div>
-      <div class="level-card">
-        <span class="level-badge b-B2">B2</span>
-        <h3>Avansat</h3>
-        <p>Structuri complexe, formare de cuvinte, transformări de fraze. Nivelul la care competiția devine cu adevărat interesantă.</p>
-      </div>
-      <div class="level-card">
-        <span class="level-badge b-C1">C1</span>
-        <h3>Performanță</h3>
-        <p>Colocații, idiomuri, structuri avansate de exprimare. Nivelul rezervat elevilor cu pregătire de nivel superior sau olimpici.</p>
-      </div>
-      <div class="level-card">
-        <span class="level-badge b-FCE">FCE</span>
-        <h3>First Certificate</h3>
-        <p>Format Cambridge B2 First. Secțiuni de Use of English, Reading și Writing, cu durată de 75 de minute.</p>
-      </div>
-      <div class="level-card">
-        <span class="level-badge b-CAE">CAE</span>
-        <h3>Advanced</h3>
-        <p>Format Cambridge C1 Advanced. Subiecte de nivel superior, vocabular academic și structuri complexe. Durată: 90 de minute.</p>
+      <div>
+        <div class="about-chip">🎓 Cine poate participa?</div>
+        <table class="level-table">
+          <thead>
+            <tr>
+              <th>Nivel</th>
+              <th>Clasă obligatorie</th>
+              <th>Clase opționale</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge b-B1">B1</span><br/><small style="color:#64748b">Intermediate</small></td>
+              <td>Clasa a VII-a</td>
+              <td>Cls. a VIII-a și a IX-a</td>
+            </tr>
+            <tr>
+              <td><span class="badge b-B2">B2</span><br/><small style="color:#64748b">Upper-Intermediate</small></td>
+              <td>—</td>
+              <td>Cls. a VIII-a, a IX-a și a X-a <small>(recomandat cls. IX)</small></td>
+            </tr>
+            <tr>
+              <td><span class="badge b-C1">C1</span><br/><small style="color:#64748b">Advanced</small></td>
+              <td>Clasa a XI-a</td>
+              <td>Clasa a X-a</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="limit-box">
+          ⚠️ <strong>Limite de înscriere:</strong><br/>
+          • Fiecare școală invitată poate înscrie maximum <strong>35 de elevi</strong> (max. 5 elevi per nivel).<br/>
+          • Școala organizatoare (CN „Mihai Viteazul" Ploiești) poate înscrie maximum <strong>70 de elevi</strong>.
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- CTA -->
-<section class="lp-cta-wrap">
-  <h2>Ești pregătit să concurezi?</h2>
-  <p>Înregistrarea este rapidă. Contul tău este creat imediat.</p>
-  <div class="lp-btns">
-    <a href="register.html" class="lp-cta-primary">Înregistrează-te acum →</a>
-    <a href="exam.html" class="lp-cta-outline">Am deja cont</a>
+<!-- ── STRUCTURE ──────────────────────────────────────────────────────── -->
+<section class="section structure-section">
+  <div class="section-inner">
+    <div class="sec-eyebrow">Structura Competiției</div>
+    <h2 class="sec-title">Două etape, un singur obiectiv</h2>
+    <p class="sec-sub">Calificarea online și finala județeană, ambele cu subiecte Cambridge-style calibrate pe niveluri.</p>
+
+    <div class="stage-grid">
+      <!-- Stage 1 -->
+      <div class="stage-card">
+        <div class="stage-head online">
+          <h3>Etapa I — Calificare Online</h3>
+          <p>20–25 Martie 2026 · Platformă ECHO</p>
+        </div>
+        <div class="stage-body">
+          <div class="stage-meta">
+            <div class="stage-row"><span class="s-icon">📅</span><span><strong>Perioada:</strong> 20–25 martie 2026</span></div>
+            <div class="stage-row"><span class="s-icon">⏱️</span><span><strong>Durată:</strong> 40 minute</span></div>
+            <div class="stage-row"><span class="s-icon">📊</span><span><strong>Format:</strong> 50 întrebări multiple choice · 100 puncte</span></div>
+            <div class="stage-row"><span class="s-icon">💻</span><span><strong>Desfășurare:</strong> Online, sub supravegherea profesorului coordonator</span></div>
+            <div class="stage-row"><span class="s-icon">📢</span><span><strong>Anunțare finaliști:</strong> 27 Martie 2026</span></div>
+          </div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin-bottom:8px;">Conținut testat</div>
+          <div class="content-pct">
+            <span class="pct-chip">Timpuri verbale · 15%</span>
+            <span class="pct-chip">Conditionals · 15%</span>
+            <span class="pct-chip">Reported Speech · 10%</span>
+            <span class="pct-chip">Passive Voice · 15%</span>
+            <span class="pct-chip">Phrasal Verbs · 20%</span>
+            <span class="pct-chip">Prepositions · 15%</span>
+            <span class="pct-chip">Collocations &amp; Idioms · 10%</span>
+          </div>
+          <div style="margin-top:14px;padding:10px 14px;background:#f5f3ff;border-radius:7px;font-size:13px;color:#4c1d95;">
+            🏆 Se califică primii <strong>60 de elevi</strong> din tot județul (20 per nivel B1, B2, C1)
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage 2 -->
+      <div class="stage-card">
+        <div class="stage-head finala">
+          <h3>Etapa II — Finala Județeană</h3>
+          <p>18 Aprilie 2026 · CN „Mihai Viteazul" Ploiești</p>
+        </div>
+        <div class="stage-body">
+          <div class="stage-meta">
+            <div class="stage-row"><span class="s-icon">📅</span><span><strong>Data:</strong> 18 Aprilie 2026</span></div>
+            <div class="stage-row"><span class="s-icon">📍</span><span><strong>Locație:</strong> CN „Mihai Viteazul" Ploiești</span></div>
+            <div class="stage-row"><span class="s-icon">⏱️</span><span><strong>Probă scrisă:</strong> 90 minute</span></div>
+          </div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin-bottom:8px;">Program</div>
+          <ul class="prog-list">
+            <li><span class="time">08:30</span><span>Primirea participanților și legitimare</span></li>
+            <li><span class="time">09:00</span><span>Deschidere oficială</span></li>
+            <li><span class="time">09:30</span><span>Probă scrisă (90 minute)</span></li>
+            <li><span class="time">11:00</span><span>Pauză</span></li>
+            <li><span class="time">11:30</span><span>Continuare evaluare</span></li>
+            <li><span class="time">14:30</span><span>Festivitate de premiere</span></li>
+          </ul>
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin:12px 0 8px;">Structura probei (100 puncte)</div>
+          <div class="part-grid">
+            <div class="part-item"><strong>Partea A · 30 pct</strong>Sentence Transformations</div>
+            <div class="part-item"><strong>Partea B · 30 pct</strong>Error Correction</div>
+            <div class="part-item"><strong>Partea C · 20 pct</strong>Gap-fill in Context</div>
+            <div class="part-item"><strong>Partea D · 20 pct</strong>Word Formation</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
-<!-- Footer -->
-<footer class="lp-footer">
-  <div class="lp-footer-brand">ECHO</div>
-  <div class="lp-footer-domain">englishgrammarchallenge.ro</div>
-  <div class="lp-footer-links">
+<!-- ── PRIZES ─────────────────────────────────────────────────────────── -->
+<section class="section prizes-section">
+  <div class="section-inner">
+    <div class="sec-eyebrow">Premii și Diplome</div>
+    <h2 class="sec-title">Premii materiale oferite de sponsori</h2>
+    <p class="sec-sub">Câte un premiu per nivel (B1, B2, C1) plus premii speciale pentru infografice.</p>
+
+    <div class="podium-grid">
+      <div class="prize-card gold">
+        <div class="prize-icon">🥇</div>
+        <div class="prize-title">Premiul I</div>
+        <div class="prize-sub">Cupă + Materiale de studiu limba engleză oferite de sponsori</div>
+        <div class="prize-count">× 3 · câte unul per nivel</div>
+      </div>
+      <div class="prize-card silver">
+        <div class="prize-icon">🥈</div>
+        <div class="prize-title">Premiul II</div>
+        <div class="prize-sub">Cupă + Materiale de studiu limba engleză oferite de sponsori</div>
+        <div class="prize-count">× 3 · câte unul per nivel</div>
+      </div>
+      <div class="prize-card bronze">
+        <div class="prize-icon">🥉</div>
+        <div class="prize-title">Premiul III</div>
+        <div class="prize-sub">Materiale de studiu limba engleză oferite de sponsori</div>
+        <div class="prize-count">× 3 · câte unul per nivel</div>
+      </div>
+      <div class="prize-card mention">
+        <div class="prize-icon">⭐</div>
+        <div class="prize-title">Mențiuni</div>
+        <div class="prize-sub">Materiale de studiu limba engleză oferite de sponsori</div>
+        <div class="prize-count">× 6 · câte două per nivel</div>
+      </div>
+    </div>
+
+    <div class="infographic-prizes">
+      <h4>🖼️ Premii Best Infographic</h4>
+      <p>Se acordă Premiu I, Premiu II, Premiu III și mențiuni pentru infografice, în funcție de numărul participanților și calitatea lucrărilor depuse.</p>
+    </div>
+
+    <div style="margin-top:36px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#94a3b8;margin-bottom:16px;">Diplome și Certificări</div>
+      <div class="diplomas-grid">
+        <div class="diploma-item">
+          <div class="diploma-icon">🏛️</div>
+          <div class="diploma-text"><strong>Diplome oficiale ISJ</strong>Avizate de Inspectoratul Școlar Județean Prahova — pentru toți cei 60 de finaliști (Etapa II)</div>
+        </div>
+        <div class="diploma-item">
+          <div class="diploma-icon">📜</div>
+          <div class="diploma-text"><strong>Diplome de participare</strong>Pentru toți cei 60 de finaliști ai Etapei II, înmânate la festivitatea de premiere</div>
+        </div>
+        <div class="diploma-item">
+          <div class="diploma-icon">📧</div>
+          <div class="diploma-text"><strong>Certificat electronic PDF</strong>Pentru toți participanții care susțin Etapa I de calificare online</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── REGISTRATION ───────────────────────────────────────────────────── -->
+<section class="reg-section">
+  <div class="reg-inner">
+    <div class="reg-text">
+      <div style="font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(167,139,250,.6);margin-bottom:10px;">Înscriere</div>
+      <div class="date-range">1 – 15 Martie 2026</div>
+      <div class="date-note">Participare gratuită · Maximum 10 elevi per școală</div>
+      <h2>Documente necesare la înscriere</h2>
+      <ul class="doc-list">
+        <li><div class="doc-num">1</div><span>Formular de înscriere online (completat de elev sau profesor coordonator)</span></li>
+        <li><div class="doc-num">2</div><span>Infografic / Poster educațional — <strong style="color:#a78bfa;">OBLIGATORIU</strong> — upload digital</span></li>
+        <li><div class="doc-num">3</div><span>Declarație de integritate (semnată de elev)</span></li>
+        <li><div class="doc-num">4</div><span>Acord GDPR pentru prelucrarea datelor personale</span></li>
+        <li><div class="doc-num">5</div><span>Acord parental (semnat de părinte sau tutore legal)</span></li>
+      </ul>
+    </div>
+    <div class="reg-cta">
+      <h3>Înregistrare pe platforma ECHO</h3>
+      <p>Creează-ți contul pe platforma ECHO pentru a te putea înscrie și a susține examenul de calificare online. Înregistrarea este rapidă și gratuită.</p>
+      <a href="register.html" class="hero-cta" style="display:inline-flex;margin-bottom:12px;">Creează cont ECHO →</a>
+      <div style="font-size:12px;color:rgba(196,181,253,.5);margin-top:8px;">Sau, dacă ai deja un cont:</div>
+      <a href="dashboard.html" style="display:inline-flex;margin-top:8px;padding:10px 22px;border-radius:8px;
+        border:1px solid rgba(255,255,255,.15);color:rgba(196,181,253,.8);font-size:13px;font-weight:600;
+        text-decoration:none;transition:background .12s;"
+        onmouseover="this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.background='transparent'">
+        Dashboard →
+      </a>
+      <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,.08);">
+        <div style="font-size:11px;color:rgba(196,181,253,.45);margin-bottom:10px;">Simulări de practică disponibile pe:</div>
+        <a href="simulari.html" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:7px;
+          background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.25);
+          color:#a78bfa;font-size:13px;font-weight:600;text-decoration:none;">
+          ▶ Simulări de concurs
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TEAM ───────────────────────────────────────────────────────────── -->
+<section class="section team-section">
+  <div class="section-inner">
+    <div style="text-align:center;margin-bottom:8px;">
+      <div class="sec-eyebrow" style="display:inline-block;">Echipa organizatoare</div>
+    </div>
+    <h2 class="sec-title" style="text-align:center;">Coordonatori</h2>
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="team-avatar">PJ</div>
+        <div class="team-name">Prof. Pintea Janin</div>
+        <div class="team-role">Director CN „Mihai Viteazul" Ploiești</div>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar">DA</div>
+        <div class="team-name">Prof. Dorobanțu Andreea</div>
+        <div class="team-role">Coordonator principal</div>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar">PG</div>
+        <div class="team-name">Prof. Pufulete Georgiana</div>
+        <div class="team-role">Conținut și evaluare</div>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar">GL</div>
+        <div class="team-name">Prof. Gimbir Lavinia</div>
+        <div class="team-role">Platformă și logistică</div>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar">DL</div>
+        <div class="team-name">Prof. Dicu Loredana</div>
+        <div class="team-role">Tehnologie și platformă IT</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PARTNERS ───────────────────────────────────────────────────────── -->
+<section class="partners-section">
+  <div class="partners-inner">
+    <div class="partners-label">Parteneri și sponsori</div>
+    <div class="partners-row">
+      <div class="partner-pill">🏫 Inspectoratul Școlar Județean <span>Prahova</span></div>
+      <div class="partner-pill">📚 <span>Hamilton House</span></div>
+      <div class="partner-pill">🐟 <span>Fischer</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CONTACT ────────────────────────────────────────────────────────── -->
+<section class="contact-section">
+  <div class="contact-inner">
+    <div class="contact-grid">
+      <div>
+        <h2 class="contact-text" style="color:#fff;font-size:22px;font-weight:800;margin-bottom:24px;">Contact și Informații</h2>
+        <div class="contact-items">
+          <div class="contact-item">
+            <div class="contact-icon">📧</div>
+            <div class="contact-detail">
+              <strong>Email</strong>
+              <span>grammarchallenge2026@cnmvploiesti.ro</span>
+            </div>
+          </div>
+          <div class="contact-item">
+            <div class="contact-icon">📞</div>
+            <div class="contact-detail">
+              <strong>Telefon</strong>
+              <span>0244 / 595 952</span>
+            </div>
+          </div>
+          <div class="contact-item">
+            <div class="contact-icon">📍</div>
+            <div class="contact-detail">
+              <strong>Adresă</strong>
+              <span>Bulevardul Independenței, nr. 8, Ploiești, Prahova</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="contact-org">
+        <h3>Colegiul Național „Mihai Viteazul" Ploiești</h3>
+        <p>Organizatorul concursului English Grammar Challenge – Prahova County 2026, Ediția I. Concurs organizat sub egida ISJ Prahova.</p>
+        <div class="org-tags">
+          <span class="org-tag">Prahova County 2026</span>
+          <span class="org-tag">Ediția I</span>
+          <span class="org-tag">Cambridge Standards</span>
+          <span class="org-tag">Participare gratuită</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────────── -->
+<footer class="footer">
+  <div class="footer-brand">English Grammar Challenge · ECHO</div>
+  <div class="footer-domain">englishgrammarchallenge.ro</div>
+  <div class="footer-links">
+    <a href="index.html">Acasă</a>
+    <a href="news.html">Noutăți</a>
+    <a href="simulari.html">Simulări</a>
     <a href="register.html">Înregistrare</a>
-    <a href="exam.html">Acces Examen</a>
-    <a href="dashboard.html">Dashboard Elev</a>
-    <a href="admin/index.html">Administrare</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="admin/index.html">Admin</a>
   </div>
-  <div class="lp-footer-copy">© 2026 ECHO — English Challenge Hub Online</div>
+  <div class="footer-copy">© 2026 Colegiul Național „Mihai Viteazul" Ploiești · Toate drepturile rezervate</div>
 </footer>
 
+<script>
+(function() {
+  var deadline = new Date("2026-03-15T23:59:59").getTime();
+  function tick() {
+    var now = Date.now();
+    var diff = deadline - now;
+    if (diff <= 0) {
+      ["cd-days","cd-hours","cd-mins","cd-secs"].forEach(function(id) {
+        document.getElementById(id).textContent = "00";
+      });
+      return;
+    }
+    var d = Math.floor(diff / 86400000);
+    var h = Math.floor((diff % 86400000) / 3600000);
+    var m = Math.floor((diff % 3600000) / 60000);
+    var s = Math.floor((diff % 60000) / 1000);
+    document.getElementById("cd-days").textContent  = String(d).padStart(2,"0");
+    document.getElementById("cd-hours").textContent = String(h).padStart(2,"0");
+    document.getElementById("cd-mins").textContent  = String(m).padStart(2,"0");
+    document.getElementById("cd-secs").textContent  = String(s).padStart(2,"0");
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
 </body>
 </html>

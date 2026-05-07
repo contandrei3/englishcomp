@@ -7,7 +7,9 @@ var CPEEN = (function () {
     PARTICIPANTS:   'cpeen_participants',
     EXAMS:          'cpeen_exams',
     SESSIONS:       'cpeen_sessions',
-    GROUP_SESSIONS: 'cpeen_group_sessions'
+    GROUP_SESSIONS: 'cpeen_group_sessions',
+    NEWS:           'cpeen_news',
+    SIM_REGS:       'cpeen_sim_regs'
   };
 
   // Derives level/stage strings from a sessionType like 'B1-calificare', 'FCE', 'CAE'
@@ -589,6 +591,48 @@ var CPEEN = (function () {
     DB.collection('proctorFlags').doc(code).delete().catch(function() {});
   }
 
+  // ── News / Announcements ──────────────────────────────────────────────────
+  function getNews() { return sg(KEYS.NEWS, []); }
+  function saveNews(items) { ss(KEYS.NEWS, items); return syncToFirebase('news', items); }
+
+  function addNewsPost(data) {
+    var posts = getNews();
+    var now = Date.now();
+    var post = Object.assign({ id: genId('news'), createdAt: now, updatedAt: now, pinned: false, category: 'general' }, data);
+    posts.unshift(post);
+    saveNews(posts);
+    return post;
+  }
+
+  function updateNewsPost(id, updates) {
+    var posts = getNews();
+    var idx = posts.findIndex(function(p) { return p.id === id; });
+    if (idx === -1) return null;
+    posts[idx] = Object.assign({}, posts[idx], updates, { updatedAt: Date.now() });
+    saveNews(posts);
+    return posts[idx];
+  }
+
+  function deleteNewsPost(id) {
+    saveNews(getNews().filter(function(p) { return p.id !== id; }));
+  }
+
+  // ── Simulation Registrations ──────────────────────────────────────────────
+  function getSimRegs() { return sg(KEYS.SIM_REGS, []); }
+  function saveSimRegs(items) { ss(KEYS.SIM_REGS, items); }
+
+  function addSimReg(data) {
+    var regs = getSimRegs();
+    var reg = Object.assign({ id: genId('sim'), createdAt: Date.now() }, data);
+    regs.push(reg);
+    saveSimRegs(regs);
+    return reg;
+  }
+
+  function deleteSimReg(id) {
+    saveSimRegs(getSimRegs().filter(function(r) { return r.id !== id; }));
+  }
+
   return {
     init,
     get lastSyncError() { return lastSyncError; },
@@ -602,6 +646,7 @@ var CPEEN = (function () {
     splitType, TYPE_DURATION,
     getExams, saveExams, getExamForParticipant, addExam, updateExam, deleteExam,
     gradeSession, seedInitialData,
-    loadProctorFlags, getProctorFlag, disqualifyParticipant, clearDisqualification
+    loadProctorFlags, getProctorFlag, disqualifyParticipant, clearDisqualification,
+    getNews, saveNews, addNewsPost, updateNewsPost, deleteNewsPost, getSimRegs, addSimReg, deleteSimReg
   };
 })();
