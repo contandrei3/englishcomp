@@ -811,7 +811,9 @@ function ExamApp() {
 
   const initialView = (()=>{
     const sid = new URLSearchParams(window.location.search).get("sid");
-    return sid ? "loading" : "code";
+    if(sid) return "loading";
+    if(sessionStorage.getItem("cpeen_student_id")) return "loading";
+    return "code";
   })();
 
   const [view,      setView]      = useState(initialView);
@@ -934,19 +936,48 @@ function ExamApp() {
   // Bootstrap from ?sid= URL param (called from dashboard)
   useEffect(() => {
     const sid = new URLSearchParams(window.location.search).get("sid");
-    if(!sid) return;
-    const s = CPEEN.getSessions().find(x => x.id === sid);
+    if(sid) {
+      const s = CPEEN.getSessions().find(x => x.id === sid);
+      if(!s) { setBootErr("Session not found. Return to your dashboard and try again."); setView("bootErr"); return; }
+      const p = CPEEN.getParticipants().find(x => x.id === s.participantId);
+      if(!p) { setBootErr("Participantul asociat sesiunii nu a fost găsit."); setView("bootErr"); return; }
+      loadSession(p, s);
+      return;
+    }
+    // Auto-login: student already authenticated in dashboard
+    const storedId = sessionStorage.getItem("cpeen_student_id");
+    if(!storedId) return;
+    const p = CPEEN.getParticipants().find(x => x.id === storedId);
+    if(!p) { setView("code"); return; }
+    const allSess = CPEEN.getSessionsByParticipant(p.id);
+    const groups  = CPEEN.getGroupSessions();
+    let s = allSess.find(x => x.status === "in_progress");
     if(!s) {
-      setBootErr("Session not found. Return to your dashboard and try again.");
-      setView("bootErr");
-      return;
+      s = allSess.find(x => {
+        if(x.status !== "pending") return false;
+        if(x.groupId) { const grp = groups.find(g => g.id === x.groupId); return grp?.status === "active"; }
+        const cfg = CPEEN.getConfig();
+        return !!(cfg.activeExams?.[x.level]?.[x.stage]);
+      });
     }
-    const p = CPEEN.getParticipants().find(x => x.id === s.participantId);
-    if(!p) {
-      setBootErr("Participantul asociat sesiunii nu a fost găsit.");
-      setView("bootErr");
-      return;
+    if(!s) {
+      const submitted = allSess.filter(x => x.status === "submitted").sort((a,b)=>(b.submittedAt||0)-(a.submittedAt||0));
+      s = submitted[0] || null;
     }
+    if(s) { loadSession(p, s); return; }
+    const pendingGroupSess = allSess.find(x => x.status === "pending" && x.groupId);
+    if(pendingGroupSess) {
+      const grp = groups.find(g => g.id === pendingGroupSess.groupId);
+      noExamSessRef.current = pendingGroupSess; noExamPtcpRef.current = p;
+      setPtcp(p); setNoExamReason(grp?.status === "finished" ? "group_finished" : "group_pending"); setView("noExam"); return;
+    }
+    const stage = CPEEN.isQualified(p) ? "finala" : "calificare";
+    const cfg = CPEEN.getConfig();
+    if(!cfg.activeExams?.[p.level]?.[stage]) { setNoExamReason(""); setPtcp(p); setView("noExam"); return; }
+    const ex = CPEEN.getExamForParticipant(p.level, stage);
+    if(!ex) { setNoExamReason(""); setPtcp(p); setView("noExam"); return; }
+    const vIdx = Math.floor(Math.random() * ex.variants.length);
+    s = CPEEN.createSession(p.id, ex, ex.variants[vIdx].id);
     loadSession(p, s);
   }, []);
 

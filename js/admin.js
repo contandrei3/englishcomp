@@ -46,6 +46,7 @@ var ADMIN = (function () {
     { href: 'sessions.html',     key: 'sessions',     label: 'Sesiuni' },
     { href: 'results.html',      key: 'results',      label: 'Rezultate' },
     { href: 'exams.html',        key: 'exams',        label: 'Subiecte' },
+    { href: 'news.html',         key: 'news',         label: 'Noutăți' },
     { href: 'settings.html',     key: 'settings',     label: 'Setări' },
   ];
 

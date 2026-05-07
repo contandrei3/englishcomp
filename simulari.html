@@ -166,18 +166,19 @@
 </head>
 <body>
 
-<nav class="nav">
+<nav class="nav" id="main-nav">
   <a href="index.html" class="nav-brand">
     <span class="nav-domain">englishgrammarchallenge.ro</span>
     <span class="nav-title">ECHO</span>
   </a>
-  <div class="nav-links">
+  <div class="nav-links" id="nav-links">
     <a href="index.html" class="nav-link">Acasă</a>
     <a href="news.html" class="nav-link">Noutăți</a>
     <a href="simulari.html" class="nav-link active">Simulări</a>
     <a href="register.html" class="nav-link">Înregistrare</a>
     <a href="dashboard.html" class="nav-link">Dashboard</a>
   </div>
+  <button class="nav-menu" aria-label="Meniu" onclick="document.getElementById('nav-links').classList.toggle('open')">☰</button>
 </nav>
 
 <!-- Hero -->

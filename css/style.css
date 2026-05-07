@@ -48,7 +48,10 @@ a{color:var(--mid);}
 }
 .nav-link:hover{color:var(--mid);background:var(--accent);}
 .nav-link.active{color:var(--mid);background:var(--accent);}
-.nav-menu{display:none;background:none;border:1px solid var(--border);color:#4a4a4a;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;}
+.nav-menu{display:none;background:none;border:1px solid var(--border);color:#4a4a4a;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:18px;line-height:1;}
+.nav-links.open{display:flex !important;flex-direction:column;position:absolute;top:52px;left:0;right:0;
+  background:#fff;border-bottom:1px solid #e8e8ec;padding:8px 16px 14px;z-index:199;gap:2px;
+  box-shadow:0 6px 20px rgba(0,0,0,.08);}
 
 /* ── Layout ──────────────────────────────────────────────────────────────── */
 .page{padding:32px 16px;min-height:calc(100vh - 52px);}
