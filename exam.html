@@ -20,7 +20,7 @@
 const { useState, useEffect, useRef, useCallback } = React;
 const fmt = s => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
 const LVL_C = {A2:"#16a34a",B1:"#d97706",B2:"#7c3aed",C1:"#2563eb"};
-const C = {dark:"#0f172a",mid:"#2563eb",light:"#e2e8f0",accent:"#eff6ff",red:"#dc2626",green:"#15803d"};
+const C = {dark:"#0f172a",mid:"#7c3aed",light:"#e2e8f0",accent:"#f5f3ff",red:"#dc2626",green:"#15803d"};
 
 function Navbar({participant}) {
   return (
@@ -294,7 +294,7 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
                     display: "inline",
                     background: "none",
                     border: "none",
-                    borderBottom: `1.5px solid ${filled ? "#2563eb" : "#94a3b8"}`,
+                    borderBottom: `1.5px solid ${filled ? "#7c3aed" : "#94a3b8"}`,
                     cursor: "pointer",
                     padding: "0 4px",
                     margin: "0 2px",
@@ -303,7 +303,7 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
                     fontFamily: "'DM Sans', sans-serif",
                     fontSize: 13,
                     fontWeight: filled ? 700 : 400,
-                    color: filled ? "#2563eb" : "#94a3b8",
+                    color: filled ? "#7c3aed" : "#94a3b8",
                     letterSpacing: filled ? 0 : "2px",
                     verticalAlign: "baseline",
                   }}>
@@ -366,7 +366,7 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
                   display: "inline",
                   background: "none",
                   border: "none",
-                  borderBottom: `1.5px solid ${filled ? "#2563eb" : "#94a3b8"}`,
+                  borderBottom: `1.5px solid ${filled ? "#7c3aed" : "#94a3b8"}`,
                   cursor: "pointer",
                   padding: "0 4px",
                   margin: "0 2px",
@@ -375,7 +375,7 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
                   fontFamily: "'DM Sans', sans-serif",
                   fontSize: 13,
                   fontWeight: filled ? 700 : 400,
-                  color: filled ? "#2563eb" : "#94a3b8",
+                  color: filled ? "#7c3aed" : "#94a3b8",
                   letterSpacing: filled ? 0 : "2px",
                   verticalAlign: "baseline",
                 }}>
@@ -443,7 +443,7 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
                   textAlign: "center",
                   padding: "0 8px",
                   margin: "0 5px",
-                  color: filled ? "#2563eb" : "#94a3b8",
+                  color: filled ? "#7c3aed" : "#94a3b8",
                   fontWeight: "600"
                 }}
                 onClick={() => requestPopup({
@@ -1179,7 +1179,7 @@ function ExamApp() {
         <div className="page-center" style={{alignItems:"flex-start",paddingTop:32}}>
           <div className="wrap-sm">
             <div className="card">
-              <div className="card-head" style={{textAlign:"center",padding:"28px",background:"#1e3a5f",borderBottom:"none"}}>
+              <div className="card-head" style={{textAlign:"center",padding:"28px",background:"linear-gradient(135deg,#4c1d95,#2d1068)",borderBottom:"none"}}>
                 <div style={{color:"#64748b",fontSize:10,letterSpacing:2,marginBottom:8,textTransform:"uppercase"}}>
                   ECHO · {ptcp?.level} · {ptcp?.stage==="finala"?"Final":"Qualifying"} · {variant.id}
                 </div>
@@ -1391,7 +1391,7 @@ function ExamApp() {
             <div style={{fontSize:12,color:"#888",marginBottom:8}}>Check all answers before submitting.</div>
             <button onClick={()=>doSubmit(answersRef.current,sessRef.current,examRef.current,variantRef.current)}
               style={{background:C.mid,color:"#fff",border:"none",borderRadius:8,padding:"13px 44px",fontSize:15,fontWeight:700,cursor:"pointer",letterSpacing:.5,transition:"background .12s"}}
-              onMouseEnter={e=>e.target.style.background="#1d4ed8"}
+              onMouseEnter={e=>e.target.style.background="#6d28d9"}
               onMouseLeave={e=>e.target.style.background=C.mid}>
               Submit exam →
             </button>
@@ -1419,7 +1419,7 @@ function ExamApp() {
   return null;
 }
 
-document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#2563eb;font-size:14px;">Loading…</div>';
+document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#7c3aed;font-size:14px;">Loading…</div>';
 CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<ExamApp/>));
 </script>
 </body>

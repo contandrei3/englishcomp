@@ -18,7 +18,7 @@
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect } = React;
-const C = {dark:"#0f172a",mid:"#2563eb",red:"#dc2626",green:"#15803d",bg:"#f8fafc"};
+const C = {dark:"#0f172a",mid:"#7c3aed",red:"#dc2626",green:"#15803d",bg:"#f8fafc"};
 
 const PARTS_META = [
   { id:'p1', sec:'Part 1', label:'Multiple Choice Cloze',        hint:'Gapped text; choose A/B/C/D per gap',         defPts:1 },
@@ -470,7 +470,7 @@ function P4Edit({data, onChange}) {
             </Fld>
             <Fld label="KEY WORD">
               <input value={it.kw} onChange={e => updIt(i, 'kw', e.target.value)} placeholder="DAWNED"
-                style={{ ...IS, width: "100%", textAlign: "center", fontWeight: 700, textTransform: "uppercase", color: "#2563eb" }}/>
+                style={{ ...IS, width: "100%", textAlign: "center", fontWeight: 700, textTransform: "uppercase", color: "#7c3aed" }}/>
             </Fld>
             <Fld label="Context after (fixed)">
               <Inp value={it.after} onChange={e => updIt(i, 'after', e.target.value)} placeholder="costly the renovation would be."/>
@@ -989,7 +989,7 @@ function ExamBuilder() {
   );
 }
 
-document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#2563eb;font-size:14px;">Se încarcă…</div>';
+document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#7c3aed;font-size:14px;">Se încarcă…</div>';
 CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<ExamBuilder/>));
 </script>
 </body>
