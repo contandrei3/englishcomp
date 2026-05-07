@@ -18,7 +18,7 @@
 
 <script type="text/babel">
 const { useState, useEffect } = React;
-const C = {dark:"#0f172a",mid:"#2563eb",light:"#e2e8f0",green:"#15803d",amber:"#b45309"};
+const C = {dark:"#0f172a",mid:"#7c3aed",light:"#e2e8f0",green:"#15803d",amber:"#b45309"};
 const STORE_KEY = "cpeen_student_id";
 const LETTERS = ['A','B','C','D','E','F'];
 
@@ -164,19 +164,39 @@ function ResultDetail({parts, answers, result}) {
   );
 }
 
-function Navbar() {
+function Sidebar({participant, onLogout}) {
   return (
-    <nav className="nav">
-      <a href="index.html" className="nav-brand">
-        <span className="nav-domain">englishgrammarchallenge.ro</span>
-        <span className="nav-title">ECHO</span>
-      </a>
-      <div className="nav-links">
-        <a href="register.html" className="nav-link">Register</a>
-        <a href="dashboard.html" className="nav-link active">My Dashboard</a>
-        <a href="admin/index.html" className="nav-link">Admin</a>
+    <aside className="app-sidebar">
+      <div className="app-sidebar-brand">
+        <div className="app-sidebar-logo">E</div>
+        <div className="app-sidebar-domain">englishgrammarchallenge.ro</div>
+        <div className="app-sidebar-title">ECHO</div>
       </div>
-    </nav>
+      {participant && (
+        <div className="app-sidebar-profile">
+          <div className="app-sidebar-name">{participant.name}</div>
+          <span className={`badge b-${participant.level}`}>{participant.level}</span>
+        </div>
+      )}
+      <nav className="app-sidebar-nav">
+        <a href="dashboard.html" className="app-sidebar-link active">
+          <span className="s-icon">📊</span> Dashboard
+        </a>
+        <a href="exam.html" className="app-sidebar-link">
+          <span className="s-icon">✏️</span> Examen
+        </a>
+        <a href="register.html" className="app-sidebar-link">
+          <span className="s-icon">➕</span> Înregistrare
+        </a>
+      </nav>
+      {onLogout && (
+        <div className="app-sidebar-footer">
+          <button className="btn btn-ghost btn-sm btn-block" style={{justifyContent:"flex-start",gap:8}} onClick={onLogout}>
+            <span>⬅</span> Deconectare
+          </button>
+        </div>
+      )}
+    </aside>
   );
 }
 
@@ -218,15 +238,23 @@ function SessionCard({s, exam, participant}) {
     URL.revokeObjectURL(a.href);
   };
 
+  const isGrad = s.status !== "submitted";
+  const cardStyle = isGrad
+    ? {borderRadius:10,padding:18,marginBottom:10,overflow:"hidden",position:"relative"}
+    : {border:"1px solid #e2e8f0",borderRadius:10,padding:18,marginBottom:10,background:"#fff"};
+
   return (
-    <div style={{border:"1px solid #e2e8f0",borderRadius:8,padding:14,marginBottom:8,background:"#fff"}}>
+    <div className={isGrad ? `card-${s.level}` : ""} style={cardStyle}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
         <div style={{flex:1,minWidth:200}}>
-          <div style={{fontWeight:700,color:C.dark,fontSize:14,marginBottom:5}}>{examTitle}</div>
+          <div style={{fontWeight:700,color:isGrad?"#fff":C.dark,fontSize:14,marginBottom:5}}>{examTitle}</div>
           <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-            <span className={`badge b-${s.level}`}>{s.level}</span>
-            <span style={{fontSize:12,color:"#64748b"}}>{stageL}</span>
-            <span style={{fontSize:11,color:"#94a3b8",fontFamily:"monospace"}}>· var. {variantId}</span>
+            {isGrad
+              ? <span style={{background:"rgba(255,255,255,.25)",color:"#fff",borderRadius:5,padding:"2px 8px",fontSize:11,fontWeight:700}}>{s.level}</span>
+              : <span className={`badge b-${s.level}`}>{s.level}</span>
+            }
+            <span style={{fontSize:12,color:isGrad?"rgba(255,255,255,.75)":"#64748b"}}>{stageL}</span>
+            <span style={{fontSize:11,color:isGrad?"rgba(255,255,255,.55)":"#94a3b8",fontFamily:"monospace"}}>· var. {variantId}</span>
             <StatusBadge status={s.status}/>
           </div>
           {s.status === "submitted" && typeof score === "number" && (
@@ -238,10 +266,12 @@ function SessionCard({s, exam, participant}) {
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"flex-start"}}>
           {canDetail && (
             <>
-              <button className="btn btn-ghost btn-sm" onClick={()=>setShowDetail(d=>!d)}>
+              <button className="btn btn-ghost btn-sm" style={isGrad?{background:"rgba(255,255,255,.15)",color:"#fff",border:"none"}:{}}
+                onClick={()=>setShowDetail(d=>!d)}>
                 {showDetail ? "Ascunde ▲" : "Detalii ▼"}
               </button>
-              <button className="btn btn-ghost btn-sm" onClick={downloadCopy} title="Descarcă copie răspunsuri (disponibilă 24h)">
+              <button className="btn btn-ghost btn-sm" style={isGrad?{background:"rgba(255,255,255,.15)",color:"#fff",border:"none"}:{}}
+                onClick={downloadCopy} title="Descarcă copie răspunsuri (disponibilă 24h)">
                 ⬇ Copie
               </button>
             </>
@@ -249,7 +279,10 @@ function SessionCard({s, exam, participant}) {
           {s.status === "submitted" && !within24h && (
             <span style={{fontSize:11,color:"#94a3b8",alignSelf:"center"}}>Copie expirată</span>
           )}
-          <a href={link} className={btnClass} style={{whiteSpace:"nowrap"}}>{btnLabel}</a>
+          <a href={link} className={btnClass}
+            style={isGrad?{background:"rgba(255,255,255,.9)",color:C.mid,whiteSpace:"nowrap"}:{whiteSpace:"nowrap"}}>
+            {btnLabel}
+          </a>
         </div>
       </div>
       {showDetail && canDetail && (
@@ -266,38 +299,33 @@ function DashboardView({participant, onLogout}) {
   const examMap  = {};
   exams.forEach(e => { examMap[e.id] = e; });
 
-  // Sort: in_progress > pending > submitted
   const order = {in_progress: 0, pending: 1, submitted: 2};
   const sorted = [...sessions].sort((a,b) => (order[a.status]??9) - (order[b.status]??9));
 
   const qualified = CPEEN.isQualified(participant);
 
   return (
-    <>
-      <Navbar/>
+    <div className="app-main" style={{background:"var(--bg)"}}>
       <div className="page">
         <div className="container" style={{maxWidth:780}}>
 
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:8}}>
-            <h2 style={{color:C.dark,fontSize:19,fontWeight:700}}>Your Dashboard</h2>
-            <div style={{display:"flex",gap:8}}>
-              <button className="btn btn-mid btn-sm" onClick={()=>setRefreshKey(k=>k+1)}>↻ Refresh</button>
-              <button className="btn btn-ghost btn-sm" onClick={onLogout}>Log out</button>
-            </div>
+            <h2 style={{color:C.dark,fontSize:19,fontWeight:700}}>Dashboard</h2>
+            <button className="btn btn-mid btn-sm" onClick={()=>setRefreshKey(k=>k+1)}>↻ Refresh</button>
           </div>
 
           {/* Profile */}
-          <div style={{background:"#fff",borderRadius:10,padding:20,border:"1px solid #e2e8f0",marginBottom:14}}>
-            <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:10,fontWeight:700}}>Profile</div>
+          <div style={{background:"#fff",borderRadius:10,padding:20,border:"1px solid #e8e8ec",marginBottom:14}}>
+            <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:10,fontWeight:700}}>Profil</div>
             <div style={{fontSize:17,fontWeight:700,color:C.dark,marginBottom:4}}>{participant.name}</div>
             <div style={{fontSize:13,color:"#64748b",marginBottom:10}}>
               {participant.school} · {participant.county}
-              {participant.grade && <> · Grade {participant.grade}</>}
+              {participant.grade && <> · Clasa {participant.grade}</>}
             </div>
             <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:12,color:"#64748b"}}>
               <span className={`badge b-${participant.level}`}>{participant.level}</span>
-              {participant.teacher && <span>Teacher: {participant.teacher}</span>}
-              {participant.username && <span>· Username: <strong>{participant.username}</strong></span>}
+              {participant.teacher && <span>Prof: {participant.teacher}</span>}
+              {participant.username && <span>· @<strong>{participant.username}</strong></span>}
             </div>
           </div>
 
@@ -307,26 +335,26 @@ function DashboardView({participant, onLogout}) {
             border: `1px solid ${qualified ? "#86efac" : "#fde68a"}`,
             borderRadius:10, padding:18, marginBottom:14
           }}>
-            <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:6,fontWeight:700}}>Qualification status</div>
+            <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:6,fontWeight:700}}>Status calificare</div>
             <div style={{fontSize:16,fontWeight:700,color: qualified ? C.green : C.amber}}>
-              {qualified ? "Qualified for the Final" : "In the Qualifying round"}
+              {qualified ? "Calificat pentru Finală" : "Etapa de calificare"}
             </div>
             <div style={{fontSize:12,color:"#64748b",marginTop:4}}>
               {qualified
-                ? "Congratulations! You have been qualified for the final stage."
-                : "To access the final stage, you must be qualified by an administrator."}
+                ? "Felicitări! Ești calificat pentru etapa finală."
+                : "Pentru a accesa finala, trebuie să fii calificat de un administrator."}
             </div>
           </div>
 
           {/* Sessions */}
-          <div style={{background:"#fff",borderRadius:10,padding:20,border:"1px solid #e2e8f0",marginBottom:16}}>
+          <div style={{background:"#fff",borderRadius:10,padding:20,border:"1px solid #e8e8ec",marginBottom:16}}>
             <div style={{fontSize:10,color:"#94a3b8",textTransform:"uppercase",letterSpacing:1.5,marginBottom:12,fontWeight:700}}>
-              My sessions ({sessions.length})
+              Sesiunile mele ({sessions.length})
             </div>
             {sessions.length === 0 ? (
               <div style={{padding:"20px 0",textAlign:"center",color:"#999",fontSize:13}}>
-                No sessions allocated yet.<br/>
-                Please wait for confirmation from your administrator.
+                Nicio sesiune alocată încă.<br/>
+                Așteaptă confirmarea din partea administratorului.
               </div>
             ) : sorted.map(s => (
               <SessionCard key={s.id} s={s} exam={examMap[s.examId]} participant={participant}/>
@@ -336,7 +364,7 @@ function DashboardView({participant, onLogout}) {
           <div className="text-center text-muted" style={{marginTop:14}}>ECHO · englishgrammarchallenge.ro</div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -358,43 +386,50 @@ function LoginEntry({onLogin}) {
   };
 
   return (
-    <>
-      <Navbar/>
-      <div className="page-center">
-        <div className="wrap-sm">
-          <div className="card">
-            <div className="card-head" style={{textAlign:"center"}}>
-              <h2>Student Dashboard</h2>
-              <p>ECHO · Autentificare</p>
+    <div className="page-center" style={{background:"var(--bg)"}}>
+      <div className="wrap-sm">
+        <div style={{textAlign:"center",marginBottom:24}}>
+          <div style={{
+            width:48,height:48,borderRadius:14,
+            background:"linear-gradient(135deg,#7c3aed,#4c1d95)",
+            display:"inline-flex",alignItems:"center",justifyContent:"center",
+            color:"#fff",fontWeight:800,fontSize:20,marginBottom:10
+          }}>E</div>
+          <div style={{fontSize:10,color:"#9ca3af",letterSpacing:2.5,textTransform:"uppercase",marginBottom:2}}>englishgrammarchallenge.ro</div>
+          <div style={{fontWeight:700,fontSize:17,color:"#0f172a"}}>ECHO</div>
+        </div>
+        <div className="card">
+          <div className="card-head" style={{textAlign:"center"}}>
+            <h2>Autentificare</h2>
+            <p>Intră în dashboard-ul tău</p>
+          </div>
+          <div className="card-body">
+            {err && <div className="alert alert-err">{err}</div>}
+            <div className="fg">
+              <label>Username<span className="req">*</span></label>
+              <input className="inp" value={username}
+                onChange={e=>{ setUsername(e.target.value); setErr(""); }}
+                onKeyDown={e=>e.key==="Enter"&&submit()}
+                placeholder="username-ul tău" autoComplete="username"/>
             </div>
-            <div className="card-body">
-              {err && <div className="alert alert-err">{err}</div>}
-              <div className="fg">
-                <label>Username<span className="req">*</span></label>
-                <input className="inp" value={username}
-                  onChange={e=>{ setUsername(e.target.value); setErr(""); }}
-                  onKeyDown={e=>e.key==="Enter"&&submit()}
-                  placeholder="username-ul tău" autoComplete="username"/>
-              </div>
-              <div className="fg">
-                <label>Parolă<span className="req">*</span></label>
-                <input type="password" className="inp" value={password}
-                  onChange={e=>{ setPassword(e.target.value); setErr(""); }}
-                  onKeyDown={e=>e.key==="Enter"&&submit()}
-                  placeholder="parola ta" autoComplete="current-password"/>
-              </div>
-              <button className="btn btn-primary btn-lg btn-block" onClick={submit} disabled={busy}>
-                {busy ? "Se verifică…" : "Autentificare →"}
-              </button>
-              <div style={{textAlign:"center",marginTop:14}}>
-                <a href="register.html" style={{fontSize:13}}>Nu ai cont? Înregistrează-te →</a>
-              </div>
+            <div className="fg">
+              <label>Parolă<span className="req">*</span></label>
+              <input type="password" className="inp" value={password}
+                onChange={e=>{ setPassword(e.target.value); setErr(""); }}
+                onKeyDown={e=>e.key==="Enter"&&submit()}
+                placeholder="parola ta" autoComplete="current-password"/>
+            </div>
+            <button className="btn btn-primary btn-lg btn-block" onClick={submit} disabled={busy}>
+              {busy ? "Se verifică…" : "Autentificare →"}
+            </button>
+            <div style={{textAlign:"center",marginTop:14}}>
+              <a href="register.html" style={{fontSize:13}}>Nu ai cont? Înregistrează-te →</a>
             </div>
           </div>
-          <div className="text-center text-muted" style={{marginTop:14}}>ECHO · englishgrammarchallenge.ro</div>
         </div>
+        <div className="text-center text-muted" style={{marginTop:14}}>ECHO · englishgrammarchallenge.ro</div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -420,11 +455,16 @@ function App() {
     setParticipant(null);
   };
 
-  if(participant) return <DashboardView participant={participant} onLogout={onLogout}/>;
+  if(participant) return (
+    <div className="app-layout">
+      <Sidebar participant={participant} onLogout={onLogout}/>
+      <DashboardView participant={participant} onLogout={onLogout}/>
+    </div>
+  );
   return <LoginEntry onLogin={onLogin}/>;
 }
 
-document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#2563eb;font-size:14px;">Se încarcă…</div>';
+document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#7c3aed;font-size:14px;">Se încarcă…</div>';
 CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<App/>));
 </script>
 </body>
