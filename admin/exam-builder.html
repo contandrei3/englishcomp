@@ -52,7 +52,7 @@ function initPart(id, defPts) {
   return { pts };
 }
 
-function toDBVariant(meta, enabled, partData) {
+function toDBVariant(meta, enabled, partData, writingEnabled, writingData) {
   const parts = [];
   PARTS_META.forEach(({id}) => {
     if (!enabled[id]) return;
@@ -124,10 +124,17 @@ function toDBVariant(meta, enabled, partData) {
       });
     }
   });
-  return {
-    title: meta.title.trim(),
-    variants:[{ id: meta.variantId.trim()||'V1', parts }]
-  };
+  const variant = { id: meta.variantId.trim()||'V1', parts };
+  if(writingEnabled && writingData?.prompt?.trim()) {
+    variant.writing = {
+      taskType: writingData.taskType || 'Essay',
+      prompt:   writingData.prompt.trim(),
+      minWords: parseInt(writingData.minWords)||0,
+      maxWords: parseInt(writingData.maxWords)||0,
+      pts:      parseInt(writingData.pts)||20
+    };
+  }
+  return { title: meta.title.trim(), variants:[variant] };
 }
 
 function fromDB(exam) {
@@ -213,9 +220,15 @@ function fromDB(exam) {
       };
     }
   });
+  const writingEnabled = !!v.writing;
+  const writingData = v.writing
+    ? { taskType:v.writing.taskType||'Essay', prompt:v.writing.prompt||'',
+        minWords:String(v.writing.minWords||150), maxWords:String(v.writing.maxWords||200),
+        pts:String(v.writing.pts||20) }
+    : { taskType:'Essay', prompt:'', minWords:'150', maxWords:'200', pts:'20' };
   return {
     meta: { title:exam.title||'', variantId:v.id||'V1' },
-    enabled, partData
+    enabled, partData, writingEnabled, writingData
   };
 }
 
@@ -794,6 +807,8 @@ function ExamBuilder() {
     PARTS_META.forEach(p => { d[p.id] = initPart(p.id, p.defPts); });
     return d;
   });
+  const [writingEnabled, setWritingEnabled] = useState(false);
+  const [writingData, setWritingData] = useState({taskType:'Essay',prompt:'',minWords:'150',maxWords:'200',pts:'20'});
   const [msg, setMsg] = useState({type:'',text:''});
   const [loading, setLoading] = useState(!!editId);
   const [showRaw, setShowRaw]   = useState(false);
@@ -802,9 +817,8 @@ function ExamBuilder() {
   const [editorKey, setEditorKey] = useState(0);
 
   const openRaw = () => {
-    // Pre-fill with the current exam state so the user can edit live
     try {
-      const current = toDBVariant(meta, enabled, partData);
+      const current = toDBVariant(meta, enabled, partData, writingEnabled, writingData);
       setRawJson(JSON.stringify(current, null, 2));
     } catch(e) {
       setRawJson('');
@@ -821,6 +835,7 @@ function ExamBuilder() {
     const loaded = fromDB(parsed);
     const hasParts = PARTS_META.some(p => loaded.enabled[p.id]);
     setMeta(loaded.meta); setEnabled(loaded.enabled); setPartData(loaded.partData);
+    setWritingEnabled(loaded.writingEnabled||false); setWritingData(loaded.writingData||{taskType:'Essay',prompt:'',minWords:'150',maxWords:'200',pts:'20'});
     setEditorKey(k => k + 1);
     setShowRaw(false); setRawErr('');
     setMsg({type: hasParts ? 'ok' : 'err',
@@ -842,6 +857,8 @@ function ExamBuilder() {
     setMeta(loaded.meta);
     setEnabled(loaded.enabled);
     setPartData(loaded.partData);
+    setWritingEnabled(loaded.writingEnabled||false);
+    setWritingData(loaded.writingData||{taskType:'Essay',prompt:'',minWords:'150',maxWords:'200',pts:'20'});
     setLoading(false);
   }, []);
 
@@ -858,8 +875,8 @@ function ExamBuilder() {
   const save = () => {
     setMsg({type:'',text:''});
     if (!meta.title.trim()) { setMsg({type:'err',text:'Titlul este obligatoriu.'}); return; }
-    if (!PARTS_META.some(p => enabled[p.id])) { setMsg({type:'err',text:'Selectați cel puțin o secțiune.'}); return; }
-    const data = toDBVariant(meta, enabled, partData);
+    if (!PARTS_META.some(p => enabled[p.id]) && !writingEnabled) { setMsg({type:'err',text:'Selectați cel puțin o secțiune sau activați Writing.'}); return; }
+    const data = toDBVariant(meta, enabled, partData, writingEnabled, writingData);
     setMsg({type:'ok', text:'Se salvează…'});
     editId ? CPEEN.updateExam(editId, data) : CPEEN.addExam(data);
     // localStorage write is synchronous — navigate immediately.
@@ -962,6 +979,48 @@ function ExamBuilder() {
               );
             })}
           </div>
+        </div>
+
+        {/* Writing section */}
+        <div style={{background:"#fff",borderRadius:12,boxShadow:"0 2px 10px rgba(0,0,0,.07)",padding:20,marginBottom:20}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:writingEnabled?16:0}}>
+            <div>
+              <div style={{fontWeight:700,color:C.dark,fontSize:14}}>✍ Subiect Writing</div>
+              <div style={{fontSize:11,color:"#888",marginTop:3}}>Task liber — corectat manual de profesor. Nu intră în scorul automat.</div>
+            </div>
+            <div onClick={()=>setWritingEnabled(e=>!e)} style={{
+              width:46,height:26,borderRadius:13,cursor:"pointer",transition:"background .2s",
+              background:writingEnabled?"#7c3aed":"#cbd5e1",position:"relative",flexShrink:0}}>
+              <div style={{position:"absolute",top:3,left:writingEnabled?22:3,width:20,height:20,
+                borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/>
+            </div>
+          </div>
+          {writingEnabled && (
+            <div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 100px 80px 80px",gap:12,alignItems:"end",marginBottom:14}}>
+                <Fld label="Tip task">
+                  <select value={writingData.taskType} onChange={e=>setWritingData(d=>({...d,taskType:e.target.value}))}
+                    style={{border:"1px solid #d0d8e8",borderRadius:6,padding:"7px 10px",fontSize:13,width:"100%",fontFamily:"inherit",outline:"none",background:"#fff"}}>
+                    {['Essay','Email','Report','Article','Review','Letter','Story','Other'].map(t=><option key={t} value={t}>{t}</option>)}
+                  </select>
+                </Fld>
+                <Fld label="Punctaj max." hint="corectat manual">
+                  <Inp type="number" value={writingData.pts} onChange={e=>setWritingData(d=>({...d,pts:e.target.value}))} style={{width:"100%"}}/>
+                </Fld>
+                <Fld label="Min. cuvinte">
+                  <Inp type="number" value={writingData.minWords} onChange={e=>setWritingData(d=>({...d,minWords:e.target.value}))} style={{width:"100%"}}/>
+                </Fld>
+                <Fld label="Max. cuvinte">
+                  <Inp type="number" value={writingData.maxWords} onChange={e=>setWritingData(d=>({...d,maxWords:e.target.value}))} style={{width:"100%"}}/>
+                </Fld>
+              </div>
+              <Fld label="Sarcina de lucru (prompt afișat elevului)">
+                <Ta value={writingData.prompt} rows={5}
+                  onChange={e=>setWritingData(d=>({...d,prompt:e.target.value}))}
+                  placeholder="ex: You have received an email from a friend asking for advice about learning a foreign language. Write an email giving your friend some advice. Write 150–200 words."/>
+              </Fld>
+            </div>
+          )}
         </div>
 
         {/* Enabled part cards — key={editorKey} forțează remount complet după import JSON */}

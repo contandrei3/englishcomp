@@ -293,6 +293,8 @@ function SessionCard({s, exam, participant}) {
   const stageL = stageLabel(s.stage);
   const examTitle = exam?.title || s.examId || "—";
   const variantId = s.variantId;
+  const variant = exam?.variants?.find(v => v.id === s.variantId);
+  const hasWriting = !!variant?.writing;
   const link = `exam.html?sid=${encodeURIComponent(s.id)}`;
   const btnLabel = s.status === "submitted"
     ? "View results →"
@@ -302,7 +304,6 @@ function SessionCard({s, exam, participant}) {
   const btnClass = s.status === "submitted" ? "btn btn-mid btn-sm" : "btn btn-primary btn-sm";
   const score = s.result?.total;
   const within24h = s.submittedAt && (Date.now() - s.submittedAt) < 86400000;
-  const variant = exam?.variants?.find(v => v.id === s.variantId);
   const canDetail = s.status === "submitted" && within24h && variant?.parts?.length && s.result;
 
   const downloadCopy = () => {
@@ -348,7 +349,7 @@ function SessionCard({s, exam, participant}) {
               <StatusBadge status={s.status}/>
             </div>
             {s.status === "submitted" && typeof score === "number" && (
-              <div style={{marginTop:8,fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+              <div style={{marginTop:8,fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                 <span style={{color:score>=75?"#15803d":score>=50?"#d97706":"#dc2626"}}>
                   {score}/100
                 </span>
@@ -358,6 +359,22 @@ function SessionCard({s, exam, participant}) {
                 {s.submittedAt && <span style={{color:"#94a3b8",fontWeight:400,fontSize:11}}>
                   · {new Date(s.submittedAt).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}
                 </span>}
+              </div>
+            )}
+            {s.status === "submitted" && hasWriting && (
+              <div style={{marginTop:6,display:"flex",alignItems:"center",gap:6}}>
+                {s.writingGrade != null ? (
+                  <span style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:5,
+                    padding:"2px 8px",fontSize:11,fontWeight:700,color:"#15803d"}}>
+                    ✓ Writing: {s.writingGrade}/{variant.writing.pts||20} pts
+                    {s.writingFeedback && <span style={{fontWeight:400,marginLeft:4}}>— {s.writingFeedback.slice(0,60)}{s.writingFeedback.length>60?"…":""}</span>}
+                  </span>
+                ) : (
+                  <span style={{background:"#fef9c3",border:"1px solid #fde047",borderRadius:5,
+                    padding:"2px 8px",fontSize:11,fontWeight:700,color:"#854d0e"}}>
+                    ⏳ Writing — în așteptarea corectării
+                  </span>
+                )}
               </div>
             )}
           </div>
