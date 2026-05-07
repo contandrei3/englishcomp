@@ -474,6 +474,22 @@ var CPEEN = (function () {
           var ok = parseInt(ans[i]) === item.answer;
           det.push(ok); if (ok) total += part.pts;
         });
+      } else if (part.type === 'l1' || part.type === 'l3') {
+        (part.items || []).forEach(function(item, i) {
+          var ok = parseInt(ans[i]) === item.answer;
+          det.push(ok); if (ok) total += part.pts;
+        });
+      } else if (part.type === 'l2') {
+        (part.items || []).forEach(function(item, i) {
+          var accepted = Array.isArray(item.answer) ? item.answer : [item.answer];
+          var ok = accepted.some(function(x) { return norm(x) === norm(ans[i]); });
+          det.push(ok); if (ok) total += part.pts;
+        });
+      } else if (part.type === 'l4') {
+        (part.items || []).forEach(function(item, i) {
+          var ok = norm(ans[i]) === norm(item.answer);
+          det.push(ok); if (ok) total += part.pts;
+        });
       }
       details.push(det);
     });

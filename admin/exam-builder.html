@@ -33,9 +33,13 @@ const PARTS_META = [
   { id:'e1', sec:'E1',     label:'Error Correction I',           hint:'Find extra word per line; ✓ if correct',     defPts:1 },
   { id:'e2', sec:'E2',     label:'Error Correction II',          hint:'Find wrong word, write correction',           defPts:1 },
   { id:'mc', sec:'MC',     label:'Multiple Choice',              hint:'Questions with up to 6 options (A–F)',        defPts:1 },
+  { id:'l1', sec:'L1',    label:'Listening – Multiple Choice',  hint:'Short extracts + A/B/C per question',         defPts:1 },
+  { id:'l2', sec:'L2',    label:'Listening – Sentence Completion', hint:'Complete sentences from recording',        defPts:1 },
+  { id:'l3', sec:'L3',    label:'Listening – MC Long Extract',  hint:'One recording + multiple A/B/C questions',   defPts:1 },
+  { id:'l4', sec:'L4',    label:'Listening – Multiple Matching', hint:'Match speakers to options A–H',             defPts:1 },
 ];
 
-const IMPLEMENTED = { p1:true,p2:true,p3:true,p4:true,p5:true,p6:true,p7:true,p8:true,ec:true,e1:true,e2:true,mc:true };
+const IMPLEMENTED = { p1:true,p2:true,p3:true,p4:true,p5:true,p6:true,p7:true,p8:true,ec:true,e1:true,e2:true,mc:true,l1:true,l2:true,l3:true,l4:true };
 
 function initPart(id, defPts) {
   const pts = String(defPts);
@@ -49,6 +53,9 @@ function initPart(id, defPts) {
   if (id==='p8') return { pts, texts:['A','B','C','D'].map(l=>({label:l,title:'',content:''})), items:[] }; // Cross-text
   if (id==='ec'||id==='e1'||id==='e2') return { title:'', intro:'', pts, lines:[], key:[] };
   if (id==='mc') return { title:'', text:'', pts, items:[] };
+  if (id==='l1'||id==='l3') return { title:'', pts, audioUrl:'', intro:'', items:[] };
+  if (id==='l2') return { title:'', pts, audioUrl:'', intro:'', items:[] };
+  if (id==='l4') return { title:'', pts, audioUrl:'', intro:'', question:'', options:['','','','','','','',''], items:[] };
   return { pts };
 }
 
@@ -121,6 +128,28 @@ function toDBVariant(meta, enabled, partData, writingEnabled, writingData) {
           options:(it.opts||[]).filter(Boolean),
           answer:parseInt(it.correct)||0
         }))
+      });
+    } else if (id==='l1'||id==='l3') {
+      parts.push({ type:id, title:d.title||'', pts, audioUrl:d.audioUrl||'',
+        ...(d.intro ? {intro:d.intro} : {}),
+        items:(d.items||[]).map(it=>({
+          question:it.question||'',
+          options:[it.a||'',it.b||'',it.c||''],
+          answer:['a','b','c'].indexOf(it.correct||'a')
+        }))
+      });
+    } else if (id==='l2') {
+      parts.push({ type:'l2', title:d.title||'', pts, audioUrl:d.audioUrl||'', intro:d.intro||'',
+        items:(d.items||[]).map(it=>({
+          before:it.before||'', after:it.after||'',
+          answer:(it.answers||'').split(';').map(x=>x.trim()).filter(Boolean)
+        }))
+      });
+    } else if (id==='l4') {
+      parts.push({ type:'l4', title:d.title||'', pts, audioUrl:d.audioUrl||'', intro:d.intro||'',
+        question:d.question||'',
+        options:(d.options||[]).filter(Boolean),
+        items:(d.items||[]).map(it=>({ label:it.label||'', answer:it.answer||'' }))
       });
     }
   });
@@ -217,6 +246,27 @@ function fromDB(exam) {
           opts:[...(it.options||['','','',''])],
           correct:String(it.answer||0)
         }))
+      };
+    } else if (id==='l1'||id==='l3') {
+      partData[id] = {
+        title:part.title||'', pts:String(part.pts||1), audioUrl:part.audioUrl||'', intro:part.intro||'',
+        items:(part.items||[]).map(it=>({
+          question:it.question||'',
+          a:it.options?.[0]||'', b:it.options?.[1]||'', c:it.options?.[2]||'',
+          correct:['a','b','c'][it.answer]||'a'
+        }))
+      };
+    } else if (id==='l2') {
+      partData.l2 = {
+        title:part.title||'', pts:String(part.pts||1), audioUrl:part.audioUrl||'', intro:part.intro||'',
+        items:(part.items||[]).map(it=>({ before:it.before||'', after:it.after||'', answers:(it.answer||[]).join('; ') }))
+      };
+    } else if (id==='l4') {
+      partData.l4 = {
+        title:part.title||'', pts:String(part.pts||1), audioUrl:part.audioUrl||'',
+        intro:part.intro||'', question:part.question||'',
+        options:[...(part.options||[]).concat(['','','','','','','','']).slice(0,8)],
+        items:(part.items||[]).map(it=>({ label:it.label||'', answer:it.answer||'' }))
       };
     }
   });
@@ -786,12 +836,178 @@ function MCEdit({data,onChange}) {
   );
 }
 
+// ── Audio URL helper ──────────────────────────────────────────────────────
+function AudioUrlFld({value, onChange}) {
+  return (
+    <div style={{marginBottom:14}}>
+      <label style={{display:"block",fontSize:12,fontWeight:700,color:"#444",marginBottom:4}}>
+        🎧 URL Audio — Google Drive sau link direct
+      </label>
+      <input value={value} onChange={onChange}
+        placeholder="https://drive.google.com/file/d/FILE_ID/view  sau  https://example.com/audio.mp3"
+        style={{...IS,width:"100%",boxSizing:"border-box"}}/>
+      <div style={{fontSize:11,color:"#888",marginTop:3}}>
+        Pentru Drive: distribuiți cu „Oricine are linkul" și lipiți linkul de partajare.
+      </div>
+    </div>
+  );
+}
+
+// ── Listening editors ─────────────────────────────────────────────────────
+function L1Edit({data, onChange}) {
+  const set = (k,v) => onChange({...data,[k]:v});
+  const setItem = (i,k,v) => onChange({...data, items:data.items.map((x,j)=>j===i?{...x,[k]:v}:x)});
+  const setOpt = (i,oi,v) => onChange({...data, items:data.items.map((x,j)=>{
+    if(j!==i) return x;
+    const next = {...x}; next[['a','b','c'][oi]] = v; return next;
+  })});
+  return (
+    <div>
+      <AudioUrlFld value={data.audioUrl||''} onChange={e=>set('audioUrl',e.target.value)}/>
+      <Fld label="Introducere (opțional)">
+        <Inp value={data.intro||''} onChange={e=>set('intro',e.target.value)} placeholder="You will hear eight short recordings..."/>
+      </Fld>
+      {(data.items||[]).map((item,i)=>(
+        <ItemCard key={i} num={i+1} onDelete={()=>set('items',data.items.filter((_,j)=>j!==i))}>
+          <Fld label="Întrebarea">
+            <Inp value={item.question||''} onChange={e=>setItem(i,'question',e.target.value)} placeholder="What does the speaker say about...?"/>
+          </Fld>
+          {['a','b','c'].map((l,oi)=>(
+            <div key={l} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+              <span style={{fontWeight:700,width:22,color:'#555'}}>{l.toUpperCase()}.</span>
+              <Inp value={item[l]||''} onChange={e=>setOpt(i,oi,e.target.value)} placeholder={`Opțiunea ${l.toUpperCase()}`} style={{flex:1}}/>
+              <label style={{display:'flex',alignItems:'center',gap:4,fontSize:12,whiteSpace:'nowrap',cursor:'pointer'}}>
+                <input type="radio" name={`l1c_${i}`} checked={(item.correct||'a')===l}
+                  onChange={()=>setItem(i,'correct',l)}/> Corect
+              </label>
+            </div>
+          ))}
+        </ItemCard>
+      ))}
+      <AddBtn onClick={()=>set('items',[...(data.items||[]),{question:'',a:'',b:'',c:'',correct:'a'}])} label="Adaugă întrebare"/>
+    </div>
+  );
+}
+
+function L2Edit({data, onChange}) {
+  const set = (k,v) => onChange({...data,[k]:v});
+  const setItem = (i,k,v) => onChange({...data, items:data.items.map((x,j)=>j===i?{...x,[k]:v}:x)});
+  return (
+    <div>
+      <AudioUrlFld value={data.audioUrl||''} onChange={e=>set('audioUrl',e.target.value)}/>
+      <Fld label="Introducere (opțional)">
+        <Inp value={data.intro||''} onChange={e=>set('intro',e.target.value)} placeholder="You will hear a talk about..."/>
+      </Fld>
+      {(data.items||[]).map((item,i)=>(
+        <ItemCard key={i} num={i+1} onDelete={()=>set('items',data.items.filter((_,j)=>j!==i))}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 36px 1fr',gap:8,alignItems:'end',marginBottom:8}}>
+            <Fld label="Text înainte de spațiu">
+              <Inp value={item.before||''} onChange={e=>setItem(i,'before',e.target.value)} placeholder="The speaker works as a"/>
+            </Fld>
+            <div style={{textAlign:'center',paddingBottom:10,fontWeight:700,color:'#7c3aed',fontSize:20}}>___</div>
+            <Fld label="Text după spațiu">
+              <Inp value={item.after||''} onChange={e=>setItem(i,'after',e.target.value)} placeholder="in London."/>
+            </Fld>
+          </div>
+          <Fld label="Răspuns(uri) acceptate" hint="separate cu ;">
+            <Inp value={item.answers||''} onChange={e=>setItem(i,'answers',e.target.value)} placeholder="teacher; school teacher"/>
+          </Fld>
+        </ItemCard>
+      ))}
+      <AddBtn onClick={()=>set('items',[...(data.items||[]),{before:'',after:'',answers:''}])} label="Adaugă propoziție"/>
+    </div>
+  );
+}
+
+function L3Edit({data, onChange}) {
+  const set = (k,v) => onChange({...data,[k]:v});
+  const setItem = (i,k,v) => onChange({...data, items:data.items.map((x,j)=>j===i?{...x,[k]:v}:x)});
+  const setOpt = (i,oi,v) => onChange({...data, items:data.items.map((x,j)=>{
+    if(j!==i) return x;
+    const next = {...x}; next[['a','b','c'][oi]] = v; return next;
+  })});
+  return (
+    <div>
+      <AudioUrlFld value={data.audioUrl||''} onChange={e=>set('audioUrl',e.target.value)}/>
+      <Fld label="Introducere (opțional)">
+        <Inp value={data.intro||''} onChange={e=>set('intro',e.target.value)} placeholder="You will hear an interview with a writer..."/>
+      </Fld>
+      {(data.items||[]).map((item,i)=>(
+        <ItemCard key={i} num={i+1} onDelete={()=>set('items',data.items.filter((_,j)=>j!==i))}>
+          <Fld label="Întrebarea">
+            <Inp value={item.question||''} onChange={e=>setItem(i,'question',e.target.value)} placeholder="Why does the speaker...?"/>
+          </Fld>
+          {['a','b','c'].map((l,oi)=>(
+            <div key={l} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+              <span style={{fontWeight:700,width:22,color:'#555'}}>{l.toUpperCase()}.</span>
+              <Inp value={item[l]||''} onChange={e=>setOpt(i,oi,e.target.value)} placeholder={`Opțiunea ${l.toUpperCase()}`} style={{flex:1}}/>
+              <label style={{display:'flex',alignItems:'center',gap:4,fontSize:12,whiteSpace:'nowrap',cursor:'pointer'}}>
+                <input type="radio" name={`l3c_${i}`} checked={(item.correct||'a')===l}
+                  onChange={()=>setItem(i,'correct',l)}/> Corect
+              </label>
+            </div>
+          ))}
+        </ItemCard>
+      ))}
+      <AddBtn onClick={()=>set('items',[...(data.items||[]),{question:'',a:'',b:'',c:'',correct:'a'}])} label="Adaugă întrebare"/>
+    </div>
+  );
+}
+
+function L4Edit({data, onChange}) {
+  const set = (k,v) => onChange({...data,[k]:v});
+  const setOpt = (i,v) => onChange({...data, options:data.options.map((x,j)=>j===i?v:x)});
+  const setItem = (i,k,v) => onChange({...data, items:data.items.map((x,j)=>j===i?{...x,[k]:v}:x)});
+  const letters = 'ABCDEFGH'.split('');
+  return (
+    <div>
+      <AudioUrlFld value={data.audioUrl||''} onChange={e=>set('audioUrl',e.target.value)}/>
+      <Fld label="Introducere (opțional)">
+        <Inp value={data.intro||''} onChange={e=>set('intro',e.target.value)} placeholder="You will hear five short extracts..."/>
+      </Fld>
+      <Fld label="Întrebarea sarcinii">
+        <Inp value={data.question||''} onChange={e=>set('question',e.target.value)} placeholder="What is each speaker's main concern?"/>
+      </Fld>
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:12,fontWeight:700,color:'#444',marginBottom:6}}>Opțiunile A–H</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+          {letters.map((l,i)=>(
+            <div key={l} style={{display:'flex',alignItems:'center',gap:6}}>
+              <span style={{fontWeight:700,color:'#7c3aed',width:20}}>{l}:</span>
+              <Inp value={(data.options||[])[i]||''} onChange={e=>setOpt(i,e.target.value)} placeholder={`Opțiunea ${l}`} style={{flex:1}}/>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{marginBottom:6,fontSize:12,fontWeight:700,color:'#444'}}>Vorbitori</div>
+      {(data.items||[]).map((item,i)=>(
+        <ItemCard key={i} num={i+1} onDelete={()=>set('items',data.items.filter((_,j)=>j!==i))}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 120px',gap:10,alignItems:'end'}}>
+            <Fld label="Etichetă vorbitor">
+              <Inp value={item.label||''} onChange={e=>setItem(i,'label',e.target.value)} placeholder="Speaker 1"/>
+            </Fld>
+            <Fld label="Răspuns corect">
+              <select value={item.answer||''} onChange={e=>setItem(i,'answer',e.target.value)}
+                style={{...IS,width:'100%'}}>
+                <option value="">—</option>
+                {letters.map(l=><option key={l} value={l}>{l}</option>)}
+              </select>
+            </Fld>
+          </div>
+        </ItemCard>
+      ))}
+      <AddBtn onClick={()=>set('items',[...(data.items||[]),{label:'',answer:''}])} label="Adaugă vorbitor"/>
+    </div>
+  );
+}
+
 const EDITORS = {
   p1: P1Edit, p2: P2Edit, p3: P3Edit, p4: P4Edit, p5: P5Edit,
   p6: P7Edit,  // p6 = Gapped Text → uses P7Edit logic
   p7: P8Edit,  // p7 = Multiple Matching → uses P8Edit logic
   p8: P6Edit,  // p8 = Cross-text → uses P6Edit logic
-  ec: ECEdit, e1: ECEdit, e2: ECEdit, mc: MCEdit
+  ec: ECEdit, e1: ECEdit, e2: ECEdit, mc: MCEdit,
+  l1: L1Edit, l2: L2Edit, l3: L3Edit, l4: L4Edit,
 };
 
 // ── Main ──────────────────────────────────────────────────────────────────

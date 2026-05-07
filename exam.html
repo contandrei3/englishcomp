@@ -43,7 +43,9 @@ const PART_LABELS = {p1:"Multiple Choice Cloze",p2:"Open Cloze",p3:"Word Formati
   p4:"Key Word Transformations",p5:"Multiple Choice Reading",p6:"Gapped Text",
   p7:"Multiple Matching",p8:"Cross-text Multiple Matching",
   ec:"Error Correction",mc:"Multiple Choice",
-  e1:"Error Correction I",e2:"Error Correction II"};
+  e1:"Error Correction I",e2:"Error Correction II",
+  l1:"Listening – Multiple Choice",l2:"Listening – Sentence Completion",
+  l3:"Listening – Multiple Choice",l4:"Listening – Multiple Matching"};
 const PART_INSTRS = {
   p1:"Read the text and decide which answer (A, B, C or D) best fits each gap.",
   p2:"Read the text and think of ONE word which best fits each gap.",
@@ -56,7 +58,11 @@ const PART_INSTRS = {
   ec:"Some of the lines contain ONE extra word which does not belong. Write the extra word. Write ✓ if the line is correct.",
   mc:"Read the question and choose the best answer (A, B, C or D).",
   e1:"Some of the lines contain ONE extra word which does not belong. Write the extra word. Write ✓ if the line is correct.",
-  e2:"Some of the lines contain ONE incorrect word. Write the correct word. Write ✓ if the line is correct."
+  e2:"Some of the lines contain ONE incorrect word. Write the correct word. Write ✓ if the line is correct.",
+  l1:"Listen to the recording and choose the answer (A, B or C) which fits best.",
+  l2:"Listen to the recording and complete the sentences with one or two words.",
+  l3:"Listen to the recording and choose the answer (A, B or C) which fits best.",
+  l4:"Listen to the extracts. Match each speaker to the correct option (A–H). Use each letter only once."
 };
 
 function gapNums(text) {
@@ -69,6 +75,28 @@ function getPartCount(part) {
   if (part.type === 'p7') return part.texts ? (part.items||[]).length : (part.key||[]).length;
   if (part.type === 'ec' || part.type === 'e1' || part.type === 'e2') return (part.lines||[]).length;
   return (part.items||[]).length;
+}
+
+function AudioPlayer({url}) {
+  if(!url) return null;
+  const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  const embedUrl = driveMatch ? `https://drive.google.com/file/d/${driveMatch[1]}/preview` : null;
+  return (
+    <div style={{background:"#f0f4ff",border:"1px solid #c4b5fd",borderRadius:10,padding:"14px 16px",marginBottom:18}}>
+      <div style={{fontSize:11,fontWeight:700,color:"#7c3aed",letterSpacing:.8,textTransform:"uppercase",marginBottom:8}}>
+        🎧 Ascultați înregistrarea
+      </div>
+      {embedUrl ? (
+        <iframe src={embedUrl} width="100%" height="80" allow="autoplay"
+          style={{border:"none",borderRadius:6,display:"block"}} title="Audio"/>
+      ) : (
+        <audio controls src={url} style={{width:"100%",display:"block"}}/>
+      )}
+      <div style={{fontSize:11,color:"#94a3b8",marginTop:6}}>
+        Puteți asculta de mai multe ori în timpul alocat.
+      </div>
+    </div>
+  );
 }
 
 // Inline clickable gap. `display` is what's shown when filled (string), `num` is gap number.
@@ -753,6 +781,120 @@ function PartSection({part, pi, ans, setAns, startNum=0, requestPopup=()=>{}}) {
           })}
         </div>
       </>}
+
+      {/* L1 — Listening Multiple Choice (short extracts) */}
+      {part.type==='l1' && <>
+        <AudioPlayer url={part.audioUrl}/>
+        {(part.items||[]).map((item,i)=>{
+          const n = startNum+i+1;
+          const opts = item.options||[];
+          return (
+            <div key={i} style={{marginBottom:14,padding:"12px 14px",background:"#fafafa",borderRadius:8,border:"1px solid #e8e8ec"}}>
+              <div style={{fontSize:13,fontWeight:600,color:C.dark,marginBottom:10}}>
+                <strong style={{color:C.mid,marginRight:6}}>{n}.</strong>{item.question}
+              </div>
+              {opts.map((opt,oi)=>{
+                const sel = parseInt(ans[i])===oi;
+                return (
+                  <label key={oi} style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:5,cursor:"pointer",
+                    padding:"7px 10px",borderRadius:7,background:sel?"#f5f3ff":"transparent",
+                    border:sel?"1px solid #c4b5fd":"1px solid transparent"}}>
+                    <input type="radio" name={`l1_${pi}_${i}`} checked={sel}
+                      onChange={()=>setAns(pi,i,String(oi))} style={{marginTop:2,accentColor:"#7c3aed"}}/>
+                    <span style={{fontSize:13,color:"#374151"}}><strong style={{color:"#555"}}>{String.fromCharCode(65+oi)}. </strong>{opt}</span>
+                  </label>
+                );
+              })}
+            </div>
+          );
+        })}
+      </>}
+
+      {/* L2 — Listening Sentence Completion */}
+      {part.type==='l2' && <>
+        <AudioPlayer url={part.audioUrl}/>
+        {part.intro && <div className="instr" style={{marginBottom:14}}>{part.intro}</div>}
+        {(part.items||[]).map((item,i)=>{
+          const n = startNum+i+1;
+          return (
+            <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+              <span style={{fontWeight:700,color:C.dark,minWidth:22,fontSize:13}}>{n}.</span>
+              <span style={{fontSize:13,color:"#374151"}}>{item.before}</span>
+              <input className="ans-inp" value={ans[i]||""} onChange={e=>setAns(pi,i,e.target.value)}
+                placeholder="..." style={{width:180,minWidth:100}}/>
+              {item.after && <span style={{fontSize:13,color:"#374151"}}>{item.after}</span>}
+            </div>
+          );
+        })}
+      </>}
+
+      {/* L3 — Listening Multiple Choice (long extract) */}
+      {part.type==='l3' && <>
+        <AudioPlayer url={part.audioUrl}/>
+        {part.intro && <div className="instr" style={{marginBottom:14}}>{part.intro}</div>}
+        {(part.items||[]).map((item,i)=>{
+          const n = startNum+i+1;
+          const opts = item.options||[];
+          return (
+            <div key={i} style={{marginBottom:14,padding:"12px 14px",background:"#fafafa",borderRadius:8,border:"1px solid #e8e8ec"}}>
+              <div style={{fontSize:13,fontWeight:600,color:C.dark,marginBottom:10}}>
+                <strong style={{color:C.mid,marginRight:6}}>{n}.</strong>{item.question}
+              </div>
+              {opts.map((opt,oi)=>{
+                const sel = parseInt(ans[i])===oi;
+                return (
+                  <label key={oi} style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:5,cursor:"pointer",
+                    padding:"7px 10px",borderRadius:7,background:sel?"#f5f3ff":"transparent",
+                    border:sel?"1px solid #c4b5fd":"1px solid transparent"}}>
+                    <input type="radio" name={`l3_${pi}_${i}`} checked={sel}
+                      onChange={()=>setAns(pi,i,String(oi))} style={{marginTop:2,accentColor:"#7c3aed"}}/>
+                    <span style={{fontSize:13,color:"#374151"}}><strong style={{color:"#555"}}>{String.fromCharCode(65+oi)}. </strong>{opt}</span>
+                  </label>
+                );
+              })}
+            </div>
+          );
+        })}
+      </>}
+
+      {/* L4 — Listening Multiple Matching */}
+      {part.type==='l4' && <>
+        <AudioPlayer url={part.audioUrl}/>
+        {part.intro && <div className="instr" style={{marginBottom:14}}>{part.intro}</div>}
+        {part.question && (
+          <div style={{fontWeight:600,fontSize:13,color:C.dark,marginBottom:14,
+            padding:"10px 14px",background:"#f5f3ff",borderRadius:8,border:"1px solid #c4b5fd"}}>
+            {part.question}
+          </div>
+        )}
+        <div style={{background:"#fafafa",borderRadius:8,padding:"12px 16px",marginBottom:16,border:"1px solid #e8e8ec"}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#94a3b8",marginBottom:8,textTransform:"uppercase",letterSpacing:.5}}>Opțiuni</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+            {(part.options||[]).filter(Boolean).map((opt,i)=>(
+              <div key={i} style={{fontSize:12,color:"#374151",padding:"3px 0"}}>
+                <strong style={{color:"#7c3aed"}}>{String.fromCharCode(65+i)}. </strong>{opt}
+              </div>
+            ))}
+          </div>
+        </div>
+        {(part.items||[]).map((item,i)=>{
+          const n = startNum+i+1;
+          const letters = (part.options||[]).filter(Boolean).map((_,j)=>String.fromCharCode(65+j));
+          return (
+            <div key={i} style={{display:"flex",alignItems:"center",gap:12,marginBottom:8,
+              padding:"10px 14px",background:"#fff",borderRadius:8,border:"1px solid #e8e8ec"}}>
+              <span style={{fontWeight:700,color:C.dark,minWidth:22,fontSize:13}}>{n}.</span>
+              <span style={{fontSize:13,color:"#374151",flex:1}}>{item.label||`Speaker ${i+1}`}</span>
+              <select value={ans[i]||""} onChange={e=>setAns(pi,i,e.target.value)}
+                style={{border:"1px solid #e2e8f0",borderRadius:7,padding:"6px 10px",fontSize:13,
+                  fontFamily:"inherit",outline:"none",background:"#fff",minWidth:80,cursor:"pointer"}}>
+                <option value="">—</option>
+                {letters.map(l=><option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+          );
+        })}
+      </>}
     </div>
   );
 }
@@ -1332,7 +1474,7 @@ function ExamApp() {
           <div style={{display:"flex",gap:5}}>
             {isNewFormat
               ? (variant.parts||[]).map((p,pi)=>{
-                  const lbl = p.type==='e1'?'E1':p.type==='e2'?'E2':`P${pi+1}`;
+                  const lbl = p.type==='e1'?'E1':p.type==='e2'?'E2':p.type==='l1'?'L1':p.type==='l2'?'L2':p.type==='l3'?'L3':p.type==='l4'?'L4':`P${pi+1}`;
                   return (
                     <button key={pi} onClick={()=>document.getElementById(`part${pi}`)?.scrollIntoView({behavior:"smooth"})}
                       style={{background:"rgba(255,255,255,.15)",color:"#fff",border:"none",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:600}}>{lbl}</button>
