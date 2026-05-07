@@ -155,7 +155,7 @@ var CPEEN = (function () {
 
   // ── Config ────────────────────────────────────────────────────────────────
   function getConfig() {
-    var cfg = Object.assign({ maxPerSchoolPerLevel: 0, showResultsImmediately: true, adminHash: DEFAULT_ADMIN_HASH, activeExams: {} }, sg(KEYS.CONFIG, {}));
+    var cfg = Object.assign({ maxPerSchoolPerLevel: 0, showResultsImmediately: true, adminHash: DEFAULT_ADMIN_HASH, activeExams: {}, registrationsOpen: true, countdownDate: "2026-03-15T23:59:59", countdownText: "Timp rămas până la închiderea înscrierilor", countdownLabel: "15 Martie 2026" }, sg(KEYS.CONFIG, {}));
     if (!cfg.adminHash) cfg.adminHash = DEFAULT_ADMIN_HASH;
     return cfg;
   }

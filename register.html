@@ -78,8 +78,59 @@ function FG({label, req, hint, err, children}) {
   );
 }
 
+const LVLBG = {A2:{background:"#dcfce7",color:"#15803d"},B1:{background:"#fef3c7",color:"#b45309"},
+  B2:{background:"#f3e8ff",color:"#7c3aed"},C1:{background:"#dbeafe",color:"#1d4ed8"},
+  FCE:{background:"#fef9c3",color:"#854d0e"},CAE:{background:"#e0e7ff",color:"#3730a3"}};
+
+// Left branding panel — shared across success / form states
+function LeftPanel() {
+  return (
+    <div style={{flex:"0 0 42%",background:"linear-gradient(150deg,#0f0524 0%,#2d1068 60%,#1e1b4b 100%)",
+      display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+      padding:"60px 44px",position:"relative",overflow:"hidden",minHeight:"100vh"}}>
+      <div style={{position:"absolute",top:-100,right:-100,width:360,height:360,borderRadius:"50%",
+        background:"rgba(124,58,237,.15)",pointerEvents:"none"}}/>
+      <div style={{position:"absolute",bottom:-60,left:-60,width:240,height:240,borderRadius:"50%",
+        background:"rgba(167,139,250,.1)",pointerEvents:"none"}}/>
+      <div style={{position:"relative",zIndex:1,textAlign:"center",maxWidth:300}}>
+        <div style={{width:64,height:64,borderRadius:20,background:"linear-gradient(135deg,#a78bfa,#7c3aed)",
+          display:"inline-flex",alignItems:"center",justifyContent:"center",
+          color:"#fff",fontWeight:800,fontSize:26,marginBottom:28,
+          boxShadow:"0 8px 32px rgba(124,58,237,.45)"}}>E</div>
+        <div style={{fontSize:10,color:"rgba(196,181,253,.6)",letterSpacing:3,textTransform:"uppercase",marginBottom:10}}>englishgrammarchallenge.ro</div>
+        <div style={{fontSize:26,fontWeight:800,color:"#fff",lineHeight:1.25,marginBottom:6,letterSpacing:"-.3px"}}>
+          English Grammar<br/>Challenge
+        </div>
+        <div style={{fontSize:12,color:"rgba(196,181,253,.6)",marginBottom:28}}>Prahova County 2026 · Ediția I</div>
+        <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap",marginBottom:28}}>
+          {["B1","B2","C1"].map(l=>(
+            <span key={l} style={{...LVLBG[l],borderRadius:5,padding:"3px 10px",fontSize:11,fontWeight:700}}>{l}</span>
+          ))}
+        </div>
+        <div style={{textAlign:"left",borderTop:"1px solid rgba(255,255,255,.1)",paddingTop:20}}>
+          {[
+            ["📅","Înscrieri","1–15 Martie 2026"],
+            ["🖥️","Calificare online","20–25 Martie 2026"],
+            ["🏫","Finală județeană","18 Aprilie 2026"],
+            ["🎓","Participare","Complet gratuită"],
+          ].map(([icon,label,val])=>(
+            <div key={label} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:12}}>
+              <span style={{fontSize:15,flexShrink:0}}>{icon}</span>
+              <div>
+                <div style={{fontSize:10,color:"rgba(196,181,253,.5)",fontWeight:700,letterSpacing:.8,textTransform:"uppercase"}}>{label}</div>
+                <div style={{fontSize:13,color:"rgba(255,255,255,.85)",fontWeight:600}}>{val}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RegisterApp() {
   CPEEN.seedInitialData();
+  const cfg = CPEEN.getConfig();
 
   const [step, setStep] = useState(1);
   const [f,  setF]  = useState({name:"",school:"",county:"",teacher:"",level:"",grade:"",username:"",password:"",email:""});
@@ -104,7 +155,6 @@ function RegisterApp() {
     if(CPEEN.findParticipantByUsername(f.username)) {
       setE(p=>({...p, username:"Acest username este deja folosit."})); return;
     }
-    const cfg = CPEEN.getConfig();
     if(cfg.maxPerSchoolPerLevel > 0) {
       const dupes = CPEEN.getParticipants().filter(p =>
         p.school.trim().toLowerCase() === f.school.trim().toLowerCase() && p.level === f.level
@@ -128,102 +178,164 @@ function RegisterApp() {
     });
   };
 
-  if(sub) return (
-    <div className="page-center">
-      <div className="wrap-sm">
-        <div className="card">
-          <div className="card-head" style={{textAlign:"center",padding:"32px 28px"}}>
-            <div style={{fontSize:44,marginBottom:8}}>✅</div>
-            <h2>Cont creat cu succes!</h2>
-            <p>Te-ai înregistrat la ECHO.</p>
-          </div>
-          <div className="card-body" style={{textAlign:"center"}}>
-            <p style={{marginBottom:6,fontSize:14,color:"#555"}}><strong>{sub.name}</strong></p>
-            <p style={{fontSize:13,color:"#777",marginBottom:20}}>{sub.school} · {sub.county} · <span className={`badge b-${sub.level}`}>{sub.level}</span></p>
-            <p style={{fontSize:13,color:"#555",marginBottom:6,fontWeight:600}}>Username-ul tău:</p>
-            <div className="code-box" style={{letterSpacing:1}}>{sub.username}</div>
-            <div className="alert alert-warn" style={{marginTop:18,textAlign:"left"}}>
-              Folosește <strong>{sub.username}</strong> și parola aleasă pentru a accesa dashboard-ul și examenul.
-            </div>
-            <a href="dashboard.html" className="btn btn-primary btn-lg btn-block mt16">Mergi la dashboard →</a>
-            <a href="index.html" className="btn btn-ghost btn-block mt8" style={{color:"var(--mid)"}}>← Pagina principală</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   const inp = (k, type="text", ph="") => (
-    <input type={type} className={`inp${e[k]?" err":""}`} value={f[k]} placeholder={ph}
-      onChange={ev=>set(k,ev.target.value)}/>
+    <input type={type} style={{
+      width:"100%",border:`1px solid ${e[k]?"#fca5a5":"#e2e8f0"}`,borderRadius:8,
+      padding:"10px 13px",fontSize:14,outline:"none",background:"#fff",color:"#0f172a",fontFamily:"inherit"
+    }} value={f[k]} placeholder={ph} onChange={ev=>set(k,ev.target.value)}
+    onFocus={ev=>{ if(!e[k]) ev.target.style.borderColor="#7c3aed"; ev.target.style.boxShadow="0 0 0 3px rgba(124,58,237,.12)"; }}
+    onBlur={ev=>{ ev.target.style.borderColor=e[k]?"#fca5a5":"#e2e8f0"; ev.target.style.boxShadow="none"; }}/>
   );
   const sel = (k, opts, ph) => (
-    <select className={`inp${e[k]?" err":""}`} value={f[k]} onChange={ev=>set(k,ev.target.value)}>
+    <select style={{
+      width:"100%",border:`1px solid ${e[k]?"#fca5a5":"#e2e8f0"}`,borderRadius:8,
+      padding:"10px 13px",fontSize:14,outline:"none",background:"#fff",color:f[k]?"#0f172a":"#94a3b8",fontFamily:"inherit"
+    }} value={f[k]} onChange={ev=>set(k,ev.target.value)}>
       <option value="">{ph}</option>
       {opts.map(o=><option key={o.v||o} value={o.v||o}>{o.l||o}</option>)}
     </select>
   );
 
-  return (
-    <div className="page-center">
-      <div className="wrap-sm">
-        <div className="card">
-          <div className="card-head">
-            <h2>Înregistrare participanți</h2>
-            <p>ECHO · Pasul {step} din 2 — {step===1?"Informații personale":"Date cont"}</p>
-          </div>
-          <div className="card-body">
-            {err && <div className="alert alert-err">{err}</div>}
+  const btnStyle = (disabled) => ({
+    width:"100%",padding:"12px",borderRadius:9,border:"none",
+    background:disabled?"#a78bfa":"#7c3aed",color:"#fff",fontSize:15,fontWeight:700,
+    cursor:disabled?"not-allowed":"pointer",fontFamily:"inherit",marginTop:8,
+    boxShadow:"0 4px 14px rgba(124,58,237,.3)"
+  });
 
-            {step === 1 && <>
-              <FG label="Numele și prenumele" req err={e.name}>
-                {inp("name","text","ex: Ionescu Maria")}
-              </FG>
-              <FG label="Școala" req err={e.school}>
-                {inp("school","text","ex: CN Mihai Viteazul Ploiești")}
-              </FG>
-              <div className="grid2">
-                <FG label="Județul" req err={e.county}>
-                  {sel("county", COUNTIES, "Selectează județul")}
-                </FG>
-                <FG label="Clasa" hint="ex: X A" err={e.grade}>
-                  {inp("grade","text","ex: X A")}
-                </FG>
-              </div>
-              <FG label="Profesor coordonator" req err={e.teacher}>
-                {inp("teacher","text","ex: Prof. Popescu Ion")}
-              </FG>
-              <FG label="Nivel" req err={e.level}>
-                {sel("level", LEVELS, "Selectează nivelul")}
-              </FG>
-              <button className="btn btn-primary btn-lg btn-block mt8" onClick={goNext}>
-                Pasul următor →
-              </button>
-              <div style={{textAlign:"center",marginTop:12}}>
-                <a href="dashboard.html" style={{fontSize:13}}>Am deja un cont →</a>
-              </div>
-            </>}
+  const lbl = (text, req) => (
+    <label style={{display:"block",fontSize:13,fontWeight:600,color:"#374151",marginBottom:5}}>
+      {text}{req && <span style={{color:"#dc2626",marginLeft:2}}>*</span>}
+    </label>
+  );
+  const ferr = (k) => e[k] ? <div style={{color:"#dc2626",fontSize:12,marginTop:4}}>{e[k]}</div> : null;
+  const fhint = (hint, k) => (!e[k] && hint) ? <div style={{color:"#64748b",fontSize:12,marginTop:4}}>{hint}</div> : null;
+  const fg = (children) => <div style={{marginBottom:14}}>{children}</div>;
 
-            {step === 2 && <>
-              <FG label="Username" req hint="3–20 caractere: litere, cifre, '.', '_', '-'" err={e.username}>
-                {inp("username","text","ex: ionescu.maria")}
-              </FG>
-              <FG label="Parolă" req hint="Minim 6 caractere" err={e.password}>
-                {inp("password","password","••••••")}
-              </FG>
-              <FG label="Email" req hint="Adresă de email validă" err={e.email}>
-                {inp("email","email","ex: maria.ionescu@scoala.ro")}
-              </FG>
-              <button className="btn btn-primary btn-lg btn-block mt8" onClick={submit} disabled={busy}>
-                {busy ? "Se înregistrează…" : "Înregistrează-te →"}
-              </button>
-              <button className="btn btn-ghost btn-block mt8" onClick={goBack}>
-                ← Înapoi
-              </button>
-            </>}
+  // ── Success screen ──────────────────────────────────────────────────────
+  if(sub) return (
+    <div style={{minHeight:"100vh",display:"flex",background:"#f5f5f7"}}>
+      <LeftPanel/>
+      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 32px"}}>
+        <div style={{width:"100%",maxWidth:400,textAlign:"center"}}>
+          <div style={{fontSize:56,marginBottom:16}}>✅</div>
+          <div style={{fontSize:24,fontWeight:800,color:"#0f172a",marginBottom:6}}>Cont creat cu succes!</div>
+          <div style={{fontSize:14,color:"#64748b",marginBottom:24}}>Bine ai venit la ECHO, {sub.name.split(" ")[0]}!</div>
+          <div style={{background:"#fff",borderRadius:14,border:"1px solid #e2e8f0",padding:22,textAlign:"left",marginBottom:20}}>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:"#94a3b8",marginBottom:12}}>Detalii cont</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#0f172a",marginBottom:4}}>{sub.name}</div>
+            <div style={{fontSize:13,color:"#64748b",marginBottom:12}}>{sub.school} · {sub.county}{sub.grade?` · ${sub.grade}`:""}</div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              <span style={{...LVLBG[sub.level],borderRadius:5,padding:"2px 8px",fontSize:11,fontWeight:700}}>{sub.level}</span>
+            </div>
+            <div style={{marginTop:14,paddingTop:14,borderTop:"1px solid #f1f5f9"}}>
+              <div style={{fontSize:11,color:"#94a3b8",fontWeight:700,letterSpacing:.8,textTransform:"uppercase",marginBottom:4}}>Username tău</div>
+              <div style={{fontFamily:"monospace",fontSize:18,fontWeight:800,color:"#7c3aed",letterSpacing:1}}>@{sub.username}</div>
+            </div>
           </div>
+          <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:9,padding:"11px 14px",fontSize:13,color:"#92400e",marginBottom:20,textAlign:"left"}}>
+            Reține username-ul și parola — vei avea nevoie de ele pentru a accesa examenul.
+          </div>
+          <a href="dashboard.html" style={{display:"block",padding:"13px",borderRadius:9,background:"#7c3aed",
+            color:"#fff",fontWeight:700,fontSize:15,textDecoration:"none",
+            boxShadow:"0 4px 14px rgba(124,58,237,.3)",marginBottom:10}}>
+            Mergi la dashboard →
+          </a>
+          <a href="index.html" style={{display:"block",fontSize:13,color:"#94a3b8",textDecoration:"none",marginTop:8}}>← Pagina principală</a>
         </div>
-        <div className="text-center text-muted" style={{marginTop:14}}>ECHO · englishgrammarchallenge.ro</div>
+      </div>
+    </div>
+  );
+
+  // ── Registrations closed ────────────────────────────────────────────────
+  if(cfg.registrationsOpen === false) return (
+    <div style={{minHeight:"100vh",display:"flex",background:"#f5f5f7"}}>
+      <LeftPanel/>
+      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 32px"}}>
+        <div style={{width:"100%",maxWidth:400,textAlign:"center"}}>
+          <div style={{fontSize:52,marginBottom:16}}>🔒</div>
+          <div style={{fontSize:24,fontWeight:800,color:"#0f172a",marginBottom:8}}>Înregistrarea este închisă</div>
+          <div style={{fontSize:14,color:"#64748b",marginBottom:28,lineHeight:1.7}}>
+            Perioada de înscriere pentru English Grammar Challenge – Prahova County 2026 s-a încheiat. Urmărește pagina de noutăți pentru informații despre ediția viitoare.
+          </div>
+          <a href="news.html" style={{display:"block",padding:"12px",borderRadius:9,background:"#7c3aed",
+            color:"#fff",fontWeight:700,fontSize:14,textDecoration:"none",marginBottom:10}}>
+            Noutăți →
+          </a>
+          <a href="dashboard.html" style={{display:"block",padding:"12px",borderRadius:9,
+            border:"1px solid #e2e8f0",color:"#64748b",fontSize:14,fontWeight:600,textDecoration:"none",
+            background:"#fff"}}>
+            Am deja cont — Dashboard →
+          </a>
+          <a href="index.html" style={{display:"block",fontSize:13,color:"#94a3b8",textDecoration:"none",marginTop:16}}>← Pagina principală</a>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Registration form ───────────────────────────────────────────────────
+  return (
+    <div style={{minHeight:"100vh",display:"flex",background:"#f5f5f7"}}>
+      <LeftPanel/>
+      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 32px",overflowY:"auto"}}>
+        <div style={{width:"100%",maxWidth:420}}>
+          {/* Progress */}
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:24}}>
+            {[1,2].map(n=>(
+              <React.Fragment key={n}>
+                <div style={{width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
+                  fontSize:12,fontWeight:700,flexShrink:0,
+                  background:step>=n?"#7c3aed":"#e2e8f0",color:step>=n?"#fff":"#94a3b8"}}>
+                  {step>n?"✓":n}
+                </div>
+                <div style={{fontSize:12,fontWeight:600,color:step===n?"#0f172a":"#94a3b8",flex:n===1?1:0}}>
+                  {n===1?"Informații personale":"Date cont"}
+                </div>
+                {n===1 && <div style={{height:1,flex:1,background:step>1?"#7c3aed":"#e2e8f0"}}/>}
+              </React.Fragment>
+            ))}
+          </div>
+
+          <div style={{marginBottom:22}}>
+            <div style={{fontSize:22,fontWeight:800,color:"#0f172a",letterSpacing:"-.3px",marginBottom:4}}>
+              {step===1?"Informații personale":"Creează contul tău"}
+            </div>
+            <div style={{fontSize:13,color:"#64748b"}}>
+              {step===1?"Completați datele participantului și ale școlii.":"Alege username-ul și parola pentru platforma ECHO."}
+            </div>
+          </div>
+
+          {err && <div style={{background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:8,padding:"11px 14px",marginBottom:14,fontSize:13,color:"#991b1b"}}>{err}</div>}
+
+          {step === 1 && <>
+            {fg(<>{lbl("Numele și prenumele",true)}{inp("name","text","ex: Ionescu Maria")}{ferr("name")}</>)}
+            {fg(<>{lbl("Școala",true)}{inp("school","text","ex: CN Mihai Viteazul Ploiești")}{ferr("school")}</>)}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              {fg(<>{lbl("Județul",true)}{sel("county",COUNTIES,"Selectează județul")}{ferr("county")}</>)}
+              {fg(<>{lbl("Clasa")}{inp("grade","text","ex: X A")}{fhint("opțional","grade")}</>)}
+            </div>
+            {fg(<>{lbl("Profesor coordonator",true)}{inp("teacher","text","ex: Prof. Popescu Ion")}{ferr("teacher")}</>)}
+            {fg(<>{lbl("Nivel Cambridge",true)}{sel("level",LEVELS,"Selectează nivelul")}{ferr("level")}</>)}
+            <button style={btnStyle(false)} onClick={goNext}>Pasul următor →</button>
+            <div style={{textAlign:"center",marginTop:16,fontSize:13,color:"#64748b"}}>
+              Am deja cont —{" "}
+              <a href="dashboard.html" style={{color:"#7c3aed",fontWeight:600,textDecoration:"none"}}>Dashboard →</a>
+            </div>
+          </>}
+
+          {step === 2 && <>
+            {fg(<>{lbl("Username",true)}{inp("username","text","ex: ionescu.maria")}{ferr("username")}{fhint("3–20 caractere: litere, cifre, '.', '_', '-'","username")}</>)}
+            {fg(<>{lbl("Parolă",true)}{inp("password","password","••••••")}{ferr("password")}{fhint("Minim 6 caractere","password")}</>)}
+            {fg(<>{lbl("Email",true)}{inp("email","email","ex: maria@scoala.ro")}{ferr("email")}</>)}
+            <button style={btnStyle(busy)} onClick={submit} disabled={busy}>
+              {busy ? "Se înregistrează…" : "Creează contul →"}
+            </button>
+            <button onClick={goBack} style={{width:"100%",padding:"11px",borderRadius:9,border:"1px solid #e2e8f0",
+              background:"#fff",color:"#64748b",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",marginTop:8}}>
+              ← Înapoi
+            </button>
+          </>}
+        </div>
       </div>
     </div>
   );

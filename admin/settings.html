@@ -41,6 +41,13 @@ function SettingsPage() {
   const [showResults,      setShowResults]      = useState(cfg0.showResultsImmediately!==false);
   const [configSaved,      setConfigSaved]      = useState(false);
 
+  // Registration + countdown
+  const [regsOpen,         setRegsOpen]         = useState(cfg0.registrationsOpen!==false);
+  const [cdDate,           setCdDate]           = useState(cfg0.countdownDate||"2026-03-15T23:59:59");
+  const [cdText,           setCdText]           = useState(cfg0.countdownText||"Timp rămas până la închiderea înscrierilor");
+  const [cdLabel,          setCdLabel]          = useState(cfg0.countdownLabel||"15 Martie 2026");
+  const [siteSaved,        setSiteSaved]        = useState(false);
+
   // Password change
   const [curPw,  setCurPw]  = useState("");
   const [newPw,  setNewPw]  = useState("");
@@ -58,7 +65,19 @@ function SettingsPage() {
       showResultsImmediately: showResults
     });
     setConfigSaved(true);
-    setTimeout(()=>setConfigSaved(false),2000);
+    setTimeout(()=>setConfigSaved(false),2500);
+  };
+
+  const saveSiteConfig = () => {
+    const cfg = CPEEN.getConfig();
+    CPEEN.saveConfig({...cfg,
+      registrationsOpen: regsOpen,
+      countdownDate: cdDate,
+      countdownText: cdText,
+      countdownLabel: cdLabel
+    });
+    setSiteSaved(true);
+    setTimeout(()=>setSiteSaved(false),2500);
   };
 
   const changePassword = () => {
@@ -132,6 +151,42 @@ function SettingsPage() {
               onChange={e=>{ setConfPw(e.target.value); setPwMsg({type:"",text:""}); }}/>
           </div>
           <button className="btn btn-primary" onClick={changePassword}>Schimbă parola</button>
+        </Section>
+
+        {/* Registrations + Countdown */}
+        <Section title="🌐 Site public — Înscrieri și timer">
+          <div className="fg" style={{display:"flex",alignItems:"center",gap:14,marginBottom:4}}>
+            <label style={{fontSize:13,fontWeight:600,color:C.dark}}>Înscrieri deschise</label>
+            <div onClick={()=>{ setRegsOpen(o=>!o); setSiteSaved(false); }}
+              style={{width:46,height:26,borderRadius:13,cursor:"pointer",transition:"background .2s",
+                background:regsOpen?"#7c3aed":"#cbd5e1",position:"relative",flexShrink:0}}>
+              <div style={{position:"absolute",top:3,left:regsOpen?22:3,width:20,height:20,
+                borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/>
+            </div>
+            <span style={{fontSize:12,fontWeight:600,color:regsOpen?"#15803d":"#dc2626"}}>
+              {regsOpen?"✓ Deschise — elevii se pot înregistra":"✗ Închise — înregistrarea este blocată"}
+            </span>
+          </div>
+          <div style={{height:1,background:"#f1f5f9",margin:"16px 0"}}/>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",color:"#94a3b8",marginBottom:12}}>Countdown pagina principală</div>
+          <div className="fg">
+            <label style={{fontSize:13,fontWeight:600,color:C.dark,display:"block",marginBottom:4}}>Text afișat deasupra timerului</label>
+            <input className="inp inp-sm" value={cdText} onChange={e=>{ setCdText(e.target.value); setSiteSaved(false); }}
+              placeholder="ex: Timp rămas până la închiderea înscrierilor" style={{maxWidth:480}}/>
+          </div>
+          <div className="fg">
+            <label style={{fontSize:13,fontWeight:600,color:C.dark,display:"block",marginBottom:4}}>Etichetă sub timer</label>
+            <input className="inp inp-sm" value={cdLabel} onChange={e=>{ setCdLabel(e.target.value); setSiteSaved(false); }}
+              placeholder="ex: 15 Martie 2026" style={{maxWidth:300}}/>
+          </div>
+          <div className="fg">
+            <label style={{fontSize:13,fontWeight:600,color:C.dark,display:"block",marginBottom:4}}>Dată și oră țintă pentru countdown</label>
+            <input type="datetime-local" className="inp inp-sm" value={cdDate.slice(0,16)}
+              onChange={e=>{ setCdDate(e.target.value+":00"); setSiteSaved(false); }}
+              style={{maxWidth:260}}/>
+          </div>
+          {siteSaved && <div className="alert alert-ok" style={{marginBottom:8}}>✓ Salvat!</div>}
+          <button className="btn btn-primary" onClick={saveSiteConfig}>Salvează setările site</button>
         </Section>
 
         {/* Danger zone */}

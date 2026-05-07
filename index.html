@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>English Grammar Challenge – Prahova County 2026</title>
 <link rel="stylesheet" href="css/style.css"/>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
 <style>
 body{background:#fff;}
 
@@ -233,7 +237,10 @@ body{background:#fff;}
   <div class="hero-eyebrow">PRAHOVA COUNTY 2026 · Ediția I</div>
   <h1>English Grammar<br/>Challenge</h1>
   <p class="hero-sub1">Primul Concurs Județean de Gramatică Engleză din Prahova, conform standardelor Cambridge. Organizat de CN „Mihai Viteazul" Ploiești în parteneriat cu ISJ Prahova.</p>
-  <a href="register.html" class="hero-cta">Înscrie-te acum →</a>
+  <a id="hero-reg-btn" href="register.html" class="hero-cta">Înscrie-te acum →</a>
+  <span id="reg-closed-note" style="display:none;align-items:center;gap:8px;padding:11px 22px;
+    border-radius:9px;background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.4);
+    color:#fca5a5;font-size:14px;font-weight:700;">✗ Înscrierea este închisă</span>
   <div class="hero-note">Înscrierea se face exclusiv de către profesorul coordonator</div>
 
   <div class="countdown-wrap">
@@ -257,7 +264,7 @@ body{background:#fff;}
       <div class="countdown-label">Secunde</div>
     </div>
   </div>
-  <div class="countdown-title" style="margin-top:18px;">Timp rămas până la închiderea înscrierilor · 15 Martie 2026</div>
+  <div class="countdown-title" style="margin-top:18px;"><span id="cd-text">Timp rămas până la închiderea înscrierilor</span> · <span id="cd-label">15 Martie 2026</span></div>
 </section>
 
 <!-- ── INFOGRAPHIC BANNER ─────────────────────────────────────────────── -->
@@ -621,27 +628,59 @@ body{background:#fff;}
 
 <script>
 (function() {
-  var deadline = new Date("2026-03-15T23:59:59").getTime();
-  function tick() {
-    var now = Date.now();
-    var diff = deadline - now;
-    if (diff <= 0) {
-      ["cd-days","cd-hours","cd-mins","cd-secs"].forEach(function(id) {
-        document.getElementById(id).textContent = "00";
-      });
-      return;
+  var timer = null;
+  function startCountdown(dateStr) {
+    if (timer) clearInterval(timer);
+    var deadline = new Date(dateStr).getTime();
+    function tick() {
+      var diff = deadline - Date.now();
+      if (diff <= 0) {
+        ["cd-days","cd-hours","cd-mins","cd-secs"].forEach(function(id){
+          var el = document.getElementById(id); if(el) el.textContent="00";
+        });
+        clearInterval(timer);
+        return;
+      }
+      var d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000),
+          m=Math.floor((diff%3600000)/60000), s=Math.floor((diff%60000)/1000);
+      var el;
+      if((el=document.getElementById("cd-days")))  el.textContent=String(d).padStart(2,"0");
+      if((el=document.getElementById("cd-hours"))) el.textContent=String(h).padStart(2,"0");
+      if((el=document.getElementById("cd-mins")))  el.textContent=String(m).padStart(2,"0");
+      if((el=document.getElementById("cd-secs")))  el.textContent=String(s).padStart(2,"0");
     }
-    var d = Math.floor(diff / 86400000);
-    var h = Math.floor((diff % 86400000) / 3600000);
-    var m = Math.floor((diff % 3600000) / 60000);
-    var s = Math.floor((diff % 60000) / 1000);
-    document.getElementById("cd-days").textContent  = String(d).padStart(2,"0");
-    document.getElementById("cd-hours").textContent = String(h).padStart(2,"0");
-    document.getElementById("cd-mins").textContent  = String(m).padStart(2,"0");
-    document.getElementById("cd-secs").textContent  = String(s).padStart(2,"0");
+    tick();
+    timer = setInterval(tick, 1000);
   }
-  tick();
-  setInterval(tick, 1000);
+  // Start with local config first (instant), then update when Firestore loads
+  var localCfg = (function(){
+    try{ return JSON.parse(localStorage.getItem('cpeen_config')||'{}'); }catch(e){ return {}; }
+  })();
+  startCountdown(localCfg.countdownDate || "2026-03-15T23:59:59");
+  var cdTextEl = document.getElementById("cd-text");
+  var cdLabelEl = document.getElementById("cd-label");
+  if(cdTextEl && localCfg.countdownText)  cdTextEl.textContent  = localCfg.countdownText;
+  if(cdLabelEl && localCfg.countdownLabel) cdLabelEl.textContent = localCfg.countdownLabel + (localCfg.countdownLabel ? "" : "");
+
+  // Update from Firestore after load
+  CPEEN.init().then(function() {
+    var cfg = CPEEN.getConfig();
+    if(cfg.countdownDate) startCountdown(cfg.countdownDate);
+    if(cfg.countdownText && cdTextEl)  cdTextEl.textContent  = cfg.countdownText;
+    if(cfg.countdownLabel && cdLabelEl) cdLabelEl.textContent = cfg.countdownLabel;
+    // Registration CTA visibility
+    var regBtn = document.getElementById("hero-reg-btn");
+    var regClosed = document.getElementById("reg-closed-note");
+    if(regBtn && regClosed) {
+      if(cfg.registrationsOpen === false) {
+        regBtn.style.display = "none";
+        regClosed.style.display = "inline-flex";
+      } else {
+        regBtn.style.display = "inline-flex";
+        regClosed.style.display = "none";
+      }
+    }
+  });
 })();
 </script>
 </body>
