@@ -1374,6 +1374,16 @@ function ExamApp() {
   }
 
   // ── Result view ─────────────────────────────────────────────────────────
+  if(view === "result" && result && !variant) return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f4f8",padding:24}}>
+      <div style={{background:"#fff",borderRadius:12,padding:32,maxWidth:400,textAlign:"center",border:"1px solid #e2e8f0"}}>
+        <div style={{fontWeight:700,color:"#15803d",fontSize:18,marginBottom:8}}>Examen depus!</div>
+        <div style={{color:"#64748b",fontSize:14,marginBottom:20}}>Rezultatul tău a fost înregistrat. Detaliile nu pot fi afișate pe acest dispozitiv — deschide dashboard-ul.</div>
+        <div style={{fontSize:28,fontWeight:800,color:"#7c3aed",marginBottom:20}}>{result.total ?? "—"} pct.</div>
+        <a href="dashboard.html" style={{background:"#7c3aed",color:"#fff",borderRadius:8,padding:"10px 22px",textDecoration:"none",fontWeight:600,fontSize:14}}>← Dashboard</a>
+      </div>
+    </div>
+  );
   if(view === "result" && result && variant) {
     const cfg = CPEEN.getConfig();
     if(!cfg.showResultsImmediately) return (
@@ -1653,11 +1663,46 @@ function ExamApp() {
     );
   }
 
-  return null;
+  // Shouldn't reach here, but show a recovery screen instead of blank
+  return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f4f8",padding:24}}>
+      <div style={{background:"#fff",borderRadius:12,padding:32,maxWidth:400,textAlign:"center",border:"1px solid #e2e8f0"}}>
+        <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
+        <div style={{fontWeight:700,color:"#0f172a",marginBottom:8}}>Ceva nu a mers</div>
+        <div style={{color:"#64748b",fontSize:14,marginBottom:20}}>Încearcă să reîmprospătezi pagina sau revino la dashboard.</div>
+        <a href="dashboard.html" style={{background:"#7c3aed",color:"#fff",borderRadius:8,padding:"10px 22px",textDecoration:"none",fontWeight:600,fontSize:14}}>← Dashboard</a>
+      </div>
+    </div>
+  );
 }
 
-document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#7c3aed;font-size:14px;">Loading…</div>';
-CPEEN.init().then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<ExamApp/>));
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = {err: null}; }
+  static getDerivedStateFromError(e) { return {err: e}; }
+  render() {
+    if(this.state.err) return (
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f0f4f8",padding:24}}>
+        <div style={{background:"#fff",borderRadius:12,padding:32,maxWidth:420,textAlign:"center",border:"1px solid #e2e8f0"}}>
+          <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
+          <div style={{fontWeight:700,color:"#0f172a",marginBottom:8}}>Eroare la încărcarea examenului</div>
+          <div style={{color:"#64748b",fontSize:13,marginBottom:6,fontFamily:"monospace",background:"#f8fafc",borderRadius:6,padding:"8px 12px",wordBreak:"break-all"}}>{String(this.state.err.message||this.state.err)}</div>
+          <div style={{color:"#94a3b8",fontSize:13,marginBottom:20}}>Încearcă să reîmprospătezi pagina. Dacă problema persistă, contactează profesorul.</div>
+          <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+            <button onClick={()=>window.location.reload()} style={{background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,padding:"10px 20px",fontWeight:600,fontSize:14,cursor:"pointer"}}>Reîmprospătează</button>
+            <a href="dashboard.html" style={{background:"transparent",color:"#7c3aed",border:"1px solid #c4b5fd",borderRadius:8,padding:"10px 20px",fontWeight:600,fontSize:14,textDecoration:"none"}}>Dashboard</a>
+          </div>
+        </div>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
+const rootEl = document.getElementById("root");
+rootEl.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#7c3aed;font-size:14px;">Loading…</div>';
+CPEEN.init().then(()=>ReactDOM.createRoot(rootEl).render(<ErrorBoundary><ExamApp/></ErrorBoundary>)).catch(e=>{
+  rootEl.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;padding:24px;"><div style="text-align:center;"><div style="font-size:28px;margin-bottom:12px;">⚠️</div><div style="font-weight:700;color:#0f172a;margin-bottom:8px;">Eroare la inițializare</div><div style="color:#64748b;font-size:13px;margin-bottom:16px;">'+String(e&&e.message||e)+'</div><a href="dashboard.html" style="background:#7c3aed;color:#fff;border-radius:8px;padding:10px 22px;text-decoration:none;font-weight:600;font-size:14px;">Dashboard</a></div></div>';
+});
 </script>
 </body>
 </html>

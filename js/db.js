@@ -233,7 +233,7 @@ var CPEEN = (function () {
     var v = exam.variants.find(function (v) { return v.id === variantId; });
     if (!v) return null;
     var answers;
-    if (v.parts && v.parts.length) {
+    if (v.parts && (v.parts.length || v.writing)) {
       answers = {
         parts: v.parts.map(function(part) {
           return new Array(partAnswerCount(part)).fill('');
@@ -242,10 +242,10 @@ var CPEEN = (function () {
       };
     } else {
       answers = {
-        s1: new Array(v.s1.items.length).fill(''),
-        s2: new Array(v.s2.key.length).fill(''),
-        s3: new Array(v.s3.key.length).fill(''),
-        s4: new Array(v.s4.items.length).fill(''),
+        s1: new Array((v.s1&&v.s1.items||[]).length).fill(''),
+        s2: new Array((v.s2&&v.s2.key||[]).length).fill(''),
+        s3: new Array((v.s3&&v.s3.key||[]).length).fill(''),
+        s4: new Array((v.s4&&v.s4.items||[]).length).fill(''),
         writing: ''
       };
     }
