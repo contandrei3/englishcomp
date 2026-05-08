@@ -14,9 +14,10 @@
 <script src="js/db.js"></script>
 </head>
 <body>
-<div id="root"></div>
+<div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#7c3aed;font-size:14px;flex-direction:column;gap:12px;"><div style="width:32px;height:32px;border:3px solid #ede9ff;border-top-color:#7c3aed;border-radius:50%;animation:spin 0.8s linear infinite"></div>Se încarcă…</div></div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
-<script type="text/babel">
+<script type="text/babel" data-presets="react">
 const { useState, useEffect } = React;
 const C = {dark:"#0f172a",mid:"#7c3aed",light:"#e2e8f0",green:"#15803d",amber:"#b45309"};
 const STORE_KEY = "cpeen_student_id";
@@ -786,7 +787,6 @@ function App() {
   return <LoginEntry onLogin={onLogin}/>;
 }
 
-document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;color:#7c3aed;font-size:14px;">Se încarcă…</div>';
 Promise.race([CPEEN.init(),new Promise(r=>setTimeout(r,6000))]).then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<App/>));
 </script>
 </body>
