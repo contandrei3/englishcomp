@@ -28,7 +28,16 @@ var CPEEN = (function () {
   // Tracks the timestamp of the last local write per Firestore docId.
   // init() will not overwrite localStorage with Firestore data that is older
   // than the most recent local write, preventing async-write/sync-read races.
-  var _lastLocalWrite = {};
+  // Persisted in localStorage so it survives page reloads — otherwise a
+  // refresh would let stale Firestore data overwrite recent unsynced changes
+  // (e.g., exam answers typed seconds before the user hit refresh).
+  var LAST_WRITE_KEY = 'cpeen_last_local_write';
+  var _lastLocalWrite = (function() {
+    try { return JSON.parse(localStorage.getItem(LAST_WRITE_KEY) || '{}'); } catch(e) { return {}; }
+  })();
+  function persistLastLocalWrite() {
+    try { localStorage.setItem(LAST_WRITE_KEY, JSON.stringify(_lastLocalWrite)); } catch(e) {}
+  }
   // Exposed so admin pages can show a warning banner when a Firestore write fails.
   var lastSyncError = null;
 
@@ -45,8 +54,9 @@ var CPEEN = (function () {
   // Returns a promise (or undefined when DB is unavailable).
   // Includes _writtenAt so init() can compare recency with _lastLocalWrite.
   function syncToFirebase(docId, data) {
-    if (!DB) return Promise.resolve();
     _lastLocalWrite[docId] = Date.now();
+    persistLastLocalWrite();
+    if (!DB) return Promise.resolve();
     var payload = docId === 'config'
       ? Object.assign({}, data, { _writtenAt: _lastLocalWrite[docId] })
       : { items_json: JSON.stringify(data), _writtenAt: _lastLocalWrite[docId] };
