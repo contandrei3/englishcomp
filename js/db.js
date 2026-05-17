@@ -189,10 +189,26 @@ var CPEEN = (function () {
 
   function loginParticipant(username, password) {
     var p = findParticipantByUsername(username);
-    if (!p) return Promise.resolve(null);
-    return hashPass(password).then(function (hash) {
-      return hash === p.passwordHash ? p : null;
+    var fallback = p
+      ? Promise.resolve(p)
+      : refreshParticipantsFromFirebase().then(function() { return findParticipantByUsername(username); });
+    return fallback.then(function(found) {
+      if (!found) return null;
+      return hashPass(password).then(function (hash) {
+        return hash === found.passwordHash ? found : null;
+      });
     });
+  }
+
+  // Force-fetch the participants doc from Firestore (used when local cache is stale).
+  function refreshParticipantsFromFirebase() {
+    if (!DB) return Promise.resolve();
+    return DB.collection('cpeen').doc('participants').get().then(function(doc) {
+      if (!doc.exists) return;
+      var d = doc.data();
+      var remote = d.items_json ? JSON.parse(d.items_json) : (d.items || []);
+      if (remote && remote.length) ss(KEYS.PARTICIPANTS, remote);
+    }).catch(function() {});
   }
 
   function updateParticipant(id, updates) {
@@ -361,8 +377,29 @@ var CPEEN = (function () {
   }
 
   // Mark a group session finished (called when time expires or admin stops it).
+  // Also auto-submits any participant sessions still pending/in_progress so
+  // students see results instead of a still-active exam state.
   function finishGroupSession(groupId) {
-    return updateGroupSession(groupId, { status: 'finished', finishedAt: Date.now() });
+    var now = Date.now();
+    var sessions = getSessions();
+    var exams = getExams();
+    var changed = false;
+    sessions.forEach(function(s) {
+      if (s.groupId !== groupId) return;
+      if (s.status === 'submitted') return;
+      var ex = exams.find(function(e) { return e.id === s.examId; });
+      var res = null;
+      if (ex) {
+        try { res = gradeSession(Object.assign({}, s, { answers: s.answers || {} }), ex); } catch(e) { res = null; }
+      }
+      s.status = 'submitted';
+      s.submittedAt = now;
+      s.locked = true;
+      if (res) s.result = res;
+      changed = true;
+    });
+    if (changed) saveSessions(sessions);
+    return updateGroupSession(groupId, { status: 'finished', finishedAt: now });
   }
 
   // ── Exams ─────────────────────────────────────────────────────────────────
