@@ -87,7 +87,8 @@ var CPEEN = (function () {
               participants:   KEYS.PARTICIPANTS,
               sessions:       KEYS.SESSIONS,
               exams:          KEYS.EXAMS,
-              group_sessions: KEYS.GROUP_SESSIONS
+              group_sessions: KEYS.GROUP_SESSIONS,
+              news:           KEYS.NEWS          // ← FIX: news era absent din keyMap
             };
             var key = keyMap[doc.id];
             if (!key) return;
