@@ -445,7 +445,7 @@ var CPEEN = (function () {
   function gradeSession(session, exam) {
     var v = exam.variants.find(function (x) { return x.id === session.variantId; });
     if (!v) return null;
-    if (v.parts && (v.parts.length || v.writing)) return gradeNewParts(session.answers, v);
+    if (v.parts !== undefined) return gradeNewParts(session.answers, v);
     var a = session.answers, total = 10, det = { s1: [], s2: [], s3: [], s4: [] };
     v.s1.key.forEach(function (acc, i) { var ok = acc.some(function (x) { return norm(x) === norm(a.s1[i]); }); det.s1.push(ok); if (ok) total += v.s1.pts; });
     v.s2.key.forEach(function (x, i)   { var ok = norm(x) === norm(a.s2[i]); det.s2.push(ok); if (ok) total += v.s2.pts; });
