@@ -281,6 +281,16 @@ const FILTERS = [
 ];
 
 /* ── Sub-components ──────────────────────────────────────────────────────── */
+
+// FIX: Spinner era folosit dar nedefinit — acum e definit corect
+function Spinner() {
+  return (
+    <div className="spinner-wrap">
+      <div className="spinner"></div>
+    </div>
+  );
+}
+
 function CategoryBadge({ category }) {
   const cls = `cat-badge cat-${category || 'general'}`;
   const label = CAT_LABELS[category] || category || 'General';
@@ -340,10 +350,9 @@ function NewsApp() {
   const [filter, setFilter] = useState('all');
   const [posts, setPosts] = useState([]);
 
+  // FIX: useEffect apelat după init() — datele sunt deja în localStorage
   React.useEffect(() => {
-    // Presupunem că CPEEN.getNews() returnează datele imediat după init
-    const data = CPEEN.getNews();
-    setPosts(data);
+    setPosts(CPEEN.getNews());
   }, []);
 
   const filtered = useMemo(() => {
@@ -353,7 +362,6 @@ function NewsApp() {
 
   const pinned = filtered.filter(p => p.pinned);
   const regular = filtered.filter(p => !p.pinned);
-  const isEmpty = posts.length > 0 && filtered.length === 0;
 
   return (
     <div>
@@ -397,17 +405,11 @@ function NewsApp() {
   );
 }
 
-  /* ── Loading Spinner ─────────────────────────────────────────────────────── */
-function Spinner() {
-  return (
-    <div className="spinner-wrap">
-      <div className="spinner"></div>
-    </div>
-  );
-}
-
 /* ── Boot ────────────────────────────────────────────────────────────────── */
 const root = ReactDOM.createRoot(document.getElementById('root'));
+
+// FIX: afișăm Spinner-ul în timp ce init() rulează asincron,
+// apoi montăm NewsApp după ce Firestore a populat localStorage
 root.render(<Spinner />);
 
 CPEEN.init().then(() => {
