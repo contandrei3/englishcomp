@@ -338,21 +338,25 @@ function FilterBar({ active, onChange }) {
 /* ── Main App ────────────────────────────────────────────────────────────── */
 function NewsApp() {
   const [filter, setFilter] = useState('all');
+  const [posts, setPosts] = useState([]);
 
-  const allPosts = CPEEN.getNews();
+  React.useEffect(() => {
+    // Presupunem că CPEEN.getNews() returnează datele imediat după init
+    const data = CPEEN.getNews();
+    setPosts(data);
+  }, []);
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return allPosts;
-    return allPosts.filter(p => (p.category || 'general') === filter);
-  }, [allPosts, filter]);
+    if (filter === 'all') return posts;
+    return posts.filter(p => (p.category || 'general') === filter);
+  }, [posts, filter]);
 
   const pinned = filtered.filter(p => p.pinned);
   const regular = filtered.filter(p => !p.pinned);
-  const isEmpty = filtered.length === 0;
+  const isEmpty = posts.length > 0 && filtered.length === 0;
 
   return (
     <div>
-      {/* Hero */}
       <div className="news-hero">
         <div className="news-hero-title">Noutăți &amp; Anunțuri</div>
         <p className="news-hero-sub">
@@ -360,19 +364,14 @@ function NewsApp() {
         </p>
       </div>
 
-      {/* Content */}
       <div className="page">
         <div className="container" style={{maxWidth: 760}}>
-
           <FilterBar active={filter} onChange={setFilter} />
 
-          {isEmpty ? (
+          {posts.length === 0 ? (
             <div className="empty-state">
               <span className="empty-state-icon">📢</span>
               <div className="empty-state-title">Niciun anunț publicat încă</div>
-              <p className="empty-state-sub">
-                Revino în curând pentru noutăți despre concurs și activitățile ECHO.
-              </p>
             </div>
           ) : (
             <>
@@ -384,30 +383,16 @@ function NewsApp() {
                   ))}
                 </div>
               )}
-
-              {regular.length > 0 && (
-                <div style={pinned.length > 0 ? {marginTop: 28} : {}}>
-                  {pinned.length > 0 && (
-                    <div className="news-section-label">Toate anunțurile</div>
-                  )}
-                  {regular.map(post => (
-                    <NewsCard key={post.id} post={post} showPinBanner={false} />
-                  ))}
-                </div>
-              )}
+              <div style={pinned.length > 0 ? {marginTop: 28} : {}}>
+                {pinned.length > 0 && <div className="news-section-label">Toate anunțurile</div>}
+                {regular.map(post => (
+                  <NewsCard key={post.id} post={post} showPinBanner={false} />
+                ))}
+              </div>
             </>
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ── Loading spinner ─────────────────────────────────────────────────────── */
-function Spinner() {
-  return (
-    <div className="spinner-wrap">
-      <div className="spinner"></div>
     </div>
   );
 }
