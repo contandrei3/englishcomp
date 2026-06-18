@@ -397,6 +397,15 @@ function NewsApp() {
   );
 }
 
+  /* ── Loading Spinner ─────────────────────────────────────────────────────── */
+function Spinner() {
+  return (
+    <div className="spinner-wrap">
+      <div className="spinner"></div>
+    </div>
+  );
+}
+
 /* ── Boot ────────────────────────────────────────────────────────────────── */
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<Spinner />);
