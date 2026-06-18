@@ -1408,7 +1408,7 @@ function ExamApp() {
       </>
     );
 
-    const isNew = !!(variant.parts && (variant.parts.length || variant.writing));
+    const isNew = variant.parts !== undefined;
     const secs = isNew
       ? variant.parts.map((part,pi) => {
           const count = getPartCount(part);
@@ -1477,7 +1477,7 @@ function ExamApp() {
   if(view === "exam" && variant) {
     const urgent = timeLeft < 300;
     const hasWriting = !!variant.writing;
-    const isNewFormat = !!(variant.parts && (variant.parts.length || variant.writing));
+    const isNewFormat = variant.parts !== undefined;
     return (
       <div style={{minHeight:"100vh",background:"#f0f4f8"}}>
         {/* Sticky header */}
