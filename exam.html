@@ -1409,18 +1409,22 @@ function ExamApp() {
     );
 
     const isNew = variant.parts !== undefined;
+    const resultDetails = result.details || result.det || {};
+    const legacyKeys = ["s1","s2","s3","s4"];
+    const legacyLbls  = {s1:"KWT", s2:"Error Corr", s3:"Open Cloze", s4:"Word Form"};
     const secs = isNew
-      ? variant.parts.map((part,pi) => {
+      ? (variant.parts||[]).map((part,pi) => {
           const count = getPartCount(part);
-          const correct = (result.details?.[pi]||[]).filter(Boolean).length;
-          return { lbl:`Part ${pi+1} — ${PART_LABELS[part.type]||part.type}`, score:correct*part.pts, max:count*part.pts };
+          const correct = (resultDetails?.[pi]||[]).filter(Boolean).length;
+          return { lbl:`Part ${pi+1} — ${PART_LABELS[part.type]||part.type}`, score:correct*(part.pts||0), max:count*(part.pts||0) };
         })
-      : [
-          {k:"s1",lbl:"KWT",       max:variant.s1.key.length*variant.s1.pts},
-          {k:"s2",lbl:"Error Corr",max:variant.s2.key.length*variant.s2.pts},
-          {k:"s3",lbl:"Open Cloze",max:variant.s3.key.length*variant.s3.pts},
-          {k:"s4",lbl:"Word Form", max:variant.s4.key.length*variant.s4.pts},
-        ];
+      : legacyKeys
+          .filter(k => variant[k] && variant[k].key)
+          .map(k => ({
+            k,
+            lbl: legacyLbls[k],
+            max: variant[k].key.length * (variant[k].pts||0)
+          }));
     return (
       <>
         <Navbar/>
@@ -1438,7 +1442,8 @@ function ExamApp() {
                 <div style={{fontWeight:700,color:C.dark,fontSize:15}}>{ptcp?.name}</div>
                 <div style={{fontSize:13,color:"#64748b",marginBottom:20}}>{ptcp?.school} · Grade {ptcp?.grade} · {ptcp?.county}</div>
                 {secs.map((sec,idx)=>{
-                  const sc = isNew ? sec.score : result.details[sec.k].filter(Boolean).length*(sec.max/Math.max(1,result.details[sec.k].length));
+                  const detArr = (isNew ? resultDetails[idx] : resultDetails[sec.k]) || [];
+                  const sc = isNew ? sec.score : detArr.filter(Boolean).length*(sec.max/Math.max(1,detArr.length));
                   return (
                     <div key={idx} style={{marginBottom:12}}>
                       <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:3}}>
@@ -1451,9 +1456,11 @@ function ExamApp() {
                     </div>
                   );
                 })}
-                <div className="alert alert-warn" style={{marginTop:12}}>
-                  The KWT section may be manually reviewed by your teacher.
-                </div>
+                {(!isNew || (variant.parts||[]).some(p=>p.type==='p3'||p.type==='p4')) && (
+                  <div className="alert alert-warn" style={{marginTop:12}}>
+                    The KWT section may be manually reviewed by your teacher.
+                  </div>
+                )}
                 {sess?.answers?.writing && (
                   <div className="alert alert-info" style={{marginTop:8}}>
                     Your writing response has been saved and will be graded manually.
