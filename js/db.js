@@ -155,13 +155,19 @@ var CPEEN = (function () {
   }
 
   function hashPass(s) {
+    if (!window.crypto || !window.crypto.subtle) {
+      return Promise.reject(new Error('Pentru login securizat, site-ul trebuie să fie accesat prin HTTPS.'));
+    }
     return crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)).then(function (buf) {
       return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
     });
   }
 
   function norm(s) {
-    return (s || '').trim().toLowerCase().replace(/\s+/g, ' ').replace(/[.,;:!?]+$/, '');
+    return (s || '').trim().toLowerCase()
+      .replace(/\s+/g, ' ')
+      .replace(/^[\s"'`«»“”‘’()[\]{}.,;:!?¿¡…\-]+/, '')
+      .replace(/[\s"'`«»“”‘’()[\]{}.,;:!?¿¡…\-]+$/, '');
   }
 
   // ── Config ────────────────────────────────────────────────────────────────
@@ -234,6 +240,15 @@ var CPEEN = (function () {
   function deleteParticipant(id) {
     saveParticipants(getParticipants().filter(function (p) { return p.id !== id; }));
     saveSessions(getSessions().filter(function (s) { return s.participantId !== id; }));
+    var gs = getGroupSessions();
+    var changed = false;
+    gs.forEach(function(g) {
+      if (g.participantIds && g.participantIds.indexOf(id) !== -1) {
+        g.participantIds = g.participantIds.filter(function(pid) { return pid !== id; });
+        changed = true;
+      }
+    });
+    if (changed) saveGroupSessions(gs);
   }
 
   // ── Sessions ──────────────────────────────────────────────────────────────
@@ -301,6 +316,49 @@ var CPEEN = (function () {
     return arr[idx];
   }
 
+  // Race-safe update: fetches the fresh sessions doc from Firestore, merges
+  // this one session's changes into it, then writes back. Prevents admin +
+  // student concurrent writes from clobbering each other across devices. Use
+  // for admin actions (writing grade, manual override); keep the fast
+  // updateSession for exam keystrokes where latency matters.
+  function updateSessionSafe(id, updates) {
+    var arr = getSessions();
+    var idx = arr.findIndex(function (s) { return s.id === id; });
+    if (idx === -1) return Promise.resolve(null);
+    arr[idx] = Object.assign({}, arr[idx], updates);
+    ss(KEYS.SESSIONS, arr);
+    if (!DB) {
+      _lastLocalWrite['sessions'] = Date.now();
+      persistLastLocalWrite();
+      return Promise.resolve(arr[idx]);
+    }
+    return DB.collection('cpeen').doc('sessions').get().then(function(doc) {
+      var remoteArr = [];
+      if (doc.exists) {
+        var d = doc.data();
+        remoteArr = d.items_json ? JSON.parse(d.items_json) : (d.items || []);
+      }
+      var localSess = arr[idx];
+      var merged = (remoteArr || []).filter(function(s) { return s.id !== id; });
+      merged.push(localSess);
+      arr.forEach(function(ls) {
+        if (ls.id !== id && !merged.find(function(m) { return m.id === ls.id; })) {
+          merged.push(ls);
+        }
+      });
+      ss(KEYS.SESSIONS, merged);
+      _lastLocalWrite['sessions'] = Date.now();
+      persistLastLocalWrite();
+      return DB.collection('cpeen').doc('sessions').set({
+        items_json: JSON.stringify(merged),
+        _writtenAt: _lastLocalWrite['sessions']
+      }).then(function() { return localSess; });
+    }).catch(function(e) {
+      lastSyncError = { docId: 'sessions', error: e, ts: Date.now() };
+      return arr[idx];
+    });
+  }
+
   // ── Group Sessions ────────────────────────────────────────────────────────
   function getGroupSessions() { return sg(KEYS.GROUP_SESSIONS, []); }
   function saveGroupSessions(gs) { ss(KEYS.GROUP_SESSIONS, gs); return syncToFirebase('group_sessions', gs); }
@@ -342,6 +400,7 @@ var CPEEN = (function () {
 
   // Add participants to a group and create their individual sessions.
   function addParticipantsToGroup(groupId, participantIds, examObj) {
+    if (!examObj || !examObj.variants || !examObj.variants.length) return;
     var gs = getGroupSessions();
     var gIdx = gs.findIndex(function(g) { return g.id === groupId; });
     if (gIdx === -1) return;
@@ -443,8 +502,9 @@ var CPEEN = (function () {
 
   // ── Grading ───────────────────────────────────────────────────────────────
   function gradeSession(session, exam) {
+    if (!exam || !exam.variants) return { total: 10, det: {}, details: [], _missing: true };
     var v = exam.variants.find(function (x) { return x.id === session.variantId; });
-    if (!v) return null;
+    if (!v) return { total: 10, det: {}, details: [], _missing: true };
     if (v.parts !== undefined) return gradeNewParts(session.answers, v);
     var a = session.answers, total = 10, det = { s1: [], s2: [], s3: [], s4: [] };
     v.s1.key.forEach(function (acc, i) { var ok = acc.some(function (x) { return norm(x) === norm(a.s1[i]); }); det.s1.push(ok); if (ok) total += v.s1.pts; });
@@ -704,7 +764,7 @@ var CPEEN = (function () {
     genId, genCode, hashPass, norm,
     getConfig, saveConfig,
     getParticipants, saveParticipants, addParticipant, findParticipantByCode, findParticipantByUsername, loginParticipant, updateParticipant, deleteParticipant, isQualified,
-    getSessions, saveSessions, getSessionByParticipant, getSessionsByParticipant, createSession, updateSession,
+    getSessions, saveSessions, getSessionByParticipant, getSessionsByParticipant, createSession, updateSession, updateSessionSafe,
     getGroupSessions, saveGroupSessions, addGroupSession, updateGroupSession, deleteGroupSession,
     addParticipantsToGroup, removeParticipantFromGroup, startGroupSession, finishGroupSession,
     splitType, TYPE_DURATION,

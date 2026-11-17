@@ -989,19 +989,27 @@ function ExamApp() {
     setAnswers(prev => {
       let next;
       if (typeof sec === 'number') {
-        // new parts[] format: sec = partIndex, i = itemIndex
-        const parts = (prev.parts||[]).map((p,pi)=>{
-          if(pi !== sec) return p;
-          const newP = [...p];
-          newP[i] = v;
-          return newP;
-        });
+        // new parts[] format — resilient to answer arrays being shorter than
+        // the exam expects (e.g. admin added items mid-session).
+        const parts = [...(prev.parts||[])];
+        while (parts.length <= sec) parts.push([]);
+        const partAns = [...(parts[sec]||[])];
+        while (partAns.length <= i) partAns.push('');
+        partAns[i] = v;
+        parts[sec] = partAns;
         next = {...prev, parts};
       } else if (sec === 'writing') {
         next = {...prev, writing: v};
       } else {
-        // old s1/s2/s3/s4 format
-        next = {...prev,[sec]:typeof i==="number"?prev[sec].map((x,j)=>j===i?v:x):v};
+        // legacy s1/s2/s3/s4 format
+        if (typeof i === 'number') {
+          const arr = [...(prev[sec]||[])];
+          while (arr.length <= i) arr.push('');
+          arr[i] = v;
+          next = {...prev, [sec]: arr};
+        } else {
+          next = {...prev, [sec]: v};
+        }
       }
       answersRef.current = next;
       if(sessIdRef.current) CPEEN.updateSession(sessIdRef.current, {answers: next});

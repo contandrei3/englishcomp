@@ -92,21 +92,21 @@ function NewFormatPanel({sel, v, ptcp}) {
 
   const save = () => {
     const total = recalcTotal(det);
-    CPEEN.updateSession(sel.id, {result:{...sel.result, total, details: det}});
+    CPEEN.updateSessionSafe(sel.id, {result:{...sel.result, total, details: det}});
     setTotal(String(total));
     setSaved(true); setTimeout(()=>setSaved(false), 2000);
   };
 
   const saveWriting = () => {
     const g = wGrade===""?null:Number(wGrade);
-    CPEEN.updateSession(sel.id, {writingGrade:g, writingFeedback:wFb});
+    CPEEN.updateSessionSafe(sel.id, {writingGrade:g, writingFeedback:wFb});
     setSavedW(true); setTimeout(()=>setSavedW(false), 2000);
   };
 
   const saveTotal = () => {
     const t = parseInt(totalVal);
     if(isNaN(t)) return;
-    CPEEN.updateSession(sel.id, {result:{...sel.result, total:t}});
+    CPEEN.updateSessionSafe(sel.id, {result:{...sel.result, total:t}});
   };
 
   // Global question numbering
@@ -250,20 +250,20 @@ function OldFormatPanel({sel, v}) {
 
   const saveS1 = () => {
     const total = recalc(s1det);
-    CPEEN.updateSession(sel.id, {result:{...sel.result, total, det:{...sel.result?.det, s1:s1det}}});
+    CPEEN.updateSessionSafe(sel.id, {result:{...sel.result, total, det:{...sel.result?.det, s1:s1det}}});
     setTotalVal(String(total));
     setSavedS1(true); setTimeout(()=>setSavedS1(false), 2000);
   };
 
   const saveTotal = () => {
     const t = parseInt(totalVal); if(isNaN(t)) return;
-    CPEEN.updateSession(sel.id, {result:{...sel.result, total:t}});
+    CPEEN.updateSessionSafe(sel.id, {result:{...sel.result, total:t}});
     setSavedTot(true); setTimeout(()=>setSavedTot(false), 2000);
   };
 
   const saveWriting = () => {
     const g = wGrade===""?null:Number(wGrade);
-    CPEEN.updateSession(sel.id, {writingGrade:g, writingFeedback:wFb});
+    CPEEN.updateSessionSafe(sel.id, {writingGrade:g, writingFeedback:wFb});
     setSavedW(true); setTimeout(()=>setSavedW(false), 2000);
   };
 

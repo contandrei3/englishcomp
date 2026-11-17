@@ -306,7 +306,9 @@ function SessionCard({s, exam, participant}) {
   const btnClass = s.status === "submitted" ? "btn btn-mid btn-sm" : "btn btn-primary btn-sm";
   const score = s.result?.total;
   const within24h = s.submittedAt && (Date.now() - s.submittedAt) < 86400000;
-  const canDetail = s.status === "submitted" && within24h && variant?.parts?.length && s.result;
+  const hasAnyParts = !!(variant?.parts && variant.parts.length);
+  const isWritingOnly = !hasAnyParts && hasWriting;
+  const canDetail = s.status === "submitted" && within24h && hasAnyParts && s.result;
 
   const downloadCopy = () => {
     if (!variant || !s.result || !participant) return;
@@ -350,7 +352,7 @@ function SessionCard({s, exam, participant}) {
               <span style={{fontSize:11,color:"#94a3b8",fontFamily:"monospace"}}>var. {variantId}</span>
               <StatusBadge status={s.status}/>
             </div>
-            {s.status === "submitted" && typeof score === "number" && (
+            {s.status === "submitted" && typeof score === "number" && !isWritingOnly && (
               <div style={{marginTop:8,fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                 <span style={{color:score>=75?"#15803d":score>=50?"#d97706":"#dc2626"}}>
                   {score}/100
