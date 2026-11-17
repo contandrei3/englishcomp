@@ -793,7 +793,7 @@ function App() {
   return <LoginEntry onLogin={onLogin}/>;
 }
 
-Promise.race([CPEEN.init(),new Promise(r=>setTimeout(r,6000))]).then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<App/>));
+Promise.race([CPEEN.init(['config','participants','sessions','exams','group_sessions','news']),new Promise(r=>setTimeout(r,6000))]).then(()=>ReactDOM.createRoot(document.getElementById("root")).render(<App/>));
 </script>
 </body>
 </html>

@@ -979,6 +979,26 @@ function ExamApp() {
   const subRef        = useRef(false);
   const sessIdRef     = useRef(null);
   const answersRef    = useRef({s1:[],s2:[],s3:[],s4:[],writing:""});
+  const saveTimerRef  = useRef(null);
+  const savePendingRef = useRef(false);
+
+  // Save strategy: every keystroke writes to localStorage synchronously
+  // (so a refresh never loses answers), but the Firestore sync is debounced
+  // to 1.5s to avoid 60 writes/minute per student. flushSave is forced on
+  // submit and before unload/tab-hide.
+  const flushSave = () => {
+    if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
+    if (savePendingRef.current && sessIdRef.current) {
+      CPEEN.updateSession(sessIdRef.current, {answers: answersRef.current});
+      savePendingRef.current = false;
+    }
+  };
+  useEffect(() => {
+    const onBeforeUnload = () => flushSave();
+    window.addEventListener('beforeunload', onBeforeUnload);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
   const sessRef       = useRef(null);
   const examRef       = useRef(null);
   const variantRef    = useRef(null);
@@ -1012,7 +1032,13 @@ function ExamApp() {
         }
       }
       answersRef.current = next;
-      if(sessIdRef.current) CPEEN.updateSession(sessIdRef.current, {answers: next});
+      if(sessIdRef.current) {
+        // Instant local save (survives refresh); Firestore write is debounced.
+        CPEEN.updateSession(sessIdRef.current, {answers: next}, {localOnly: true});
+        savePendingRef.current = true;
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(flushSave, 1500);
+      }
       return next;
     });
   };
@@ -1020,6 +1046,8 @@ function ExamApp() {
   const doSubmit = useCallback((curAnswers, curSess, curExam, curVariant) => {
     if(subRef.current) return;
     subRef.current = true;
+    if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
+    savePendingRef.current = false;
     clearInterval(timerRef.current);
     const res = CPEEN.gradeSession({...curSess, answers: curAnswers}, curExam);
     const updated = CPEEN.updateSession(curSess.id, {
@@ -1205,7 +1233,7 @@ function ExamApp() {
     const p = noExamPtcpRef.current;
     if (!s || !p) return;
     setChecking(true);
-    CPEEN.init().then(() => {
+    CPEEN.init(['group_sessions','sessions']).then(() => {
       setChecking(false);
       const grp = CPEEN.getGroupSessions().find(g => g.id === s.groupId);
       if (grp?.status === "active") {
@@ -1715,7 +1743,7 @@ class ErrorBoundary extends React.Component {
 }
 
 const rootEl = document.getElementById("root");
-const initOrTimeout = Promise.race([CPEEN.init(), new Promise(r=>setTimeout(r,6000))]);
+const initOrTimeout = Promise.race([CPEEN.init(['config','participants','sessions','exams','group_sessions']), new Promise(r=>setTimeout(r,6000))]);
 initOrTimeout.then(()=>ReactDOM.createRoot(rootEl).render(<ErrorBoundary><ExamApp/></ErrorBoundary>)).catch(e=>{
   rootEl.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,system-ui,sans-serif;padding:24px;"><div style="text-align:center;"><div style="font-size:28px;margin-bottom:12px;">⚠️</div><div style="font-weight:700;color:#0f172a;margin-bottom:8px;">Eroare la inițializare</div><div style="color:#64748b;font-size:13px;margin-bottom:16px;">'+String(e&&e.message||e)+'</div><a href="dashboard.html" style="background:#7c3aed;color:#fff;border-radius:8px;padding:10px 22px;text-decoration:none;font-weight:600;font-size:14px;">Dashboard</a></div></div>';
 });

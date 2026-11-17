@@ -66,62 +66,67 @@ var CPEEN = (function () {
       });
   }
 
-  function init() {
+  // init(docs?) — if docs is omitted, fetches the whole cpeen collection
+  // (legacy behavior, needed by admin pages touching everything). Passing a
+  // specific list like ['config','participants','sessions'] uses targeted
+  // doc.get() calls which bypass the full-collection snapshot and are much
+  // faster on first load: fewer bytes, less parsing, parallel requests.
+  function init(docs) {
     initFirebase();
     if (!DB) return Promise.resolve();
+    var applyDoc = function(docId, d) {
+      if (!d) return;
+      var remoteTs = d._writtenAt || 0;
+      var localTs  = _lastLocalWrite[docId] || 0;
+      if (localTs > remoteTs) return;
+      if (docId === 'config') {
+        ss(KEYS.CONFIG, d);
+      } else {
+        var remote = d.items_json ? JSON.parse(d.items_json) : (d.items || []);
+        var keyMap = {
+          participants:   KEYS.PARTICIPANTS,
+          sessions:       KEYS.SESSIONS,
+          exams:          KEYS.EXAMS,
+          group_sessions: KEYS.GROUP_SESSIONS,
+          news:           KEYS.NEWS
+        };
+        var key = keyMap[docId];
+        if (!key) return;
+        if (remote.length > 0) {
+          if (docId === 'exams') {
+            var localExams = sg(KEYS.EXAMS, []);
+            var merged = remote.slice();
+            localExams.forEach(function(localExam) {
+              if (!localExam || !localExam.id) return;
+              var i = merged.findIndex(function(remoteExam) { return remoteExam.id === localExam.id; });
+              if (i === -1) { merged.push(localExam); return; }
+              var remoteExam = merged[i] || {};
+              var lTs = localExam.updatedAt || localExam.createdAt || 0;
+              var rTs = remoteExam.updatedAt || remoteExam.createdAt || 0;
+              if (lTs >= rTs) merged[i] = localExam;
+            });
+            ss(KEYS.EXAMS, merged);
+          } else {
+            ss(key, remote);
+          }
+        }
+      }
+    };
+
+    if (Array.isArray(docs) && docs.length) {
+      // Targeted fetch: parallel doc.get() calls, skip docs we don't need.
+      return Promise.all(docs.map(function(docId) {
+        return DB.collection('cpeen').doc(docId).get()
+          .then(function(doc) { if (doc.exists) applyDoc(docId, doc.data()); })
+          .catch(function() {});
+      })).then(function() {});
+    }
+
     return DB.collection('cpeen').get()
       .then(function(snapshot) {
-        snapshot.forEach(function(doc) {
-          var d = doc.data();
-          // Skip this doc if we have a pending/recent local write that hasn't
-          // round-tripped yet — local data is authoritative until Firestore confirms.
-          var remoteTs = d._writtenAt || 0;
-          var localTs  = _lastLocalWrite[doc.id] || 0;
-          if (localTs > remoteTs) return;
-
-          if (doc.id === 'config') {
-            ss(KEYS.CONFIG, d);
-          } else {
-            var remote = d.items_json ? JSON.parse(d.items_json) : (d.items || []);
-            var keyMap = {
-              participants:   KEYS.PARTICIPANTS,
-              sessions:       KEYS.SESSIONS,
-              exams:          KEYS.EXAMS,
-              group_sessions: KEYS.GROUP_SESSIONS,
-              news:           KEYS.NEWS          // ← FIX: news era absent din keyMap
-            };
-            var key = keyMap[doc.id];
-            if (!key) return;
-            if (remote.length > 0) {
-              // Preserve unsynced local exams when a newer page load receives
-              // a stale Firestore snapshot right after creating/importing one.
-              // This avoids "new subject disappeared" races on navigation.
-              if (doc.id === 'exams') {
-                var localExams = sg(KEYS.EXAMS, []);
-                var merged = remote.slice();
-                localExams.forEach(function(localExam) {
-                  if (!localExam || !localExam.id) return;
-                  var i = merged.findIndex(function(remoteExam) { return remoteExam.id === localExam.id; });
-                  if (i === -1) {
-                    merged.push(localExam);
-                    return;
-                  }
-                  var remoteExam = merged[i] || {};
-                  var localTs = localExam.updatedAt || localExam.createdAt || 0;
-                  var remoteTs = remoteExam.updatedAt || remoteExam.createdAt || 0;
-                  if (localTs >= remoteTs) merged[i] = localExam;
-                });
-                ss(KEYS.EXAMS, merged);
-              } else {
-                ss(key, remote);
-              }
-            }
-          }
-        });
+        snapshot.forEach(function(doc) { applyDoc(doc.id, doc.data()); });
       })
-      .catch(function() {
-        return Promise.resolve();
-      });
+      .catch(function() { return Promise.resolve(); });
   }
 
   var DEFAULT_ADMIN_HASH = '214d1f1c62239db83286301ef9ce31e93144e98570370de2f035560e13b2a7d9'; // echo2026 (legacy)
@@ -307,12 +312,18 @@ var CPEEN = (function () {
     return session;
   }
 
-  function updateSession(id, updates) {
+  function updateSession(id, updates, opts) {
     var arr = getSessions();
     var idx = arr.findIndex(function (s) { return s.id === id; });
     if (idx === -1) return null;
     arr[idx] = Object.assign({}, arr[idx], updates);
-    saveSessions(arr);
+    if (opts && opts.localOnly) {
+      ss(KEYS.SESSIONS, arr);
+      _lastLocalWrite['sessions'] = Date.now();
+      persistLastLocalWrite();
+    } else {
+      saveSessions(arr);
+    }
     return arr[idx];
   }
 

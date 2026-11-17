@@ -664,7 +664,7 @@ body{background:#fff;}
   if(cdLabelEl && localCfg.countdownLabel) cdLabelEl.textContent = localCfg.countdownLabel + (localCfg.countdownLabel ? "" : "");
 
   // Update from Firestore after load
-  CPEEN.init().then(function() {
+  CPEEN.init(['config','news']).then(function() {
     var cfg = CPEEN.getConfig();
     if(cfg.countdownDate) startCountdown(cfg.countdownDate);
     if(cfg.countdownText && cdTextEl)  cdTextEl.textContent  = cfg.countdownText;

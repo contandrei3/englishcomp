@@ -412,7 +412,7 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 // apoi montăm NewsApp după ce Firestore a populat localStorage
 root.render(<Spinner />);
 
-CPEEN.init().then(() => {
+CPEEN.init(['news']).then(() => {
   root.render(<NewsApp />);
 }).catch(err => {
   root.render(
