@@ -13,7 +13,7 @@ const ROOT = __dirname;
 const OUT = path.join(ROOT, 'dist');
 
 // Files/dirs copied as-is to dist.
-const COPY_PATHS = ['css', 'js', 'sheets', 'proctor', '404.html', 'favicon.ico', 'robots.txt'];
+const COPY_PATHS = ['css', 'js', 'sheets', 'proctor', '404.html', 'favicon.ico', 'favicon.png', 'og-image.png', 'robots.txt'];
 // HTML pages that have inline JSX to compile.
 const HTML_GLOBS = [
   'index.html', 'dashboard.html', 'register.html', 'exam.html',
