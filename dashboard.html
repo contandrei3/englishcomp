@@ -25,7 +25,7 @@ const LETTERS = ['A','B','C','D','E','F'];
 
 function getCorrectDisplay(part, i) {
   if (!part) return '—';
-  if (part.type==='p1'||part.type==='p5'||part.type==='mc') return LETTERS[part.items?.[i]?.answer] ?? '—';
+  if (part.type==='p1'||part.type==='p5'||part.type==='mc'||part.type==='l1'||part.type==='l3') return LETTERS[part.items?.[i]?.answer] ?? '—';
   if (part.type==='p8') return part.items?.[i]?.answer ?? '—';
   if (part.type==='p2'||part.type==='p6') {
     const a = part.key?.[i]; return Array.isArray(a) ? a[0] : (a ?? '—');
@@ -33,12 +33,16 @@ function getCorrectDisplay(part, i) {
   if (part.type==='p3'||part.type==='p4') {
     const a = part.items?.[i]?.key; return Array.isArray(a) ? a[0] : (a ?? '—');
   }
-  if (part.type==='p7') return part.items?.[i]?.answer ?? '—';
+  if (part.type==='p7'||part.type==='l4') return part.items?.[i]?.answer ?? '—';
+  if (part.type==='l2') {
+    const a = part.items?.[i]?.answer;
+    return Array.isArray(a) ? a[0] : (a ?? '—');
+  }
   if (part.type==='ec'||part.type==='e1'||part.type==='e2') return part.key?.[i] ?? '—';
   return '—';
 }
 function getStudentDisplay(part, raw) {
-  if ((part.type==='p1'||part.type==='p5'||part.type==='mc') && raw!=='' && raw!==undefined)
+  if ((part.type==='p1'||part.type==='p5'||part.type==='mc'||part.type==='l1'||part.type==='l3') && raw!=='' && raw!==undefined)
     return LETTERS[parseInt(raw)] ?? raw;
   return raw || '—';
 }
